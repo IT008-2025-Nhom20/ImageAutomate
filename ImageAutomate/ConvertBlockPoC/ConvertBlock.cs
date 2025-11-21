@@ -1,4 +1,4 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 
 namespace ConvertBlockPoC;
 
@@ -29,7 +29,7 @@ public enum PngCompressionLevel
     BestCompression = 9
 }
 
-public class ConvertBlock : INotifyPropertyChanged
+public class ConvertBlock : IBlock
 {
     private ImageFormat _targetFormat = ImageFormat.Png;
     private bool _alwaysReEncode = false;
@@ -42,6 +42,24 @@ public class ConvertBlock : INotifyPropertyChanged
     {
         _jpegOptions.PropertyChanged += (s, e) => OnPropertyChanged(nameof(JpegOptions));
         _pngOptions.PropertyChanged += (s, e) => OnPropertyChanged(nameof(PngOptions));
+    }
+
+    [Browsable(false)]
+    public string Name => "Convert";
+
+    [Browsable(false)]
+    public string ConfigurationSummary
+    {
+        get
+        {
+            var opts = TargetFormat switch
+            {
+                ImageFormat.Jpeg => $"Quality: {JpegOptions.Quality}",
+                ImageFormat.Png => $"Compression: {PngOptions.CompressionLevel}",
+                _ => "Options: Default"
+            };
+            return $"Format: {TargetFormat}\nRe-encode: {AlwaysReEncode}\n{opts}";
+        }
     }
 
     [Category("Configuration")]
@@ -57,6 +75,7 @@ public class ConvertBlock : INotifyPropertyChanged
                 OnPropertyChanged(nameof(TargetFormat));
                 OnPropertyChanged(nameof(JpegOptions));
                 OnPropertyChanged(nameof(PngOptions));
+                OnPropertyChanged(nameof(ConfigurationSummary));
             }
         }
     }
@@ -72,6 +91,7 @@ public class ConvertBlock : INotifyPropertyChanged
             {
                 _alwaysReEncode = value;
                 OnPropertyChanged(nameof(AlwaysReEncode));
+                OnPropertyChanged(nameof(ConfigurationSummary));
             }
         }
     }

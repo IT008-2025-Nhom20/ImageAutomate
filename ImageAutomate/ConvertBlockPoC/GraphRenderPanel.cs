@@ -1,4 +1,4 @@
-﻿/**
+/**
  * GraphRenderPanel.cs
  * 
  * Panel-based control for rendering pipeline graph
@@ -29,8 +29,8 @@ public class GraphRenderPanel : Panel
             if (Math.Abs(_nodeWidth - value) > double.Epsilon)
             {
                 _nodeWidth = value;
-                if (_pGraph != null)
-                    _pGraph.NodeWidth = value;
+                if (_graph != null)
+                    _graph.NodeWidth = value;
                 Invalidate();
             }
         }
@@ -48,8 +48,8 @@ public class GraphRenderPanel : Panel
             if (Math.Abs(_nodeHeight - value) > double.Epsilon)
             {
                 _nodeHeight = value;
-                if (_pGraph != null)
-                    _pGraph.NodeHeight = value;
+                if (_graph != null)
+                    _graph.NodeHeight = value;
                 Invalidate();
             }
         }
@@ -115,20 +115,41 @@ public class GraphRenderPanel : Panel
     #endregion
 
     [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-    public PipelineGraph PGraph => _pGraph;
+    public PipelineGraph? Graph
+    {
+        get => _graph;
+        set
+        {
+            _graph = value;
+            if (_graph != null)
+            {
+                _graph.NodeWidth = _nodeWidth;
+                _graph.NodeHeight = _nodeHeight;
+                ComputeLayoutAndRender();
+            }
+            else
+            {
+                Invalidate();
+            }
+        }
+    }
 
-    private readonly PipelineGraph _pGraph;
+    private PipelineGraph? _graph;
     private PointF _panOffset = new(0, 0);
     private Point _lastMousePos;
     private bool _isPanning;
+
+    // Deprecated but kept for PoC compatibility
+    public PipelineGraph PGraph => _graph ?? throw new InvalidOperationException("Graph not initialized");
 
     public GraphRenderPanel()
     {
         DoubleBuffered = true;
         BackColor = Color.White;
 
-        // Initialize PGraph after property defaults are set
-        _pGraph = new PipelineGraph(_nodeWidth, _nodeHeight);
+        // For PoC compatibility, we can initialize a default graph
+        // But standard usage should be setting the Graph property
+        _graph = new PipelineGraph(_nodeWidth, _nodeHeight);
 
         Resize += (_, _) => Invalidate();
         MouseDown += OnMouseDownPan;
@@ -139,26 +160,29 @@ public class GraphRenderPanel : Panel
 
     public void Initialize(ConvertBlock block)
     {
-        _pGraph.CenterNode = _pGraph.AddNode(block);
+        if (_graph == null) _graph = new PipelineGraph(_nodeWidth, _nodeHeight);
+        _graph.CenterNode = _graph.AddNode(block);
         ComputeLayoutAndRender();
     }
 
     public void SetCenterBlock(ConvertBlock block)
     {
-        var node = _pGraph.GetNode(block) ?? _pGraph.AddNode(block);
-        _pGraph.CenterNode = node;
+        if (_graph == null) return;
+        var node = _graph.GetNode(block) ?? _graph.AddNode(block);
+        _graph.CenterNode = node;
         ComputeLayoutAndRender();
     }
 
     public void AddBlockAndConnect(ConvertBlock block, ConvertBlock? connectTo = null)
     {
-        var newNode = _pGraph.AddNode(block);
+        if (_graph == null) return;
+        var newNode = _graph.AddNode(block);
 
         if (connectTo != null)
         {
-            var targetNode = _pGraph.GetNode(connectTo);
+            var targetNode = _graph.GetNode(connectTo);
             if (targetNode != null)
-                _pGraph.AddEdge(targetNode, newNode);
+                _graph.AddEdge(targetNode, newNode);
         }
 
         ComputeLayoutAndRender();
@@ -166,21 +190,17 @@ public class GraphRenderPanel : Panel
 
     public void AddSuccessor(ConvertBlock block)
     {
-        var newNode = _pGraph.AddNode(block);
-
-        if (_pGraph.CenterNode != null)
-            _pGraph.AddEdge(_pGraph.CenterNode, newNode);
-
+        if (_graph == null || _graph.CenterNode == null) return;
+        var newNode = _graph.AddNode(block);
+        _graph.AddEdge(_graph.CenterNode, newNode);
         ComputeLayoutAndRender();
     }
 
     public void AddPredecessor(ConvertBlock block)
     {
-        var newNode = _pGraph.AddNode(block);
-
-        if (_pGraph.CenterNode != null)
-            _pGraph.AddEdge(newNode, _pGraph.CenterNode);
-
+        if (_graph == null || _graph.CenterNode == null) return;
+        var newNode = _graph.AddNode(block);
+        _graph.AddEdge(newNode, _graph.CenterNode);
         ComputeLayoutAndRender();
     }
 
@@ -207,11 +227,13 @@ public class GraphRenderPanel : Panel
     {
         if (!_isPanning) return;
 
+        // Calculate delta in screen pixels
         float dx = e.X - _lastMousePos.X;
         float dy = e.Y - _lastMousePos.Y;
 
-        ClampPanToBounds(ref dx, ref dy);
-
+        // Adjust pan offset (Camera move)
+        // We're moving the camera, so moving mouse right means camera moves left relative to world,
+        // or rather, the world moves right.
         _panOffset.X += dx;
         _panOffset.Y += dy;
 
@@ -221,58 +243,56 @@ public class GraphRenderPanel : Panel
 
     private void OnMouseWheelPan(object? sender, MouseEventArgs e)
     {
-        float dx = 0;
-        float dy = e.Delta / 4f;
+        // Zoom logic
+        const float zoomFactor = 1.1f;
+        float oldScale = _renderScale;
 
-        ClampPanToBounds(ref dx, ref dy);
+        if (e.Delta > 0)
+            _renderScale *= zoomFactor;
+        else
+            _renderScale /= zoomFactor;
 
-        _panOffset.X += dx;
-        _panOffset.Y += dy;
+        // Clamp scale
+        _renderScale = Math.Max(0.1f, Math.Min(_renderScale, 5.0f));
+
+        // Zoom towards mouse pointer
+        // World = (Screen - Pan) / Scale
+        // NewPan = Screen - (World * NewScale)
+        // => NewPan = Screen - ((Screen - OldPan) / OldScale * NewScale)
+
+        // Current mouse position relative to the panel center (which is our origin for translation)
+        float mouseX = e.X - Width / 2.0f;
+        float mouseY = e.Y - Height / 2.0f;
+
+        // The point in the world that is currently under the mouse
+        float worldX = (mouseX - _panOffset.X) / oldScale;
+        float worldY = (mouseY - _panOffset.Y) / -oldScale; // -oldScale because Y is flipped
+
+        // We want this world point to remain under the mouse after scaling
+        // NewScreenPos = World * NewScale + NewPan
+        // mouseX = worldX * NewScale + NewPanX
+        // NewPanX = mouseX - worldX * NewScale
+
+        _panOffset.X = mouseX - (worldX * _renderScale);
+        // For Y, remember the flip:
+        // mouseY = worldY * -NewScale + NewPanY
+        // NewPanY = mouseY - (worldY * -NewScale)
+        _panOffset.Y = mouseY - (worldY * -_renderScale);
+
         Invalidate();
     }
 
     private void ClampPanToBounds(ref float dx, ref float dy, float margin = 20)
     {
-        var graph = _pGraph.GeomGraph;
-        var bounds = graph.BoundingBox;
-
-        // AABB corners in graph space
-        float graphLeft = (float)bounds.Left * _renderScale;
-        float graphRight = (float)bounds.Right * _renderScale;
-        float graphTop = (float)bounds.Top * _renderScale;
-        float graphBottom = (float)bounds.Bottom * _renderScale;
-
-        // Current screen positions of graph edges
-        float centerX = Width / 2f;
-        float centerY = Height / 2f;
-
-        float screenLeft = centerX + _panOffset.X + graphLeft;
-        float screenRight = centerX + _panOffset.X + graphRight;
-        float screenTop = centerY + _panOffset.Y - graphTop;
-        float screenBottom = centerY + _panOffset.Y - graphBottom;
-
-        // Proposed new positions
-        float newScreenLeft = screenLeft + dx;
-        float newScreenRight = screenRight + dx;
-        float newScreenTop = screenTop + dy;
-        float newScreenBottom = screenBottom + dy;
-
-        // Clamp horizontal
-        if (newScreenLeft > Width - margin)
-            dx = (Width - margin) - screenLeft;
-        else if (newScreenRight < margin)
-            dx = margin - screenRight;
-
-        // Clamp vertical
-        if (newScreenTop > Height - margin)
-            dy = (Height - margin) - screenTop;
-        else if (newScreenBottom < margin)
-            dy = margin - screenBottom;
+        // With the new camera system, we can implement more sophisticated clamping later.
+        // For now, allowing free pan.
     }
 
     private void ComputeLayoutAndRender()
     {
-        var graph = _pGraph.GeomGraph;
+        if (_graph == null) return;
+
+        var graph = _graph.GeomGraph;
 
         var settings = new SugiyamaLayoutSettings
         {
@@ -287,206 +307,80 @@ public class GraphRenderPanel : Panel
         layout.Run();
 
         graph.UpdateBoundingBox();
-        CenterGraphAtOrigin();
+        // No longer centering the graph at origin (modifying world coords).
+        // We handle centering via the camera transform.
+
+        // Auto-center camera on first layout
+        CenterCameraOnGraph();
+
         Invalidate();
     }
 
-    private void CenterGraphAtOrigin()
+    private void CenterCameraOnGraph()
     {
-        var graph = _pGraph.GeomGraph;
-        var bounds = graph.BoundingBox;
-        var centerOffset = new MsaglPoint(-bounds.Center.X, -bounds.Center.Y);
+        if (_graph == null) return;
+        var bounds = _graph.GeomGraph.BoundingBox;
 
-        foreach (var node in graph.Nodes)
-            node.BoundaryCurve.Translate(centerOffset);
+        // We want to position the camera so the center of the graph is at (0,0) screen relative offset
+        // World Center
+        float wx = (float)bounds.Center.X;
+        float wy = (float)bounds.Center.Y;
 
-        foreach (var edge in graph.Edges)
-            edge.Curve?.Translate(centerOffset);
+        // Screen = World * Scale + Pan (conceptually, ignoring the center offset of Width/2, Height/2)
+        // We want Screen to be (0,0) relative to panel center
+        // 0 = wx * Scale + PanX => PanX = -wx * Scale
+        // 0 = wy * -Scale + PanY => PanY = wy * Scale
 
-        graph.UpdateBoundingBox();
+        _panOffset.X = -wx * _renderScale;
+        _panOffset.Y = wy * _renderScale; // Positive because Y is flipped (World Y up, Screen Y down)
     }
 
     protected override void OnPaint(PaintEventArgs e)
     {
         base.OnPaint(e);
 
-        var graph = _pGraph.GeomGraph;
+        if (_graph == null) return;
+        var graph = _graph.GeomGraph;
         if (graph.Nodes.Count == 0) return;
 
         Graphics g = e.Graphics;
         g.SmoothingMode = SmoothingMode.AntiAlias;
         g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
 
-        float offsetX = Width / 2f + _panOffset.X;
-        float offsetY = Height / 2f + _panOffset.Y;
+        // Apply Camera Transform
+        // 1. Translate to center of panel (so (0,0) is at center)
+        // 2. Translate by Pan Offset
+        // 3. Scale (and flip Y)
 
         using Matrix transform = new();
-        transform.Translate(offsetX, offsetY);
+        transform.Translate(Width / 2f + _panOffset.X, Height / 2f + _panOffset.Y);
         transform.Scale(_renderScale, -_renderScale);
         g.Transform = transform;
 
+        // Use NodeRenderer strategies
+        // We can switch between Direct (legacy-ish) and Optimized (GraphicsPath) strategies
+        bool useOptimized = true; // Toggle this to switch strategies
+
         // Draw edges first
         foreach (var geomEdge in graph.Edges)
-            DrawEdge(g, geomEdge);
+        {
+            NodeRenderer.DrawEdge(g, geomEdge, _socketRadius);
+        }
 
         // Draw nodes on top
         foreach (var geomNode in graph.Nodes)
-            DrawNode(g, geomNode);
-
-        g.ResetTransform();
-    }
-
-    private static string GetEncodingOptionsDisplay(ConvertBlock block)
-    {
-        return block.TargetFormat switch
         {
-            ImageFormat.Jpeg => $"Quality: {block.JpegOptions.Quality}",
-            ImageFormat.Png => $"Compression: {block.PngOptions.CompressionLevel}",
-            _ => "Options: Default"
-        };
-    }
-
-    #region Rendering Utilities
-
-    private void DrawEdge(Graphics g, GeomEdge geomEdge)
-    {
-        var sourceNode = geomEdge.Source;
-        var targetNode = geomEdge.Target;
-
-        if (sourceNode?.BoundingBox == null || targetNode?.BoundingBox == null)
-            return;
-
-        PointF start = new(
-            (float)(sourceNode.Center.X + sourceNode.BoundingBox.Width / 2),
-            (float)sourceNode.Center.Y
-        );
-
-        PointF end = new(
-            (float)(targetNode.Center.X - targetNode.BoundingBox.Width / 2),
-            (float)targetNode.Center.Y
-        );
-
-        using var edgePen = new Pen(Color.FromArgb(150, 150, 150), 2);
-        g.DrawLine(edgePen, start, end);
-    }
-
-    private void DrawNode(Graphics g, GeomNode geomNode)
-    {
-        if (geomNode.UserData is not ConvertBlock block) return;
-
-        var bounds = geomNode.BoundingBox;
-        RectangleF rect = new(
-            (float)bounds.Left,
-            (float)bounds.Bottom,
-            (float)bounds.Width,
-            (float)bounds.Height
-        );
-
-        float radius = 8;
-        var state = g.Save();
-
-        bool isCenterBlock = geomNode == _pGraph.CenterNode;
-
-        using (var bgBrush = new SolidBrush(Color.FromArgb(60, 60, 60)))
-        using (var borderPen = new Pen(
-            isCenterBlock ? _selectedBlockOutlineColor : Color.FromArgb(100, 100, 100),
-            isCenterBlock ? 3 : 2))
-        using (var path = CreateRoundedRectPath(rect, radius))
-        {
-            g.FillPath(bgBrush, path);
-            g.DrawPath(borderPen, path);
-        }
-
-        RectangleF headerRect = new(rect.X, rect.Y, rect.Width, 25);
-        using (var headerBrush = new SolidBrush(Color.FromArgb(80, 80, 80)))
-        using (var headerPath = CreateRoundedRectPath(headerRect, radius, topOnly: true))
-        {
-            g.FillPath(headerBrush, headerPath);
-        }
-
-        g.Restore(state);
-        state = g.Save();
-
-        using (var flipMatrix = new Matrix(1, 0, 0, -1, 0, 2 * (rect.Y + rect.Height / 2)))
-        {
-            g.MultiplyTransform(flipMatrix);
-        }
-
-        using (var textBrush = new SolidBrush(Color.White))
-        using (var labelFont = new Font("Segoe UI", 10, FontStyle.Bold))
-        using (var detailFont = new Font("Segoe UI", 8))
-        {
-            g.DrawString("Convert", labelFont, textBrush,
-                new PointF(rect.X + 10, rect.Y + 5));
-
-            float yOffset = rect.Y + 35;
-            string[] properties =
-            [
-                $"Format: {block.TargetFormat}",
-                $"Re-encode: {block.AlwaysReEncode}",
-                GetEncodingOptionsDisplay(block)
-            ];
-
-            foreach (var prop in properties)
+            bool isSelected = geomNode == _graph.CenterNode;
+            if (useOptimized)
             {
-                g.DrawString(prop, detailFont, textBrush,
-                    new PointF(rect.X + 10, yOffset));
-                yOffset += 18;
+                NodeRenderer.OptimizedStrategy.DrawNode(g, geomNode, isSelected, _selectedBlockOutlineColor, _socketRadius);
+            }
+            else
+            {
+                NodeRenderer.DirectStrategy.DrawNode(g, geomNode, isSelected, _selectedBlockOutlineColor, _socketRadius);
             }
         }
 
-        g.Restore(state);
-        state = g.Save();
-
-        DrawSocket(g, new PointF(rect.Left - 5, rect.Top + rect.Height / 2), isInput: true);
-        DrawSocket(g, new PointF(rect.Right + 5, rect.Top + rect.Height / 2), isInput: false);
-
-        g.Restore(state);
+        g.ResetTransform();
     }
-
-    private static GraphicsPath CreateRoundedRectPath(RectangleF rect, float radius, bool topOnly = false)
-    {
-        GraphicsPath path = new();
-        float diameter = radius * 2;
-
-        path.AddArc(rect.X, rect.Y, diameter, diameter, 180, 90);
-        path.AddArc(rect.Right - diameter, rect.Y, diameter, diameter, 270, 90);
-
-        if (topOnly)
-        {
-            path.AddLine(rect.Right, rect.Y + radius, rect.Right, rect.Bottom);
-            path.AddLine(rect.Right, rect.Bottom, rect.X, rect.Bottom);
-            path.AddLine(rect.X, rect.Bottom, rect.X, rect.Y + radius);
-        }
-        else
-        {
-            path.AddArc(rect.Right - diameter, rect.Bottom - diameter, diameter, diameter, 0, 90);
-            path.AddArc(rect.X, rect.Bottom - diameter, diameter, diameter, 90, 90);
-        }
-
-        path.CloseFigure();
-        return path;
-    }
-
-    private void DrawSocket(Graphics g, PointF center, bool isInput)
-    {
-        float socketRadius = (float)_socketRadius;
-        RectangleF socketRect = new(
-            center.X - socketRadius,
-            center.Y - socketRadius,
-            socketRadius * 2,
-            socketRadius * 2
-        );
-
-        var socketColor = isInput
-            ? Color.FromArgb(100, 200, 100)
-            : Color.FromArgb(200, 100, 100);
-
-        using var socketBrush = new SolidBrush(socketColor);
-        using var socketBorder = new Pen(Color.White, 1.5f);
-        g.FillEllipse(socketBrush, socketRect);
-        g.DrawEllipse(socketBorder, socketRect);
-    }
-
-    #endregion Rendering Utilities
 }
