@@ -98,6 +98,20 @@ public class GraphRenderPanel : Panel
     }
     private double _columnSpacing = 250;
 
+    [Category("Graph Layout")]
+    [Description("Vertical spacing between nodes in the same layer")]
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
+    public double NodeSpacing
+    {
+        get => _nodeSpacing;
+        set
+        {
+            _nodeSpacing = value;
+            Invalidate();
+        }
+    }
+    private double _nodeSpacing = 30;
+
     [Category("Graph Appearance")]
     [Description("Node render scale factor")]
     [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
@@ -111,6 +125,12 @@ public class GraphRenderPanel : Panel
         }
     }
     private float _renderScale = 1.0f;
+
+    [Category("Graph Behavior")]
+    [Description("Allows the graph to be panned completely off-screen")]
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
+    [DefaultValue(false)]
+    public bool AllowOutOfScreenPan { get; set; } = false;
 
     #endregion
 
@@ -231,11 +251,10 @@ public class GraphRenderPanel : Panel
         float dx = e.X - _lastMousePos.X;
         float dy = e.Y - _lastMousePos.Y;
 
-        // Adjust pan offset (Camera move)
-        // We're moving the camera, so moving mouse right means camera moves left relative to world,
-        // or rather, the world moves right.
         _panOffset.X += dx;
         _panOffset.Y += dy;
+
+        ClampPanToBounds();
 
         _lastMousePos = e.Location;
         Invalidate();
@@ -256,36 +275,99 @@ public class GraphRenderPanel : Panel
         _renderScale = Math.Max(0.1f, Math.Min(_renderScale, 5.0f));
 
         // Zoom towards mouse pointer
-        // World = (Screen - Pan) / Scale
-        // NewPan = Screen - (World * NewScale)
-        // => NewPan = Screen - ((Screen - OldPan) / OldScale * NewScale)
-
-        // Current mouse position relative to the panel center (which is our origin for translation)
         float mouseX = e.X - Width / 2.0f;
         float mouseY = e.Y - Height / 2.0f;
 
-        // The point in the world that is currently under the mouse
         float worldX = (mouseX - _panOffset.X) / oldScale;
-        float worldY = (mouseY - _panOffset.Y) / -oldScale; // -oldScale because Y is flipped
-
-        // We want this world point to remain under the mouse after scaling
-        // NewScreenPos = World * NewScale + NewPan
-        // mouseX = worldX * NewScale + NewPanX
-        // NewPanX = mouseX - worldX * NewScale
+        float worldY = (mouseY - _panOffset.Y) / -oldScale;
 
         _panOffset.X = mouseX - (worldX * _renderScale);
-        // For Y, remember the flip:
-        // mouseY = worldY * -NewScale + NewPanY
-        // NewPanY = mouseY - (worldY * -NewScale)
         _panOffset.Y = mouseY - (worldY * -_renderScale);
+
+        ClampPanToBounds();
 
         Invalidate();
     }
 
-    private void ClampPanToBounds(ref float dx, ref float dy, float margin = 20)
+    private void ClampPanToBounds()
     {
-        // With the new camera system, we can implement more sophisticated clamping later.
-        // For now, allowing free pan.
+        if (AllowOutOfScreenPan || _graph == null) return;
+
+        var bounds = _graph.GeomGraph.BoundingBox;
+
+        // Transform Graph Bounding Box to Screen Coordinates
+        // Center of Panel is (Width/2, Height/2)
+        // Transform: Translate(Center + Pan) * Scale(Zoom, -Zoom)
+
+        float cx = Width / 2.0f + _panOffset.X;
+        float cy = Height / 2.0f + _panOffset.Y;
+
+        // MSAGL Bounds (World)
+        float wx1 = (float)bounds.Left;
+        float wx2 = (float)bounds.Right;
+        float wy1 = (float)bounds.Bottom;
+        float wy2 = (float)bounds.Top;
+
+        // Convert to Screen
+        // ScreenX = WorldX * Scale + CX
+        // ScreenY = WorldY * -Scale + CY
+
+        float sx1 = wx1 * _renderScale + cx;
+        float sx2 = wx2 * _renderScale + cx;
+        float sy1 = wy1 * -_renderScale + cy;
+        float sy2 = wy2 * -_renderScale + cy;
+
+        // Determine Screen Bounding Box of the Graph
+        // Note: Y is flipped, so sy2 (from Top) will be smaller (higher on screen) than sy1 (from Bottom)
+        float graphScreenLeft = Math.Min(sx1, sx2);
+        float graphScreenRight = Math.Max(sx1, sx2);
+        float graphScreenTop = Math.Min(sy1, sy2);
+        float graphScreenBottom = Math.Max(sy1, sy2);
+
+        float graphWidth = graphScreenRight - graphScreenLeft;
+        float graphHeight = graphScreenBottom - graphScreenTop;
+
+        // Margin to keep visible
+        float margin = 30;
+
+        // If graph is smaller than viewport, center it or keep inside?
+        // Usually "Clamping" means don't let it go too far away.
+        // Constraint: Keep at least 'margin' pixels visible on all sides?
+        // Or: Constrain the center?
+
+        // Let's ensure at least (margin) overlap between GraphRect and ViewportRect.
+
+        // Viewport: (0, 0, Width, Height)
+
+        // Correct Horizontal
+        if (graphScreenRight < margin)
+        {
+            // Graph is too far left
+            // shift right so graphScreenRight = margin
+            float shift = margin - graphScreenRight;
+            _panOffset.X += shift;
+        }
+        else if (graphScreenLeft > Width - margin)
+        {
+            // Graph is too far right
+            // shift left so graphScreenLeft = Width - margin
+            float shift = (Width - margin) - graphScreenLeft;
+            _panOffset.X += shift;
+        }
+
+        // Correct Vertical
+        if (graphScreenBottom < margin)
+        {
+            // Graph is too high up (bottom is above top margin)
+            float shift = margin - graphScreenBottom;
+            _panOffset.Y += shift;
+        }
+        else if (graphScreenTop > Height - margin)
+        {
+            // Graph is too low down
+            float shift = (Height - margin) - graphScreenTop;
+            _panOffset.Y += shift;
+        }
     }
 
     private void ComputeLayoutAndRender()
@@ -298,7 +380,7 @@ public class GraphRenderPanel : Panel
         {
             Transformation = PlaneTransformation.Rotation(Math.PI / 2),
             LayerSeparation = _columnSpacing,
-            NodeSeparation = 30,
+            NodeSeparation = _nodeSpacing,
             EdgeRoutingSettings = { EdgeRoutingMode = Microsoft.Msagl.Core.Routing.EdgeRoutingMode.Spline },
             RandomSeedForOrdering = 0
         };
@@ -307,10 +389,9 @@ public class GraphRenderPanel : Panel
         layout.Run();
 
         graph.UpdateBoundingBox();
-        // No longer centering the graph at origin (modifying world coords).
-        // We handle centering via the camera transform.
 
-        // Auto-center camera on first layout
+        // Auto-center camera on first layout if we are strictly enforcing bounds,
+        // or just to be nice.
         CenterCameraOnGraph();
 
         Invalidate();
@@ -321,18 +402,11 @@ public class GraphRenderPanel : Panel
         if (_graph == null) return;
         var bounds = _graph.GeomGraph.BoundingBox;
 
-        // We want to position the camera so the center of the graph is at (0,0) screen relative offset
-        // World Center
         float wx = (float)bounds.Center.X;
         float wy = (float)bounds.Center.Y;
 
-        // Screen = World * Scale + Pan (conceptually, ignoring the center offset of Width/2, Height/2)
-        // We want Screen to be (0,0) relative to panel center
-        // 0 = wx * Scale + PanX => PanX = -wx * Scale
-        // 0 = wy * -Scale + PanY => PanY = wy * Scale
-
         _panOffset.X = -wx * _renderScale;
-        _panOffset.Y = wy * _renderScale; // Positive because Y is flipped (World Y up, Screen Y down)
+        _panOffset.Y = wy * _renderScale;
     }
 
     protected override void OnPaint(PaintEventArgs e)
@@ -347,27 +421,18 @@ public class GraphRenderPanel : Panel
         g.SmoothingMode = SmoothingMode.AntiAlias;
         g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
 
-        // Apply Camera Transform
-        // 1. Translate to center of panel (so (0,0) is at center)
-        // 2. Translate by Pan Offset
-        // 3. Scale (and flip Y)
-
         using Matrix transform = new();
         transform.Translate(Width / 2f + _panOffset.X, Height / 2f + _panOffset.Y);
         transform.Scale(_renderScale, -_renderScale);
         g.Transform = transform;
 
-        // Use NodeRenderer strategies
-        // We can switch between Direct (legacy-ish) and Optimized (GraphicsPath) strategies
-        bool useOptimized = true; // Toggle this to switch strategies
+        bool useOptimized = true;
 
-        // Draw edges first
         foreach (var geomEdge in graph.Edges)
         {
             NodeRenderer.DrawEdge(g, geomEdge, _socketRadius);
         }
 
-        // Draw nodes on top
         foreach (var geomNode in graph.Nodes)
         {
             bool isSelected = geomNode == _graph.CenterNode;
