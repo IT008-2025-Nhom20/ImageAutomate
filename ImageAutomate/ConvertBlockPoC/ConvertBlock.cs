@@ -205,8 +205,7 @@ public class JpegEncodingOptions : INotifyPropertyChanged
         get => _quality;
         set
         {
-            if (value < 1) value = 1;
-            if (value > 100) value = 100;
+            value = Math.Clamp(value, 1, 100);
 
             if (_quality != value)
             {

@@ -344,8 +344,6 @@ public class GraphRenderPanel : Panel
         transform.Scale(_renderScale, -_renderScale);
         g.Transform = transform;
 
-        bool useOptimized = true;
-
         foreach (var geomEdge in graph.Edges)
         {
             NodeRenderer.DrawEdge(g, geomEdge, _socketRadius);
@@ -354,14 +352,7 @@ public class GraphRenderPanel : Panel
         foreach (var geomNode in graph.Nodes)
         {
             bool isSelected = geomNode == _graph.CenterNode;
-            if (useOptimized)
-            {
-                NodeRenderer.OptimizedStrategy.DrawNode(g, geomNode, isSelected, _selectedBlockOutlineColor, _socketRadius);
-            }
-            else
-            {
-                NodeRenderer.DirectStrategy.DrawNode(g, geomNode, isSelected, _selectedBlockOutlineColor, _socketRadius);
-            }
+            NodeRenderer.OptimizedStrategy.DrawNode(g, geomNode, isSelected, _selectedBlockOutlineColor, _socketRadius);
         }
 
         g.ResetTransform();
