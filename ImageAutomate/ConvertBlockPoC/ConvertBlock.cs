@@ -33,17 +33,25 @@ public class ConvertBlock : IBlock
 {
     private ImageFormat _targetFormat = ImageFormat.Png;
     private bool _alwaysReEncode = false;
-    private JpegEncodingOptions _jpegOptions = new JpegEncodingOptions();
-    private PngEncodingOptions _pngOptions = new PngEncodingOptions();
+    private JpegEncodingOptions _jpegOptions = new();
+    private PngEncodingOptions _pngOptions = new();
     private double _width = 200;
     private double _height = 100;
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
+    void Options_OnPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (sender is JpegEncodingOptions)
+            OnPropertyChanged(nameof(JpegOptions));
+        else if (sender is PngEncodingOptions)
+            OnPropertyChanged(nameof(PngOptions));
+    }
+
     public ConvertBlock()
     {
-        _jpegOptions.PropertyChanged += (s, e) => OnPropertyChanged(nameof(JpegOptions));
-        _pngOptions.PropertyChanged += (s, e) => OnPropertyChanged(nameof(PngOptions));
+        _jpegOptions.PropertyChanged += Options_OnPropertyChanged;
+        _pngOptions.PropertyChanged += Options_OnPropertyChanged;
     }
 
     [Browsable(false)]
@@ -136,7 +144,13 @@ public class ConvertBlock : IBlock
         get => _jpegOptions;
         set
         {
+            // unsubscribe from old options to avoid memory leaks
+            if (_jpegOptions != null)
+                _jpegOptions.PropertyChanged -= Options_OnPropertyChanged;
             _jpegOptions = value;
+            // resubscribe after assignment
+            if (_jpegOptions != null)
+                _jpegOptions.PropertyChanged += Options_OnPropertyChanged;
             OnPropertyChanged(nameof(JpegOptions));
         }
     }
@@ -149,7 +163,11 @@ public class ConvertBlock : IBlock
         get => _pngOptions;
         set
         {
+            if (_pngOptions != null)
+                _pngOptions.PropertyChanged -= Options_OnPropertyChanged;
             _pngOptions = value;
+            if (_pngOptions != null)
+                _pngOptions.PropertyChanged += Options_OnPropertyChanged;
             OnPropertyChanged(nameof(PngOptions));
         }
     }
