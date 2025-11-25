@@ -93,9 +93,6 @@ public static class NodeRenderer
             using (var detailFont = new Font("Segoe UI", 8))
             {
                 // Text Coordinates in Flipped Space:
-                // Visual Top corresponds to MSAGL Y_min (rect.Y) in the local flipped space?
-                // Let's re-verify:
-                // Center Y = C.
                 // Visual Top (Screen -Y) maps to MSAGL Top (Y_max).
                 // Local Flipped Transform: Y -> -Y + 2C.
                 // Input Y_max -> -Y_max + 2C = Y_min.
@@ -191,10 +188,7 @@ public static class NodeRenderer
             }
             g.Restore(state);
 
-            // Drawing - Socket Layer
-            // Input Socket
             DrawSocket(g, new PointF(rect.Left, rect.Top + rect.Height / 2), isInput: true, socketRadius);
-            // Output Socket
             DrawSocket(g, new PointF(rect.Right, rect.Top + rect.Height / 2), isInput: false, socketRadius);
         }
     }
