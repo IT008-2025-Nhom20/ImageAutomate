@@ -1,4 +1,12 @@
+using System;
+using System.Collections.Generic;
 using System.ComponentModel;
+using System.Data;
+using System.Drawing;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Windows.Forms;
 
 namespace ConvertBlockPoC;
 
@@ -13,8 +21,8 @@ public class MainForm : Form
         _graphPanel.Invalidate();
     }
 
-    public MainForm()
-    {
+        public MainForm()
+        {
         Text = "Pipeline Graph PoC";
         Size = new Size(1200, 800);
 
@@ -40,10 +48,10 @@ public class MainForm : Form
         Controls.Add(splitContainer);
 
         InitializeGraph();
-    }
+        }
 
     private void InitializeGraph()
-    {
+        {
         // Create Blocks with specified Width and Height as per PoC requirements
         var source = new ConvertBlock {
             TargetFormat = ImageFormat.Jpeg,
