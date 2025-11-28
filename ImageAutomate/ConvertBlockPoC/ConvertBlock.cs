@@ -1,4 +1,4 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 
 namespace ConvertBlockPoC;
 
@@ -44,7 +44,7 @@ public enum TiffCompression
     Zip
 }
 
-public class ConvertBlock : INotifyPropertyChanged
+public class ConvertBlock : IBlock
 {
     private ImageFormat _targetFormat = ImageFormat.Png;
     private bool _alwaysReEncode = false;
@@ -56,19 +56,71 @@ public class ConvertBlock : INotifyPropertyChanged
     private TgaEncodingOptions _tgaOptions = new TgaEncodingOptions();
     private WebPEncodingOptions _webpOptions = new WebPEncodingOptions();
     private QoiEncodingOptions _qoiOptions = new QoiEncodingOptions();
+    private double _width = 200;
+    private double _height = 100;
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
+    void Options_OnPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (sender is JpegEncodingOptions)
+            OnPropertyChanged(nameof(JpegOptions));
+        else if (sender is PngEncodingOptions)
+            OnPropertyChanged(nameof(PngOptions));
+    }
+
     public ConvertBlock()
     {
-        _jpegOptions.PropertyChanged += (s, e) => OnPropertyChanged(nameof(JpegOptions));
-        _pngOptions.PropertyChanged += (s, e) => OnPropertyChanged(nameof(PngOptions));
-        _bmpOptions.PropertyChanged += (s, e) => OnPropertyChanged(nameof(BmpOptions));
-        _gifOptions.PropertyChanged += (s, e) => OnPropertyChanged(nameof(GifOptions));
-        _tiffOptions.PropertyChanged += (s, e) => OnPropertyChanged(nameof(TiffOptions));
-        _tgaOptions.PropertyChanged += (s, e) => OnPropertyChanged(nameof(TgaOptions));
-        _webpOptions.PropertyChanged += (s, e) => OnPropertyChanged(nameof(WebPOptions));
-        _qoiOptions.PropertyChanged += (s, e) => OnPropertyChanged(nameof(QoiOptions));
+        _jpegOptions.PropertyChanged += Options_OnPropertyChanged;
+        _pngOptions.PropertyChanged += Options_OnPropertyChanged;
+    }
+
+    [Browsable(false)]
+    public string Name => "Convert";
+
+    [Browsable(false)]
+    public string ConfigurationSummary
+    {
+        get
+        {
+            var opts = TargetFormat switch
+            {
+                ImageFormat.Jpeg => $"Quality: {JpegOptions.Quality}",
+                ImageFormat.Png => $"Compression: {PngOptions.CompressionLevel}",
+                _ => "Options: Default"
+            };
+            return $"Format: {TargetFormat}\nRe-encode: {AlwaysReEncode}\n{opts}";
+        }
+    }
+
+    [Category("Layout")]
+    [Description("Width of the block node")]
+    public double Width
+    {
+        get => _width;
+        set
+        {
+            if (Math.Abs(_width - value) > double.Epsilon)
+            {
+                _width = value;
+                OnPropertyChanged(nameof(Width));
+            }
+        }
+    }
+
+    [Category("Layout")]
+    [Description("Height of the block node")]
+    public double Height
+    {
+        get => _height;
+        set
+        {
+            if (Math.Abs(_height - value) > double.Epsilon)
+            {
+                _height = value;
+                OnPropertyChanged(nameof(Height));
+            }
+        }
     }
 
     [Category("Configuration")]
@@ -89,6 +141,7 @@ public class ConvertBlock : INotifyPropertyChanged
                 OnPropertyChanged(nameof(TgaOptions));
                 OnPropertyChanged(nameof(WebPOptions));
                 OnPropertyChanged(nameof(QoiOptions));
+                OnPropertyChanged(nameof(ConfigurationSummary));
             }
         }
     }
@@ -104,6 +157,7 @@ public class ConvertBlock : INotifyPropertyChanged
             {
                 _alwaysReEncode = value;
                 OnPropertyChanged(nameof(AlwaysReEncode));
+                OnPropertyChanged(nameof(ConfigurationSummary));
             }
         }
     }
@@ -116,7 +170,13 @@ public class ConvertBlock : INotifyPropertyChanged
         get => _jpegOptions;
         set
         {
+            // unsubscribe from old options to avoid memory leaks
+            if (_jpegOptions != null)
+                _jpegOptions.PropertyChanged -= Options_OnPropertyChanged;
             _jpegOptions = value;
+            // resubscribe after assignment
+            if (_jpegOptions != null)
+                _jpegOptions.PropertyChanged += Options_OnPropertyChanged;
             OnPropertyChanged(nameof(JpegOptions));
         }
     }
@@ -129,7 +189,11 @@ public class ConvertBlock : INotifyPropertyChanged
         get => _pngOptions;
         set
         {
+            if (_pngOptions != null)
+                _pngOptions.PropertyChanged -= Options_OnPropertyChanged;
             _pngOptions = value;
+            if (_pngOptions != null)
+                _pngOptions.PropertyChanged += Options_OnPropertyChanged;
             OnPropertyChanged(nameof(PngOptions));
         }
     }
@@ -279,8 +343,7 @@ public class JpegEncodingOptions : INotifyPropertyChanged
         get => _quality;
         set
         {
-            if (value < 1) value = 1;
-            if (value > 100) value = 100;
+            value = Math.Clamp(value, 1, 100);
 
             if (_quality != value)
             {

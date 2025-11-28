@@ -1,4 +1,4 @@
-﻿/**
+/**
  * PipelineGraph.cs
  *
  * Graph datastructure for managing Block nodes and their connections.
@@ -13,41 +13,12 @@ using MsaglPoint = Microsoft.Msagl.Core.Geometry.Point;
 
 namespace ConvertBlockPoC;
 
-public class PipelineGraph(double nodeWidth, double nodeHeight)
+public class PipelineGraph()
 {
-    private double _nodeWidth = nodeWidth;
-    private double _nodeHeight = nodeHeight;
-
     private readonly GeomGraph _geomGraph = new();
-    private readonly Dictionary<ConvertBlock, GeomNode> _blockToNode = [];
+    private readonly Dictionary<IBlock, GeomNode> _blockToNode = [];
 
-    public event Action<ConvertBlock>? OnNodeRemoved;
-
-    public double NodeWidth
-    {
-        get => _nodeWidth;
-        set
-        {
-            if (Math.Abs(_nodeWidth - value) > double.Epsilon)
-            {
-                _nodeWidth = value;
-                ResizeAllNodes();
-            }
-        }
-    }
-
-    public double NodeHeight
-    {
-        get => _nodeHeight;
-        set
-        {
-            if (Math.Abs(_nodeHeight - value) > double.Epsilon)
-            {
-                _nodeHeight = value;
-                ResizeAllNodes();
-            }
-        }
-    }
+    public event Action<IBlock>? OnNodeRemoved;
 
     public GeomNode? CenterNode { get; set; }
     public GeomGraph GeomGraph => _geomGraph;
@@ -58,7 +29,7 @@ public class PipelineGraph(double nodeWidth, double nodeHeight)
     public int NodeCount => _geomGraph.Nodes.Count;
     public int EdgeCount => _geomGraph.Edges.Count;
 
-    public GeomNode AddNode(ConvertBlock block)
+    public GeomNode AddNode(IBlock block)
     {
         if (_blockToNode.TryGetValue(block, out var existingNode))
             return existingNode;
@@ -86,14 +57,14 @@ public class PipelineGraph(double nodeWidth, double nodeHeight)
 
         _geomGraph.Nodes.Remove(node);
 
-        if (node.UserData is ConvertBlock block)
+        if (node.UserData is IBlock block)
         {
             _blockToNode.Remove(block);
             OnNodeRemoved?.Invoke(block);
         }
     }
 
-    public GeomNode? GetNode(ConvertBlock block) =>
+    public GeomNode? GetNode(IBlock block) =>
         _blockToNode.GetValueOrDefault(block);
 
     public GeomNode? GetNodeAt(int index)
@@ -114,11 +85,11 @@ public class PipelineGraph(double nodeWidth, double nodeHeight)
 
     public IEnumerable<GeomNode> EnumerateNodes() => _geomGraph.Nodes;
 
-    public IEnumerable<(GeomNode node, ConvertBlock block)> EnumerateNodesWithBlocks()
+    public IEnumerable<(GeomNode node, IBlock block)> EnumerateNodesWithBlocks()
     {
         foreach (var node in _geomGraph.Nodes)
         {
-            if (node.UserData is ConvertBlock block)
+            if (node.UserData is IBlock block)
                 yield return (node, block);
         }
     }
@@ -131,25 +102,14 @@ public class PipelineGraph(double nodeWidth, double nodeHeight)
         CenterNode = null;
     }
 
-    private GeomNode CreateNode(ConvertBlock block)
+    private GeomNode CreateNode(IBlock block)
     {
+        // Create a rectangle with the block's specific dimensions
         return new GeomNode(
-            CurveFactory.CreateRectangle(_nodeWidth, _nodeHeight, new MsaglPoint(0, 0))
+            CurveFactory.CreateRectangle(block.Width, block.Height, new MsaglPoint(0, 0))
         )
         {
             UserData = block
         };
-    }
-
-    private void ResizeAllNodes()
-    {
-        foreach (var node in _geomGraph.Nodes)
-        {
-            node.BoundaryCurve = CurveFactory.CreateRectangle(
-                _nodeWidth,
-                _nodeHeight,
-                node.Center
-            );
-        }
     }
 }
