@@ -333,9 +333,11 @@ public class GraphRenderPanel : Panel
     {
         base.OnPaint(e);
 
-        if (_graph == null) return;
+        if (_graph == null)
+            return;
         var graph = _graph.GeomGraph;
-        if (graph.Nodes.Count == 0) return;
+        if (graph.Nodes.Count == 0)
+            return;
 
         Graphics g = e.Graphics;
         g.SmoothingMode = SmoothingMode.AntiAlias;
@@ -347,124 +349,7 @@ public class GraphRenderPanel : Panel
         g.Transform = transform;
 
         foreach (var geomEdge in graph.Edges)
-            DrawEdge(g, geomEdge);
-
-        // Draw nodes on top
-        foreach (var geomNode in graph.Nodes)
-            DrawNode(g, geomNode);
-
-        g.ResetTransform();
-    }
-
-    private static string GetEncodingOptionsDisplay(ConvertBlock block)
-    {
-        return block.TargetFormat switch
-        {
-            ImageFormat.Jpeg => $"Quality: {block.JpegOptions.Quality}",
-            ImageFormat.Png => $"Compression: {block.PngOptions.CompressionLevel}",
-            _ => "Options: Default"
-        };
-    }
-
-    #endregion Private Method
-
-    #region Rendering Utilities
-
-    private void DrawEdge(Graphics g, GeomEdge geomEdge)
-    {
-        var sourceNode = geomEdge.Source;
-        var targetNode = geomEdge.Target;
-
-        if (sourceNode?.BoundingBox == null || targetNode?.BoundingBox == null)
-            return;
-
-        PointF start = new(
-            (float)(sourceNode.Center.X + sourceNode.BoundingBox.Width / 2),
-            (float)sourceNode.Center.Y
-        );
-
-        PointF end = new(
-            (float)(targetNode.Center.X - targetNode.BoundingBox.Width / 2),
-            (float)targetNode.Center.Y
-        );
-
-        using var edgePen = new Pen(Color.FromArgb(150, 150, 150), 2);
-        g.DrawLine(edgePen, start, end);
-    }
-
-    private void DrawNode(Graphics g, GeomNode geomNode)
-    {
-        if (geomNode.UserData is not ConvertBlock block) return;
-
-        var bounds = geomNode.BoundingBox;
-        RectangleF rect = new(
-            (float)bounds.Left,
-            (float)bounds.Bottom,
-            (float)bounds.Width,
-            (float)bounds.Height
-        );
-
-        float radius = 8;
-        var state = g.Save();
-
-        bool isCenterBlock = geomNode == _pGraph.CenterNode;
-
-        using (var bgBrush = new SolidBrush(Color.FromArgb(60, 60, 60)))
-        using (var borderPen = new Pen(
-            isCenterBlock ? _selectedBlockOutlineColor : Color.FromArgb(100, 100, 100),
-            isCenterBlock ? 3 : 2))
-        using (var path = CreateRoundedRectPath(rect, radius))
-        {
-            g.FillPath(bgBrush, path);
-            g.DrawPath(borderPen, path);
-        }
-
-        RectangleF headerRect = new(rect.X, rect.Y, rect.Width, 25);
-        using (var headerBrush = new SolidBrush(Color.FromArgb(80, 80, 80)))
-        using (var headerPath = CreateRoundedRectPath(headerRect, radius, topOnly: true))
-        {
-            g.FillPath(headerBrush, headerPath);
-        }
-
-        g.Restore(state);
-        state = g.Save();
-
-        using (var flipMatrix = new Matrix(1, 0, 0, -1, 0, 2 * (rect.Y + rect.Height / 2)))
-        {
-            g.MultiplyTransform(flipMatrix);
-        }
-
-        using (var textBrush = new SolidBrush(Color.White))
-        using (var labelFont = new Font("Segoe UI", 10, FontStyle.Bold))
-        using (var detailFont = new Font("Segoe UI", 8))
-        {
-            g.DrawString("Convert", labelFont, textBrush,
-                new PointF(rect.X + 10, rect.Y + 5));
-
-            float yOffset = rect.Y + 35;
-            string[] properties =
-            [
-                $"Format: {block.TargetFormat}",
-                $"Re-encode: {block.AlwaysReEncode}",
-                GetEncodingOptionsDisplay(block)
-            ];
-
-            foreach (var prop in properties)
-            {
-                g.DrawString(prop, detailFont, textBrush,
-                    new PointF(rect.X + 10, yOffset));
-                yOffset += 18;
-            }
-        }
-
-        g.Restore(state);
-        state = g.Save();
-
-        DrawSocket(g, new PointF(rect.Left - 5, rect.Top + rect.Height / 2), isInput: true);
-        DrawSocket(g, new PointF(rect.Right + 5, rect.Top + rect.Height / 2), isInput: false);
-
-        g.Restore(state);
-    }
+            NodeRenderer.DrawEdge(g, geomEdge, _socketRadius);
 
         foreach (var geomNode in graph.Nodes)
         {
@@ -474,4 +359,5 @@ public class GraphRenderPanel : Panel
 
         g.ResetTransform();
     }
+    #endregion
 }
