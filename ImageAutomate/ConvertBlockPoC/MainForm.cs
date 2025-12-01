@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
@@ -6,87 +6,51 @@ using System.Drawing;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Windows.Controls;
 using System.Windows.Forms;
 
-namespace ConvertBlockPoC;
-
-public class MainForm : Form
+namespace ConvertBlockPoC
 {
-    private PipelineGraph _graph = new();
-    private GraphRenderPanel _graphPanel;
-    private PropertyGrid _propertyGrid;
-
-    void OnBlockChanged(object? sender, EventArgs e)
+    public partial class MainForm : Form
     {
-        _graphPanel.Invalidate();
-    }
-
+        PipelineGraph graph = new();
+        ConvertBlock centerConvertBlock = new ConvertBlock();
         public MainForm()
         {
-        Text = "Pipeline Graph PoC";
-        Size = new Size(1200, 800);
+            InitializeComponent();
 
-        var splitContainer = new SplitContainer
-        {
-            Dock = DockStyle.Fill,
-            SplitterDistance = 900
-        };
+            graph.AddNode(centerConvertBlock);
+            graph.CenterNode = graph.GetNode(centerConvertBlock);
 
-        _graphPanel = new GraphRenderPanel
-        {
-            Dock = DockStyle.Fill,
-            Graph = _graph
-        };
-
-        _propertyGrid = new PropertyGrid
-        {
-            Dock = DockStyle.Fill
-        };
-
-        splitContainer.Panel1.Controls.Add(_graphPanel);
-        splitContainer.Panel2.Controls.Add(_propertyGrid);
-        Controls.Add(splitContainer);
-
-        InitializeGraph();
+            graphRenderPanel1.Graph = graph;
+            propertyGrid1.SelectedObject = centerConvertBlock;
         }
 
-    private void InitializeGraph()
+        private void butAddSuccessor_Click(object sender, EventArgs e)
         {
-        // Create Blocks with specified Width and Height as per PoC requirements
-        var source = new ConvertBlock {
-            TargetFormat = ImageFormat.Jpeg,
-            JpegOptions = { Quality = 90 },
-            Width = 200,
-            Height = 120
-        };
-        source.PropertyChanged += OnBlockChanged;
-        var process = new ConvertBlock {
-            TargetFormat = ImageFormat.Png,
-            AlwaysReEncode = true,
-            Width = 200,
-            Height = 120
-        };
-        var output = new ConvertBlock {
-            TargetFormat = ImageFormat.WebP,
-            Width = 200,
-            Height = 120
-        };
+            ConvertBlock newConvert = new ConvertBlock();
+            graphRenderPanel1.AddSuccessor(newConvert);
+            graphRenderPanel1.Invalidate();
+        }
 
-        // Initialize Panel
-        _graphPanel.Initialize(source);
+        private void butAddPredecessor_Click(object sender, EventArgs e)
+        {
+            ConvertBlock newConvert = new ConvertBlock();
+            graphRenderPanel1.AddPredecessor(newConvert);
+            graphRenderPanel1.Invalidate();
+        }
 
-        // Setup Graph
-        _graphPanel.AddBlockAndConnect(process, source);
-        _graphPanel.AddBlockAndConnect(output, process);
-        var selected = (_graphPanel.Graph?.CenterNode) ?? throw new Exception();
-        _propertyGrid.SelectedObject = selected.UserData;
+        private void butClear_Click(object sender, EventArgs e)
+        {
+            graph.Clear();
+            ConvertBlock newConvert = new ConvertBlock();
+            graphRenderPanel1.Initialize(newConvert);
+            graphRenderPanel1.Invalidate();
+        }
 
-        // Add some branching to test layout
-        var branch = new ConvertBlock {
-            TargetFormat = ImageFormat.Bmp,
-            Width = 200,
-            Height = 120
-        };
-        _graphPanel.AddBlockAndConnect(branch, source);
+        private void butSelectRandom_Click(object sender, EventArgs e)
+        {
+            throw new NotImplementedException();
+        }
     }
 }
