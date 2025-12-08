@@ -30,7 +30,7 @@ public enum AnchorPositionOption
     Bottom,
     BottomRight
 }
-public class CropBlock
+public class CropBlock : IBlock
 {
     #region Fields
 

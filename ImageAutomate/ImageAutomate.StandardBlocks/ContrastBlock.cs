@@ -12,7 +12,7 @@ using System.Threading.Tasks;
 
 namespace ImageAutomate.StandardBlocks;
 
-internal class ContrastBlock
+internal class ContrastBlock : IBlock
 {
     #region Fields
 

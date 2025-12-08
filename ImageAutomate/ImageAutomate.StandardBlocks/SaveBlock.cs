@@ -20,7 +20,7 @@ using System.Threading.Tasks;
 
 namespace ImageAutomate.StandardBlocks;
 
-public class SaveBlock
+public class SaveBlock : IBlock
 {
     #region Fields
 

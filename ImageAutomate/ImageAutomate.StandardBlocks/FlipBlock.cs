@@ -17,7 +17,7 @@ public enum FlipModeOption
     Horizontal,
     Vertical
 }
-public class FlipBlock
+public class FlipBlock : IBlock
 {
     #region Fields
 
