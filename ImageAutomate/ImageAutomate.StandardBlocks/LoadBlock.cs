@@ -11,24 +11,21 @@ using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
+using System.Runtime.CompilerServices;
 
 namespace ImageAutomate.StandardBlocks;
 
-internal class LoadBlock : IBlock
+public class LoadBlock : IBlock
 {
     #region Fields
     private readonly Socket _outputSocket = new("Load.out", "Image.out");
     private readonly IReadOnlyList<Socket> _inputs;
     private readonly IReadOnlyList<Socket> _outputs;
 
-    private static readonly HttpClient HttpClient = new HttpClient();
-
     private string _sourcePath = string.Empty;
-    private bool _loadFromUrl = false;
-    private string _url = string.Empty;
     private bool _autoOrient = false;
 
-    private bool _alwaysEncoder = false;
+    private bool _alwaysEncode = false;
     private bool disposedValue = false;
 
     private int _width = 200;
@@ -129,36 +126,6 @@ internal class LoadBlock : IBlock
         }
     }
 
-    [Category("Cofniguration")]
-    [Description("If true, load the image from the specified URL instead of a local file")]
-    public bool LoadFromUrl
-    {
-        get => _loadFromUrl;
-        set
-        {
-            if (_loadFromUrl != value)
-            {
-                _loadFromUrl = value;
-                OnPropertyChanged(nameof(LoadFromUrl));
-            }    
-        }
-    }
-
-    [Category("Configuration")]
-    [Description("Remote URL of the image to load (used when LoadFromUrl = true)")]
-    public string Url
-    {
-        get => _url;
-        set
-        {
-            if (_url != value)
-            {
-                _url = value;
-                OnPropertyChanged(nameof(Url));
-            }
-        }
-    }
-
     [Category("Confiuration")]
     [Description("If true, applies EXIF orientation correction automatically")]
     public bool AutoOrient
@@ -184,10 +151,9 @@ internal class LoadBlock : IBlock
     #region Execute
     public IReadOnlyDictionary<Socket, IReadOnlyList<IBasicWorkItem>> Execute(IDictionary<Socket, IReadOnlyList<IBasicWorkItem>> inputs)
     {
-        // This block ignores upstream data; it is an entry point.
-        var loaded = LoadSingleWorkItem();
+        var items = LoadWorkItems();
 
-        var list = loaded is null ? Array.Empty<IBasicWorkItem>() : new[] { loaded };
+        var list = new List<IBasicWorkItem>(items);
 
         var readOnly = new ReadOnlyCollection<IBasicWorkItem>(list);
 
@@ -199,10 +165,10 @@ internal class LoadBlock : IBlock
 
     public IReadOnlyDictionary<string, IReadOnlyList<IBasicWorkItem>> Execute(IDictionary<string, IReadOnlyList<IBasicWorkItem>> inputs)
     {
-        var loaded = LoadSingleWorkItem();
+        var items = LoadWorkItems();
 
-        var list = loaded is null ? Array.Empty<IBasicWorkItem>() : new[] { loaded };
-
+        var list = new List<IBasicWorkItem>(items);
+   
         var readOnly = new ReadOnlyCollection<IBasicWorkItem>(list);
 
         return new Dictionary<string, IReadOnlyList<IBasicWorkItem>>
@@ -210,41 +176,62 @@ internal class LoadBlock : IBlock
                 { _outputSocket.Id, readOnly }
             };
     }
-    private IBasicWorkItem? LoadSingleWorkItem()
+
+    private IEnumerable<IBasicWorkItem?> LoadWorkItems()
     {
-        if (LoadFromUrl)
-        {
-            if (string.IsNullOrWhiteSpace(Url))
-                throw new InvalidOperationException("LoadBlock: Url is required when LoadFromUrl = true.");
+        if (string.IsNullOrWhiteSpace(SourcePath))
+            throw new InvalidOperationException("LoadBlock: SourcePath is required when LoadFromUrl = false.");
+        return LoadFromFolderInternal();
+    }
 
-            return LoadFromUrlInternal(Url);
+    public IEnumerable<IBasicWorkItem?> LoadFromFolderInternal()
+    {
+        if (string.IsNullOrWhiteSpace(SourcePath)) throw new InvalidOperationException("LoadBlock: SourcePath is required");
+        if (!Directory.Exists(SourcePath)) throw new DirectoryNotFoundException("LoadBlock: SourPath of directory is not found");
+
+        var type = "*.jpg; *.png";
+        var patterns = type.Split(';');
+
+        var files = new List<string>();
+
+        foreach ( var pattern in patterns)
+        {
+            var found = Directory.GetFiles(SourcePath, pattern);
+            files.AddRange(found);
         }
-        else
-        {
-            if (string.IsNullOrWhiteSpace(SourcePath))
-                throw new InvalidOperationException("LoadBlock: SourcePath is required when LoadFromUrl = false.");
+        files.Sort(StringComparer.OrdinalIgnoreCase);
 
-            return LoadFromFileInternal(SourcePath);
+        foreach (var file in files)
+        {
+            // Reuse hàm cũ
+            IBasicWorkItem? wi = null;
+
+            wi = LoadFromFileInternal(file);
+
+            if (wi != null)
+            {
+                // Bổ sung metadata cho batch
+                wi.Metadata["BatchFolder"] = SourcePath;
+                wi.Metadata["FileName"] = Path.GetFileName(file);
+                wi.Metadata["FullPath"] = file;
+            }
+            yield return wi!;
         }
     }
-    private IBasicWorkItem LoadFromFileInternal(string path)
+    public IBasicWorkItem LoadFromFileInternal(string path)
     {
         if (!File.Exists(path))
             throw new FileNotFoundException($"LoadBlock: File not found at path '{path}'.", path);
 
         try
         {
-            // 1. Mở stream và load ảnh
-            using var fs = File.OpenRead(path);
-            using var image = Image.Load<Rgba32>(fs);
+            var fs = File.OpenRead(path);
+            var image = Image.Load<Rgba32>(fs);
 
-            // 2. Lấy định dạng đã decode
             var format = image.Metadata.DecodedImageFormat;
             if (format is null)
                 throw new InvalidOperationException($"LoadBlock: Unsupported or unknown image format for file '{path}'.");
-
-            // 3. AutoOrient nếu bật
-
+            
             if (AutoOrient)
             {
                 image.Mutate(x => x.AutoOrient());
@@ -254,19 +241,7 @@ internal class LoadBlock : IBlock
             image.Save(ms, format);
             var bytes = ms.ToArray();
 
-            var metadata = new Dictionary<string, object>
-            {
-                ["ImageData"] = bytes,
-                ["Format"] = MapFormat(format),
-                ["SourcePath"] = path,
-                ["SourceType"] = "File",
-                ["AutoOriented"] = AutoOrient,
-                ["Width"] = image.Width,
-                ["Height"] = image.Height,
-                ["LoadedAtUtc"] = DateTime.UtcNow
-            };
-
-            return new LoadBlockWorkItem(metadata);
+            return new WorkItem(image);
         }
         catch (Exception ex) when (ex is IOException
                                    || ex is UnauthorizedAccessException
@@ -278,94 +253,6 @@ internal class LoadBlock : IBlock
         }
     }
 
-    private IBasicWorkItem LoadFromUrlInternal(string url)
-    {
-        try
-        {
-            // 1. HTTP GET
-            var response = HttpClient.GetAsync(url).GetAwaiter().GetResult();
-            if (!response.IsSuccessStatusCode)
-            {
-                throw new InvalidOperationException(
-                    $"LoadBlock: Failed to access URL '{url}'. Status code: {(int)response.StatusCode} {response.StatusCode}");
-            }
-
-            // 2. Validate content type = image/*
-            var contentType = response.Content.Headers.ContentType;
-            if (!IsImageContentType(contentType))
-            {
-                throw new InvalidOperationException(
-                    $"LoadBlock: URL '{url}' does not contain an image resource. Content-Type: '{contentType?.MediaType}'.");
-            }
-
-            // 3. Đọc toàn bộ bytes về bộ nhớ
-            var bytes = response.Content.ReadAsByteArrayAsync().GetAwaiter().GetResult();
-
-            // 4. Load ảnh từ byte[] (ImageSharp 3.x)
-            using var image = Image.Load<Rgba32>(bytes);
-
-            // 5. Lấy định dạng đã decode
-            var format = image.Metadata.DecodedImageFormat;
-            if (format is null)
-                throw new InvalidOperationException($"LoadBlock: Unsupported or unknown image format at URL '{url}'.");
-            if (AutoOrient)
-            {
-                image.Mutate(x => x.AutoOrient());
-            }
-
-            using var ms = new MemoryStream();
-            image.Save(ms, format);
-            var outbytes = ms.ToArray();
-
-            var metadata = new Dictionary<string, object>
-            {
-                ["ImageData"] = outbytes,
-                ["Format"] = MapFormat(format),
-                ["SourceUrl"] = url,
-                ["SourceType"] = "Url",
-                ["AutoOriented"] = AutoOrient,
-                ["Width"] = image.Width,
-                ["Height"] = image.Height,
-                ["LoadedAtUtc"] = DateTime.UtcNow
-            };
-
-            return new LoadBlockWorkItem(metadata);
-        }
-        catch (Exception ex) when (ex is HttpRequestException
-                                   || ex is TaskCanceledException
-                                   || ex is SixLabors.ImageSharp.UnknownImageFormatException
-                                   || ex is SixLabors.ImageSharp.InvalidImageContentException)
-        {
-            throw new InvalidOperationException(
-                $"LoadBlock: Failed to load image from URL '{url}': {ex.Message}", ex);
-        }
-    }
-    private static bool IsImageContentType(MediaTypeHeaderValue? contentType)
-    {
-        if (contentType?.MediaType is null)
-            return false;
-
-        return contentType.MediaType.StartsWith("image/", StringComparison.OrdinalIgnoreCase);
-    }
-
-    private static ImageFormat MapFormat(IImageFormat format)
-    {
-        var name = format.Name?.ToLowerInvariant() ?? string.Empty;
-
-        return name switch
-        {
-            "jpeg" or "jpg" => ImageFormat.Jpeg,
-            "png" => ImageFormat.Png,
-            "gif" => ImageFormat.Gif,
-            "bmp" => ImageFormat.Bmp,
-            "pbm" => ImageFormat.Pbm,
-            "tiff" => ImageFormat.Tiff,
-            "tga" => ImageFormat.Tga,
-            "webp" => ImageFormat.WebP,
-            "qoi" => ImageFormat.Qoi,
-            _ => ImageFormat.Png
-        };
-    }
     #endregion
 
     #region IDisposable
@@ -399,19 +286,4 @@ internal class LoadBlock : IBlock
     }
     #endregion
 
-    #region Nested WorkItem
-
-    private sealed class LoadBlockWorkItem : IBasicWorkItem
-    {
-        public Guid Id { get; } = Guid.NewGuid();
-
-        public IDictionary<string, object> Metadata { get; }
-
-        public LoadBlockWorkItem(IDictionary<string, object> metadata)
-        {
-            Metadata = metadata ?? throw new ArgumentNullException(nameof(metadata));
-        }
-    }
-
-    #endregion
 }
