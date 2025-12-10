@@ -35,10 +35,18 @@ public record Connection(
 /// </remarks>
 public class PipelineGraph
 {
+    private static System.Text.Json.JsonSerializerOptions _serializerOptions = new()
+    {
+        IncludeFields = true,
+        WriteIndented = true,
+    };
+    #region Private Fields
     private IBlock? _center;
     private readonly List<IBlock> _blocks = [];
     private readonly List<Connection> _connections = [];
+    #endregion
 
+    #region Properties
     public IBlock? Center
     {
         get => _center;
@@ -52,19 +60,45 @@ public class PipelineGraph
     public IReadOnlyList<IBlock> Blocks => _blocks;
     public IReadOnlyList<Connection> Connections => _connections;
     /// <summary>
-    /// Occurs when a block is removed from the collection or environment.
+    /// Occurs when the graph is modified, such as when nodes or edges are added, removed, or updated.
     /// </summary>
-    /// <remarks>
-    /// Subscribers can use this event to perform cleanup or respond to the removal of a block. The
-    /// event provides the removed block as an argument. This event is not raised if the block is removed due to
-    /// internal disposal or shutdown unless explicitly triggered.
-    /// </remarks>
-    public event Action<IBlock>? OnBlockRemoved;
+    /// <remarks>Subscribers can use this event to respond to changes in the graph's structure or data. The
+    /// event is raised after the modification is complete. This event is not thread-safe; ensure appropriate
+    /// synchronization when subscribing or handling the event in multithreaded scenarios.</remarks>
+    public event EventHandler? GraphChanged;
+    #endregion
 
+    #region Public API
     public void AddBlock(IBlock block)
     {
         if (!_blocks.Contains(block))
+        {
             _blocks.Add(block);
+            GraphChanged?.Invoke(this, EventArgs.Empty);
+        }
+    }
+
+    /// <summary>
+    /// Removes the specified block from the collection and disconnects any connections associated with it.
+    /// </summary>
+    /// <remarks>
+    /// If the specified block is the current center block, the center is reset to null. Any
+    /// connections where the block is a source or target are also removed. If the block is successfully removed, the
+    /// OnBlockRemoved event is invoked.
+    /// </remarks>
+    /// <param name="block">The block to remove. Must not be null.</param>
+    public void RemoveBlock(IBlock block)
+    public void RemoveBlock(IBlock block)
+    {
+        if (_blocks.Remove(block))
+        {
+            // Remove all connections touching this block
+            _connections.RemoveAll(c => c.Source == block || c.Target == block);
+
+            if (Center == block)
+                Center = null;
+            GraphChanged?.Invoke(this, EventArgs.Empty);
+        }
     }
 
     /// <summary>
@@ -86,6 +120,8 @@ public class PipelineGraph
 
         // Add the connection
         _connections.Add(new Connection(source, sourceSocket, target, targetSocket));
+
+        GraphChanged?.Invoke(this, EventArgs.Empty);
     }
 
     /// <summary>
@@ -99,28 +135,17 @@ public class PipelineGraph
             ?? throw new ArgumentException($"Socket ID '{targetSocketId}' not found on target '{target.Title}'");
 
         Connect(source, srcSocket, target, tgtSocket);
+        // The event is raised in the other overload
     }
 
     /// <summary>
-    /// Removes the specified block from the collection and disconnects any connections associated with it.
+    /// Removes the specified connection from the connections list.
     /// </summary>
-    /// <remarks>
-    /// If the specified block is the current center block, the center is reset to null. Any
-    /// connections where the block is a source or target are also removed. If the block is successfully removed, the
-    /// OnBlockRemoved event is invoked.
-    /// </remarks>
-    /// <param name="block">The block to remove. Must not be null.</param>
-    public void RemoveBlock(IBlock block)
+    /// <param name="connection">The connection to be disconnected. Cannot be null.</param>
+    public void Disconnect(Connection connection)
     {
-        // Remove all connections touching this block
-        _connections.RemoveAll(c => c.Source == block || c.Target == block);
-
-        if (_blocks.Remove(block))
-        {
-            if (Center == block)
-                Center = null;
-            OnBlockRemoved?.Invoke(block);
-        }
+        if (_connections.Remove(connection))
+            GraphChanged?.Invoke(this, EventArgs.Empty);
     }
 
     /// <summary>
@@ -135,5 +160,21 @@ public class PipelineGraph
         _connections.Clear();
         _blocks.Clear();
         Center = null;
+        GraphChanged?.Invoke(this, EventArgs.Empty);
     }
+    #endregion
+
+    #region Serialization
+    public string ToJson()
+    {
+        throw new NotImplementedException("PipelineGraph serialization is not implemented yet.");
+        //return System.Text.Json.JsonSerializer.Serialize(this, _serializerOptions);
+    }
+    public static PipelineGraph FromJson(string json)
+    {
+        throw new NotImplementedException("PipelineGraph deserialization is not implemented yet.");
+        //return System.Text.Json.JsonSerializer.Deserialize<PipelineGraph>(json, _serializerOptions)
+        //    ?? throw new InvalidOperationException("Failed to deserialize PipelineGraph from JSON.");
+    }
+    #endregion
 }
