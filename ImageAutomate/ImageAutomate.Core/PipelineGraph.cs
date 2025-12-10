@@ -88,12 +88,13 @@ public class PipelineGraph
     /// </remarks>
     /// <param name="block">The block to remove. Must not be null.</param>
     public void RemoveBlock(IBlock block)
+    public void RemoveBlock(IBlock block)
     {
-        // Remove all connections touching this block
-        _connections.RemoveAll(c => c.Source == block || c.Target == block);
-
         if (_blocks.Remove(block))
         {
+            // Remove all connections touching this block
+            _connections.RemoveAll(c => c.Source == block || c.Target == block);
+
             if (Center == block)
                 Center = null;
             GraphChanged?.Invoke(this, EventArgs.Empty);
