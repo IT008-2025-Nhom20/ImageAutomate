@@ -19,6 +19,9 @@ public record Connection(
 /// <summary>
 /// Represents a directed graph of blocks and connections.
 /// </summary>
+/// <remarks>
+/// The class is not thread-safe; external synchronization is required if accessed concurrently.
+/// </remarks>
 public class PipelineGraph
 {
     private static System.Text.Json.JsonSerializerOptions _serializerOptions = new()
