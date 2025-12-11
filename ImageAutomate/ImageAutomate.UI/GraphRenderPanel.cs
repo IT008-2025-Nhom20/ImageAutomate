@@ -105,9 +105,12 @@ public class GraphRenderPanel : Panel
         get => _graph;
         set
         {
+            if (_graph != null)
+                _graph.GraphChanged -= OnGraphChangedRecompute;
             _graph = value;
             if (_graph != null)
             {
+                _graph.GraphChanged += OnGraphChangedRecompute;
                 ComputeLayout();
                 CenterCameraOnGraph();
             }
@@ -356,9 +359,14 @@ public class GraphRenderPanel : Panel
         layout.Run();
     }
 
-    protected override void OnPaint(PaintEventArgs e)
+    private void OnGraphChangedRecompute(object? sender, EventArgs args)
     {
         ComputeLayout();
+        Invalidate();
+    }
+
+    protected override void OnPaint(PaintEventArgs e)
+    {
         base.OnPaint(e);
 
         if (_graph == null)

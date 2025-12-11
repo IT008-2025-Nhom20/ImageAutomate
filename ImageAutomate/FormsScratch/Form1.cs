@@ -11,7 +11,6 @@ namespace FormsScratch
         {
             InitializeComponent();
             pipelineGraph.GraphChanged += OnGraphChanged;
-            graphRenderPanel1.RenderScale = 0.6f;
         }
 
         private void OnGraphChanged(object? sender, EventArgs e)
