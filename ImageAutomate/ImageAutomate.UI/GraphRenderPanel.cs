@@ -123,6 +123,8 @@ public class GraphRenderPanel : Panel
     private PointF _panOffset = new(0, 0);
     private Point _lastMousePos;
     private bool _isPanning;
+    private Point _mouseDownLocation;
+    private const int ClickDragThreshold = 5; // pixels
 
     public GraphRenderPanel()
     {
@@ -388,7 +390,7 @@ public class GraphRenderPanel : Panel
 
         foreach (var geomNode in _geomGraph.Nodes)
         {
-            bool isSelected = geomNode == _graph.Center;
+            bool isSelected = geomNode.UserData == _graph.Center;
             NodeRenderer.OptimizedStrategy.DrawNode(g, geomNode, isSelected, _selectedBlockOutlineColor, _socketRadius);
         }
 
