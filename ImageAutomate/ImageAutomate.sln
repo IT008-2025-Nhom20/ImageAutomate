@@ -3,8 +3,6 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 18
 VisualStudioVersion = 18.0.11205.157
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ConvertBlockPoC", "ConvertBlockPoC\ConvertBlockPoC.csproj", "{1ED93648-F4E9-4466-BA1A-EA87D9852B7E}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ImageAutomate.Core", "ImageAutomate.Core\ImageAutomate.Core.csproj", "{F17BB4D3-561B-465C-AD00-8A2364D06079}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Scratch", "Scratch\Scratch.csproj", "{E7D95E8B-2C0E-4835-9D1E-17E5EB7E2082}"
@@ -19,10 +17,6 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{1ED93648-F4E9-4466-BA1A-EA87D9852B7E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{1ED93648-F4E9-4466-BA1A-EA87D9852B7E}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{1ED93648-F4E9-4466-BA1A-EA87D9852B7E}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{1ED93648-F4E9-4466-BA1A-EA87D9852B7E}.Release|Any CPU.Build.0 = Release|Any CPU
 		{F17BB4D3-561B-465C-AD00-8A2364D06079}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{F17BB4D3-561B-465C-AD00-8A2364D06079}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F17BB4D3-561B-465C-AD00-8A2364D06079}.Release|Any CPU.ActiveCfg = Release|Any CPU
