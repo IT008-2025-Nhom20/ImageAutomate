@@ -12,6 +12,11 @@ public record Socket(string Id, string Name);
 /// <summary>
 /// Represents a configurable block in the workflow graph.
 /// </summary>
+/// <remarks>The IBlock interface provides properties for naming, titling, and content management, as well as
+/// layout dimensions and socket-based input/output connections. Implementations should notify property changes via the
+/// INotifyPropertyChanged interface and release resources appropriately by implementing IDisposable. Thread safety and
+/// property change semantics depend on the specific implementation.
+/// </remarks>
 public interface IBlock: INotifyPropertyChanged, IDisposable
 {
     #region Basic Properties
