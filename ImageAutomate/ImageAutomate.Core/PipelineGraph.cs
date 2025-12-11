@@ -55,6 +55,7 @@ public class PipelineGraph
             if (value != null && !_blocks.Contains(value))
                 throw new InvalidOperationException("Center block must be part of the graph.");
             _center = value;
+            GraphChanged?.Invoke(this, EventArgs.Empty);
         }
     }
     public IReadOnlyList<IBlock> Blocks => _blocks;
