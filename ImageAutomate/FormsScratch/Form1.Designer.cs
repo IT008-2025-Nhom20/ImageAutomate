@@ -31,12 +31,16 @@
             graphRenderPanel1 = new ImageAutomate.UI.GraphRenderPanel();
             splitContainer1 = new SplitContainer();
             splitContainer2 = new SplitContainer();
+            button3 = new Button();
+            button2 = new Button();
+            button1 = new Button();
             propertyGrid1 = new PropertyGrid();
             ((System.ComponentModel.ISupportInitialize)splitContainer1).BeginInit();
             splitContainer1.Panel1.SuspendLayout();
             splitContainer1.Panel2.SuspendLayout();
             splitContainer1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)splitContainer2).BeginInit();
+            splitContainer2.Panel1.SuspendLayout();
             splitContainer2.Panel2.SuspendLayout();
             splitContainer2.SuspendLayout();
             SuspendLayout();
@@ -49,7 +53,7 @@
             graphRenderPanel1.Location = new Point(0, 0);
             graphRenderPanel1.Name = "graphRenderPanel1";
             graphRenderPanel1.NodeSpacing = 30D;
-            graphRenderPanel1.RenderScale = 1F;
+            graphRenderPanel1.RenderScale = 0.75F;
             graphRenderPanel1.SelectedBlockOutlineColor = Color.Red;
             graphRenderPanel1.Size = new Size(530, 450);
             graphRenderPanel1.SocketRadius = 6D;
@@ -81,6 +85,9 @@
             // 
             // splitContainer2.Panel1
             // 
+            splitContainer2.Panel1.Controls.Add(button3);
+            splitContainer2.Panel1.Controls.Add(button2);
+            splitContainer2.Panel1.Controls.Add(button1);
             splitContainer2.Panel1.RightToLeft = RightToLeft.No;
             // 
             // splitContainer2.Panel2
@@ -91,6 +98,36 @@
             splitContainer2.Size = new Size(266, 450);
             splitContainer2.SplitterDistance = 144;
             splitContainer2.TabIndex = 0;
+            // 
+            // button3
+            // 
+            button3.Location = new Point(48, 92);
+            button3.Name = "button3";
+            button3.Size = new Size(75, 23);
+            button3.TabIndex = 2;
+            button3.Text = "button3";
+            button3.UseVisualStyleBackColor = true;
+            button3.Click += button3_Click;
+            // 
+            // button2
+            // 
+            button2.Location = new Point(41, 61);
+            button2.Name = "button2";
+            button2.Size = new Size(75, 23);
+            button2.TabIndex = 1;
+            button2.Text = "button2";
+            button2.UseVisualStyleBackColor = true;
+            button2.Click += button2_Click;
+            // 
+            // button1
+            // 
+            button1.Location = new Point(24, 33);
+            button1.Name = "button1";
+            button1.Size = new Size(75, 23);
+            button1.TabIndex = 0;
+            button1.Text = "button1";
+            button1.UseVisualStyleBackColor = true;
+            button1.Click += button1_Click;
             // 
             // propertyGrid1
             // 
@@ -114,6 +151,7 @@
             splitContainer1.Panel2.ResumeLayout(false);
             ((System.ComponentModel.ISupportInitialize)splitContainer1).EndInit();
             splitContainer1.ResumeLayout(false);
+            splitContainer2.Panel1.ResumeLayout(false);
             splitContainer2.Panel2.ResumeLayout(false);
             ((System.ComponentModel.ISupportInitialize)splitContainer2).EndInit();
             splitContainer2.ResumeLayout(false);
@@ -126,5 +164,8 @@
         private SplitContainer splitContainer1;
         private SplitContainer splitContainer2;
         private PropertyGrid propertyGrid1;
+        private Button button1;
+        private Button button3;
+        private Button button2;
     }
 }

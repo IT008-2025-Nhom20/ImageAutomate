@@ -10,6 +10,13 @@ namespace FormsScratch
         public Form1()
         {
             InitializeComponent();
+            pipelineGraph.GraphChanged += OnGraphChanged;
+            graphRenderPanel1.RenderScale = 0.6f;
+        }
+
+        private void OnGraphChanged(object? sender, EventArgs e)
+        {
+            graphRenderPanel1.Invalidate();
         }
 
         private void CustomInit(object sender, EventArgs e)
@@ -30,11 +37,26 @@ namespace FormsScratch
             pipelineGraph.Connect(convertBlock, convertBlock.Outputs[0], saveBlockB, saveBlockB.Inputs[0]);
 
             pipelineGraph.Center = loadBlock;
-            graphRenderPanel1.SetCenterBlock(loadBlock);
 
             graphRenderPanel1.Graph = pipelineGraph;
             propertyGrid1.SelectedObject = loadBlock;
-            graphRenderPanel1.Refresh();
+        }
+
+        private void button1_Click(object sender, EventArgs e)
+        {
+            graphRenderPanel1.CenterCameraOnGraph();
+        }
+
+        private void button2_Click(object sender, EventArgs e)
+        {
+            graphRenderPanel1.RenderScale = Math.Clamp(graphRenderPanel1.RenderScale + 0.1f, 0.1f, 5f);
+            graphRenderPanel1.CenterCameraOnGraph();
+        }
+
+        private void button3_Click(object sender, EventArgs e)
+        {
+            graphRenderPanel1.RenderScale = Math.Clamp(graphRenderPanel1.RenderScale - 0.1f, 0.1f, 5f);
+            graphRenderPanel1.CenterCameraOnGraph();
         }
     }
 }

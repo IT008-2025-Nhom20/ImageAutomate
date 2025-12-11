@@ -13,6 +13,7 @@ using GeomNode = Microsoft.Msagl.Core.Layout.Node;
 using GeomGraph = Microsoft.Msagl.Core.Layout.GeometryGraph;
 using GeomEdge = Microsoft.Msagl.Core.Layout.Edge;
 using MsaglPoint = Microsoft.Msagl.Core.Geometry.Point;
+using System.Diagnostics;
 
 namespace ImageAutomate.UI;
 
@@ -107,11 +108,8 @@ public class GraphRenderPanel : Panel
             _graph = value;
             if (_graph != null)
             {
-                ComputeLayoutAndRender();
-            }
-            else
-            {
-                Invalidate();
+                ComputeLayout();
+                CenterCameraOnGraph();
             }
         }
     }
@@ -132,25 +130,7 @@ public class GraphRenderPanel : Panel
         MouseDown += OnMouseDownPan;
         MouseMove += OnMouseMovePan;
         MouseUp += OnMouseUpPan;
-        MouseWheel += OnMouseWheelPan;
-    }
-
-    public void Initialize(IBlock block)
-    {
-        if (_graph == null)
-            _graph = new PipelineGraph();
-        _graph.AddBlock(block);
-        ComputeLayoutAndRender();
-    }
-
-    public void SetCenterBlock(IBlock block)
-    {
-        if (_graph == null)
-            return;
-        if (!_graph.Blocks.Contains(block))
-            _graph.AddBlock(block);
-        _graph.Center = block;
-        ComputeLayoutAndRender();
+        MouseWheel += OnMouseWheelZoom;
     }
 
     public void AddBlockAndConnect(IBlock sourceBlock, Socket sourceSocket, IBlock destBlock, Socket destSocket)
@@ -168,7 +148,7 @@ public class GraphRenderPanel : Panel
                 _graph.Connect(sourceBlock, sourceSocket, destBlock, destSocket);
         }
 
-        ComputeLayoutAndRender();
+        Invalidate();
     }
 
     public void AddSuccessor(Socket sourceSocket, IBlock destBlock, Socket destSocket)
@@ -187,6 +167,22 @@ public class GraphRenderPanel : Panel
         if (_graph.Center is null)
             return;
         AddBlockAndConnect(sourceBlock, sourceSocket, _graph.Center, destSocket);
+    }
+
+    public void CenterCameraOnGraph()
+    {
+        if (_graph == null)
+            return;
+        var bounds = _geomGraph.BoundingBox;
+
+        var node = _geomGraph.Nodes.First(n => n.UserData == _graph.Center);
+        float wx = (float)node.Center.X;
+        float wy = (float)node.Center.Y;
+
+        _panOffset.X = -wx * _renderScale;
+        _panOffset.Y = wy * _renderScale;
+
+        Invalidate();
     }
 
     #region Private method
@@ -212,7 +208,8 @@ public class GraphRenderPanel : Panel
 
     private void OnMouseMovePan(object? sender, MouseEventArgs e)
     {
-        if (!_isPanning) return;
+        if (!_isPanning)
+            return;
 
         // Calculate delta in screen pixels
         float dx = e.X - _lastMousePos.X;
@@ -227,7 +224,7 @@ public class GraphRenderPanel : Panel
         Invalidate();
     }
 
-    private void OnMouseWheelPan(object? sender, MouseEventArgs e)
+    private void OnMouseWheelZoom(object? sender, MouseEventArgs e)
     {
         // Zoom logic
         const float zoomFactor = 1.1f;
@@ -258,7 +255,8 @@ public class GraphRenderPanel : Panel
 
     private void ClampPanToBounds()
     {
-        if (AllowOutOfScreenPan || _graph == null) return;
+        if (AllowOutOfScreenPan || _graph == null)
+            return;
 
         var bounds = _geomGraph.BoundingBox;
 
@@ -338,9 +336,10 @@ public class GraphRenderPanel : Panel
         }
     }
 
-    private void ComputeLayoutAndRender()
+    private void ComputeLayout()
     {
-        if (_graph == null) return;
+        if (_graph == null)
+            return;
 
         RebuildVisualGraph();
 
@@ -355,28 +354,11 @@ public class GraphRenderPanel : Panel
 
         var layout = new LayeredLayout(_geomGraph, settings);
         layout.Run();
-
-        _geomGraph.UpdateBoundingBox();
-        CenterCameraOnGraph();
-
-        Invalidate();
-    }
-
-    private void CenterCameraOnGraph()
-    {
-        if (_graph == null)
-            return;
-        var bounds = _geomGraph.BoundingBox;
-
-        float wx = (float)bounds.Center.X;
-        float wy = (float)bounds.Center.Y;
-
-        _panOffset.X = -wx * _renderScale;
-        _panOffset.Y = wy * _renderScale;
     }
 
     protected override void OnPaint(PaintEventArgs e)
     {
+        ComputeLayout();
         base.OnPaint(e);
 
         if (_graph == null)
