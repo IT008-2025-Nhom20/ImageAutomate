@@ -18,14 +18,6 @@ public static class NodeRenderer
     private static readonly SolidBrush TextBrush = new(Color.White);
 
     private static readonly Pen BorderPenNormal = new(Color.FromArgb(100, 100, 100), 2);
-    private static readonly Pen BorderPenSelected = new(Color.Red, 3); // Will be updated if color changes, but here we assume static for trivial opt.
-
-    // Note: If SelectedBlockOutlineColor is dynamic per panel, we can't cache the selected pen globally easily without a map or recreating it.
-    // However, for "trivial optimization", caching the common brushes/pens is a big win.
-    // We will keep creating the selected pen if color varies, or just cache a default one.
-    // The previous code passed `selectionColor` as an argument.
-    // We will cache common colors. For dynamic ones, we still create them or use a Dictionary cache.
-    // To keep it simple and trivial, we'll cache the static ones.
 
     private static readonly Font LabelFont = new("Segoe UI", 10, FontStyle.Bold);
     private static readonly Font DetailFont = new("Segoe UI", 8);
@@ -115,7 +107,7 @@ public static class NodeRenderer
             }
 
             // Text Coordinates in Flipped Space
-            g.DrawString(block.Name, LabelFont, TextBrush, new PointF(rect.X + 10, rect.Y + 5));
+            g.DrawString(block.Title, LabelFont, TextBrush, new PointF(rect.X + 10, rect.Y + 5));
 
             float yOffset = rect.Y + 35;
             string[] lines = block.Content.Split('\n');
@@ -163,8 +155,6 @@ public static class NodeRenderer
             g.FillPath(BgBrush, mainPath);
             g.FillPath(HeaderBrush, headerPath);
 
-            // For border, if selected color is standard Red, use cached, otherwise create new.
-            // But the panel passes `_selectedBlockOutlineColor`.
             if (isSelected)
             {
                 using var selPen = new Pen(selectionColor, 3);

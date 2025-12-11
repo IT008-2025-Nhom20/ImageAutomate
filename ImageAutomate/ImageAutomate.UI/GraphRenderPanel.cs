@@ -17,7 +17,7 @@ using MsaglPoint = Microsoft.Msagl.Core.Geometry.Point;
 namespace ImageAutomate.UI;
 
 /// <summary>
-/// Custom panel for rendering and interacting with pipeline graph. Support node visualization, layout,
+/// Custom panel for rendering and interacting with a pipeline graph. Supports node visualization, layout,
 /// selection, zooming, and panning operations.
 /// </summary>
 /// <remarks>GraphRenderPanel enables visualization and manipulation of directed graphs composed of blocks and
@@ -155,7 +155,7 @@ public class GraphRenderPanel : Panel
     /// <param name="sourceBlock">The block that provides the output socket to be connected. Cannot be null.</param>
     /// <param name="sourceSocket">The output socket on the source block to connect. Must be an Output of sourceBlock.</param>
     /// <param name="destBlock">The block that receives the input socket connection. Cannot be null.</param>
-    /// <param name="destSocket">The input socket on the destination block to connect. Must an Input of destBlock.</param>
+    /// <param name="destSocket">The input socket on the destination block to connect. Must be an Input of destBlock.</param>
     /// <exception cref="Exception">Thrown if the specified source socket is not present in the source block's Outputs collection, or if the
     /// destination socket is not present in the destination block's Inputs collection.</exception>
     public void AddBlockAndConnect(IBlock sourceBlock, Socket sourceSocket, IBlock destBlock, Socket destSocket)
@@ -180,7 +180,7 @@ public class GraphRenderPanel : Panel
     /// <summary>
     /// Connects the specified source socket of the Selected block to a receiving block and socket within the graph.
     /// </summary>
-    /// <remarks>If the graph or the Selected block is not initialized, the method return immediately.</remarks>
+    /// <remarks>If the graph or the Selected block is not initialized, the method returns immediately.</remarks>
     /// <param name="sourceSocket">The socket in the Selected block from which the connection originates.</param>
     /// <param name="destBlock">The block that will be connected to the source socket.</param>
     /// <param name="destSocket">The socket in the destination block to which the connection is made.</param>
@@ -196,7 +196,7 @@ public class GraphRenderPanel : Panel
     /// <summary>
     /// Connects the specified source block to the Selected block of the graph
     /// </summary>
-    /// <remarks>If the graph or its center block is null, the method return immediately.</remarks>
+    /// <remarks>If the graph or its center block is null, the method returns immediately.</remarks>
     /// <param name="sourceBlock">The block to be added as a predecessor and connected to the center block.</param>
     /// <param name="sourceSocket">The socket on the source block used for the connection.</param>
     /// <param name="destSocket">The socket on the center block that will be connected to the source block.</param>
