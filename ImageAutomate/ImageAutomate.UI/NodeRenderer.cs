@@ -84,11 +84,18 @@ public static class NodeRenderer
             float radius = 8;
             var state = g.Save();
 
-            using var borderPen = new Pen(isSelected ? selectionColor : Color.FromArgb(100, 100, 100), isSelected ? 3 : 2);
             using (var path = CreateRoundedRectPath(rect, radius))
             {
                 g.FillPath(BgBrush, path);
-                g.DrawPath(borderPen, path);
+                if (isSelected)
+                {
+                    using var borderPen = new Pen(selectionColor, 3);
+                    g.DrawPath(borderPen, path);
+                }
+                else
+                {
+                    g.DrawPath(BorderPenNormal, path);
+                }
             }
 
             RectangleF headerRect = new(rect.X, rect.Bottom - 25, rect.Width, 25);
