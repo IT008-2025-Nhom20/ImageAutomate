@@ -119,16 +119,34 @@ public class ConvertBlock : IBlock
     }
     public string Content
     {
-        get => _content;
+        get
+        {
+            var optionSummaries= TargetFormat switch
+            {
+                ImageFormat.Jpeg => $"Quality: {JpegOptions.Quality}",
+                ImageFormat.Png => $"Compression: {PngOptions.CompressionLevel}",
+                ImageFormat.Bmp => $"BitsPerPixel: {BmpOptions.BitsPerPixel}",
+                ImageFormat.Gif => $"ColorPaletteSize: {GifOptions.ColorPaletteSize}\n" +
+                                   $"UseDithering: {GifOptions.UseDithering}",
+                ImageFormat.Tiff => $"Compression: {TiffOptions.Compression}",
+                ImageFormat.Tga => $"Compression: {TgaOptions.Compress}",
+                ImageFormat.WebP => $"LossLess: {WebPOptions.Lossless}\n" +
+                                    $"Quality: {WebPOptions.Quality}",
+                ImageFormat.Qoi => $"Include Alpha: {QoiOptions.IncludeAlpha}",
+                _ => "Options: Default"
+            };
+            return $"Format: {TargetFormat}\nRe-encode: {AlwaysEncode}\nConfiguration:{optionSummaries}";
+        }
         set
         {
-            if (!string.Equals(_content, value, StringComparison.Ordinal))
+            if(_content != value)
             {
                 _content = value;
                 OnPropertyChanged(nameof(Content));
-            }
+            }    
         }
     }
+    
     #endregion
 
     #region Layout
@@ -193,7 +211,7 @@ public class ConvertBlock : IBlock
     
     [Category("Configuration")]
     [Description("Force re-encoding even when format matches")]
-    public bool AlwaysReEncode
+    public bool AlwaysEncode
     {
         get => _alwaysEncoder;
         set
@@ -201,7 +219,7 @@ public class ConvertBlock : IBlock
             if (_alwaysEncoder != value)
             {
                 _alwaysEncoder = value;
-                OnPropertyChanged(nameof(AlwaysReEncode));
+                OnPropertyChanged(nameof(AlwaysEncode));
             }
         }
     }
@@ -443,7 +461,7 @@ public class ConvertBlock : IBlock
         }
 
         // Nếu không bắt buộc re-encode và format đã trùng target => bỏ qua, trả item gốc
-        if (!AlwaysReEncode && currentFormat.HasValue && currentFormat.Value == TargetFormat)
+        if (!AlwaysEncode && currentFormat.HasValue && currentFormat.Value == TargetFormat)
         {
             return item;
         }
