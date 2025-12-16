@@ -153,8 +153,13 @@ public class SaveBlock : IBlock
         if (!inputs.TryGetValue(_inputs[0].Id, out var inItems))
             throw new ArgumentException($"Input items not found for the expected input socket {_inputs[0].Id}.", nameof(inputs));
 
-        foreach (WorkItem item in inItems.Cast<WorkItem>())
-            SaveImage(item);
+        foreach (var item in inItems)
+        {
+            if (item is WorkItem workItem)
+            {
+                SaveImage(workItem);
+            }
+        }
 
         // Sink block; does not emit new WorkItem list
         return new Dictionary<Socket, IReadOnlyList<IBasicWorkItem>>();

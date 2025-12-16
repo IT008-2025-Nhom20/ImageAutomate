@@ -50,10 +50,10 @@ public class BBlock : IBlock
         return new Dictionary<Socket, IReadOnlyList<IBasicWorkItem>>();
     }
 
-    public IReadOnlyDictionary<string, IReadOnlyList<IBasicWorkItem>> Execute(IDictionary<string, IReadOnlyList<IBasicWorkItem>> inputs)
+    public IReadOnlyDictionary<Socket, IReadOnlyList<IBasicWorkItem>> Execute(IDictionary<string, IReadOnlyList<IBasicWorkItem>> inputs)
     {
         Console.WriteLine($"Stub {Name} is being executed...");
-        return new Dictionary<string, IReadOnlyList<IBasicWorkItem>>();
+        return new Dictionary<Socket, IReadOnlyList<IBasicWorkItem>>();
     }
 
     public void Dispose()

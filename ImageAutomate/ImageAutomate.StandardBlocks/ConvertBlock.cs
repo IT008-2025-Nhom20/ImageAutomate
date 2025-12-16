@@ -63,7 +63,7 @@ public class ConvertBlock : IBlock
     private readonly IReadOnlyList<Socket> _outputs = [new("Convert.Out", "Image.Out")];
 
     private ImageFormat _targetFormat = ImageFormat.Png;
-    private bool _alwaysEncoder = false;
+    private bool _alwaysEncode = false;
     private bool disposedValue = false;
 
     private JpegEncodingOptions _jpegOptions = new JpegEncodingOptions();
@@ -191,12 +191,12 @@ public class ConvertBlock : IBlock
     [Description("Force re-encoding even when format matches")]
     public bool AlwaysEncode
     {
-        get => _alwaysEncoder;
+        get => _alwaysEncode;
         set
         {
-            if (_alwaysEncoder != value)
+            if (_alwaysEncode != value)
             {
-                _alwaysEncoder = value;
+                _alwaysEncode = value;
                 OnPropertyChanged(nameof(AlwaysEncode));
             }
         }

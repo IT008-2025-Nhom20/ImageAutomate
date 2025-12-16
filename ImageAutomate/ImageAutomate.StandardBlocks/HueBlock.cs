@@ -17,7 +17,7 @@ public class HueBlock : IBlock
     private int _nodeHeight = 100;
 
     private float _hueShift = 0.0f;
-    private bool _alwaysEncode = true;
+
     #endregion
 
     #region IBlock basic
@@ -26,7 +26,7 @@ public class HueBlock : IBlock
 
     public string Title => "Hue";
 
-    public string Content => $"Hue shift: {HueShift}\nRe-encode: {AlwaysEncode}";
+    public string Content => $"Hue shift: {HueShift}";
 
     #endregion
 
@@ -88,20 +88,7 @@ public class HueBlock : IBlock
             }
         }
     }
-    [Category("Configuration")]
-    [Description("Force re-encoding even when format matches")]
-    public bool AlwaysEncode
-    {
-        get => _alwaysEncode;
-        set
-        {
-            if (_alwaysEncode != value)
-            {
-                _alwaysEncode = value;
-                OnPropertyChanged(nameof(AlwaysEncode));
-            }
-        }
-    }
+
     #endregion
 
     #region INotifyPropertyChanged
@@ -127,16 +114,45 @@ public class HueBlock : IBlock
         if (!inputs.TryGetValue(_inputs[0].Id, out var inItems))
             throw new ArgumentException($"Input items not found for the expected input socket {_inputs[0].Id}.", nameof(inputs));
 
-        foreach (WorkItem item in inItems.Cast<WorkItem>())
+        var outputItems = new List<IBasicWorkItem>();
+
+        foreach (var item in inItems)
         {
-            if (Math.Abs(HueShift) < 0.01f)
-                continue;
-            item.Image.Mutate(x => x.Hue(HueShift));
+            if (item is WorkItem sourceItem)
+            {
+                if (Math.Abs(HueShift) < 0.01f)
+                {
+                    // Skip processing but still clone to preserve immutability
+                    var clonedImage = sourceItem.Image.Clone(x => { });
+                    var newItem = new WorkItem(clonedImage);
+                    
+                    // Deep-copy metadata
+                    foreach (var kvp in sourceItem.Metadata)
+                    {
+                        newItem.Metadata[kvp.Key] = kvp.Value;
+                    }
+                    
+                    outputItems.Add(newItem);
+                }
+                else
+                {
+                    var clonedImage = sourceItem.Image.Clone(x => x.Hue(HueShift));
+                    var newItem = new WorkItem(clonedImage);
+                    
+                    // Deep-copy metadata
+                    foreach (var kvp in sourceItem.Metadata)
+                    {
+                        newItem.Metadata[kvp.Key] = kvp.Value;
+                    }
+                    
+                    outputItems.Add(newItem);
+                }
+            }
         }
 
         return new Dictionary<Socket, IReadOnlyList<IBasicWorkItem>>
             {
-                { _outputs[0], inItems }
+                { _outputs[0], outputItems }
             };
     }
 

@@ -17,9 +17,8 @@ public class VignetteBlock : IBlock
 
     private Color _color = Color.Black;
     private float _strength = 0.6f;
-
     private bool _disposed;
-    private bool _alwaysEncode = true;
+
     #endregion
 
     #region INotifyPropertyChanged
@@ -37,7 +36,7 @@ public class VignetteBlock : IBlock
 
     public string Title => "Vignette";
 
-    public string Content => $"Color: {Color}\nStrength: {Strength}\nRe-encode: {AlwaysEncode}";
+    public string Content => $"Color: {Color}\nStrength: {Strength}";
 
     [Category("Layout")]
     [Description("Width of the block node")]
@@ -104,20 +103,6 @@ public class VignetteBlock : IBlock
         }
     }
 
-    [Category("Configuration")]
-    [Description("Force re-encoding even when format matches")]
-    public bool AlwaysEncode
-    {
-        get => _alwaysEncode;
-        set
-        {
-            if (_alwaysEncode != value)
-            {
-                _alwaysEncode = value;
-                OnPropertyChanged(nameof(AlwaysEncode));
-            }
-        }
-    }
     #endregion
 
     #region Sockets
@@ -141,16 +126,45 @@ public class VignetteBlock : IBlock
         if (!inputs.TryGetValue(_inputs[0].Id, out var inItems))
             throw new ArgumentException($"Input items not found for the expected input socket {_inputs[0].Id}.", nameof(inputs));
 
-        foreach (WorkItem item in inItems.Cast<WorkItem>())
+        var outputItems = new List<IBasicWorkItem>();
+
+        foreach (var item in inItems)
         {
-            if (_strength <= 0f)
-                continue;
-            item.Image.Mutate(x => x.Vignette(new GraphicsOptions { BlendPercentage = _strength }, _color));
+            if (item is WorkItem sourceItem)
+            {
+                if (_strength <= 0f)
+                {
+                    // Skip processing but still clone to preserve immutability
+                    var clonedImage = sourceItem.Image.Clone(x => { });
+                    var newItem = new WorkItem(clonedImage);
+                    
+                    // Deep-copy metadata
+                    foreach (var kvp in sourceItem.Metadata)
+                    {
+                        newItem.Metadata[kvp.Key] = kvp.Value;
+                    }
+                    
+                    outputItems.Add(newItem);
+                }
+                else
+                {
+                    var clonedImage = sourceItem.Image.Clone(x => x.Vignette(new GraphicsOptions { BlendPercentage = _strength }, _color));
+                    var newItem = new WorkItem(clonedImage);
+                    
+                    // Deep-copy metadata
+                    foreach (var kvp in sourceItem.Metadata)
+                    {
+                        newItem.Metadata[kvp.Key] = kvp.Value;
+                    }
+                    
+                    outputItems.Add(newItem);
+                }
+            }
         }
 
         return new Dictionary<Socket, IReadOnlyList<IBasicWorkItem>>
             {
-                { _outputs[0], inItems }
+                { _outputs[0], outputItems }
             };
     }
 

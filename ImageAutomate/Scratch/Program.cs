@@ -10,14 +10,14 @@ public class Program
         LoadBlock loadBlock = new LoadBlock();
         loadBlock.SourcePath = "C:\\Users\\Admin\\Pictures\\Test";
         
-        foreach (var item in loadBlock.LoadFromFolderInternal())
+        foreach (var item in loadBlock.Execute(new Dictionary<Socket, IReadOnlyList<IBasicWorkItem>>()))
         {
-            if (item != null)
+            if (item.Value.Count > 0)
             {
-                Console.WriteLine(item.Id);
-                foreach (var data in item.Metadata)
+                Console.WriteLine(item.Key.Id);
+                foreach (var data in item.Value)
                 {
-                    Console.WriteLine($"{data.Key}: {data.Value}\n");
+                    Console.WriteLine($"{data.Metadata}\n");
                 }    
             }
         }    

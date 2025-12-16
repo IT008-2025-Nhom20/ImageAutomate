@@ -17,7 +17,6 @@ internal class ContrastBlock : IBlock
     private int _nodeHeight = 100;
 
     private float _contrast = 1.0f;
-    private bool _alwaysEncode = true;
 
     #endregion
 
@@ -27,7 +26,7 @@ internal class ContrastBlock : IBlock
 
     public string Title => "Contrast";
 
-    public string Content => $"Contrast: {Contrast}\nRe-encode: {AlwaysEncode}";
+    public string Content => $"Contrast: {Contrast}";
 
     #endregion
 
@@ -90,20 +89,6 @@ internal class ContrastBlock : IBlock
         }
     }
 
-    [Category("Configuration")]
-    [Description("Force re-encoding even when format matches")]
-    public bool AlwaysEncode
-    {
-        get => _alwaysEncode;
-        set
-        {
-            if (_alwaysEncode != value)
-            {
-                _alwaysEncode = value;
-                OnPropertyChanged(nameof(AlwaysEncode));
-            }
-        }
-    }
     #endregion
 
     #region INotifyPropertyChanged
@@ -129,12 +114,27 @@ internal class ContrastBlock : IBlock
         if (!inputs.TryGetValue(_inputs[0].Id, out var inItems))
             throw new ArgumentException($"Input items not found for the expected input socket {_inputs[0].Id}.", nameof(inputs));
 
-        foreach (WorkItem item in inItems.Cast<WorkItem>())
+        var outputItems = new List<IBasicWorkItem>();
+
+        foreach (var item in inItems)
         {
-            item.Image.Mutate(x => x.Contrast(Contrast));
+            if (item is WorkItem sourceItem)
+            {
+                var clonedImage = sourceItem.Image.Clone(x => x.Contrast(Contrast));
+
+                var newItem = new WorkItem(clonedImage);
+                
+                // Deep-copy metadata
+                foreach (var kvp in sourceItem.Metadata)
+                {
+                    newItem.Metadata[kvp.Key] = kvp.Value;
+                }
+                
+                outputItems.Add(newItem);
+            }
         }
 
-        return new Dictionary<Socket, IReadOnlyList<IBasicWorkItem>> { { _outputs[0], inItems } };
+        return new Dictionary<Socket, IReadOnlyList<IBasicWorkItem>> { { _outputs[0], outputItems } };
     }
 
     #endregion

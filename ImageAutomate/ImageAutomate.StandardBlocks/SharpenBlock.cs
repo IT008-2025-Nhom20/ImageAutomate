@@ -17,7 +17,6 @@ public class SharpenBlock : IBlock
     private int _nodeHeight = 100;
 
     private float _amount = 1.0f;
-    private bool _alwaysEncode = true;
     #endregion
 
     #region IBlock basic
@@ -26,7 +25,7 @@ public class SharpenBlock : IBlock
 
     public string Title => "Sharpen";
 
-    public string Content => $"Amount: {Amount}\nRe-encode: {AlwaysEncode}";
+    public string Content => $"Amount: {Amount}";
 
     #endregion
 
@@ -88,20 +87,7 @@ public class SharpenBlock : IBlock
             }
         }
     }
-    [Category("Configuration")]
-    [Description("Force re-encoding even when format matches")]
-    public bool AlwaysEncode
-    {
-        get => _alwaysEncode;
-        set
-        {
-            if (_alwaysEncode != value)
-            {
-                _alwaysEncode = value;
-                OnPropertyChanged(nameof(AlwaysEncode));
-            }
-        }
-    }
+
     #endregion
 
     #region INotifyPropertyChanged
@@ -127,16 +113,45 @@ public class SharpenBlock : IBlock
         if (!inputs.TryGetValue(_inputs[0].Id, out var inItems))
             throw new ArgumentException($"Input items not found for the expected input socket {_inputs[0].Id}.", nameof(inputs));
 
-        foreach (WorkItem item in inItems.Cast<WorkItem>())
+        var outputItems = new List<IBasicWorkItem>();
+
+        foreach (var item in inItems)
         {
-            if (Amount <= 0.0f)
-                continue;
-            item.Image.Mutate(x => x.GaussianSharpen(Amount));
+            if (item is WorkItem sourceItem)
+            {
+                if (Amount <= 0.0f)
+                {
+                    // Skip processing but still clone to preserve immutability
+                    var clonedImage = sourceItem.Image.Clone(x => { });
+                    var newItem = new WorkItem(clonedImage);
+                    
+                    // Deep-copy metadata
+                    foreach (var kvp in sourceItem.Metadata)
+                    {
+                        newItem.Metadata[kvp.Key] = kvp.Value;
+                    }
+                    
+                    outputItems.Add(newItem);
+                }
+                else
+                {
+                    var clonedImage = sourceItem.Image.Clone(x => x.GaussianSharpen(Amount));
+                    var newItem = new WorkItem(clonedImage);
+                    
+                    // Deep-copy metadata
+                    foreach (var kvp in sourceItem.Metadata)
+                    {
+                        newItem.Metadata[kvp.Key] = kvp.Value;
+                    }
+                    
+                    outputItems.Add(newItem);
+                }
+            }
         }
 
         return new Dictionary<Socket, IReadOnlyList<IBasicWorkItem>>
             {
-                { _outputs[0], inItems }
+                { _outputs[0], outputItems }
             };
     }
 

@@ -42,8 +42,6 @@ public class ResizeBlock : IBlock
     private int? _targetHeight;
     private bool _preserveAspectRatio = true;
     private ResizeResampler _resampler = ResizeResampler.Lanczos3;
-    private bool _alwaysEncoder = true;
-
     private Color _backgroundColor = Color.Transparent;
 
     #endregion
@@ -66,20 +64,17 @@ public class ResizeBlock : IBlock
                        $"Width: {TargetWidth}\n" +
                        $"Height: {TargetHeight}\n" +
                        $"Preserve aspect ratio: {PreserveAspectRatio}\n" +
-                       $"Resampler: {Resampler}\n" +
-                       $"Re-encode: {AlwaysEncoder}";
-            else if(ResizeMode is ResizeModeOption.Pad)
+                       $"Resampler: {Resampler}\n";
+            else if (ResizeMode is ResizeModeOption.Pad)
                 return $"Resize mode: {ResizeMode}\n" +
                        $"Width: {TargetWidth}\n" +
                        $"Height: {TargetHeight}\n" +
                        $"Resampler: {Resampler}\n" +
-                       $"Back ground color: {BackgroundColor}\n" +
-                       $"Re-encode: {AlwaysEncoder}";
+                       $"Back ground color: {BackgroundColor}\n";
             return $"Resize mode: {ResizeMode}\n" +
                    $"Width: {TargetWidth}\n" +
                    $"Height: {TargetHeight}\n" +
-                   $"Resampler: {Resampler}\n" +
-                   $"Re-encode: {AlwaysEncoder}";
+                   $"Resampler: {Resampler}\n";
         }
     }
 
@@ -223,20 +218,7 @@ public class ResizeBlock : IBlock
             }
         }
     }
-    [Category("Configuration")]
-    [Description("If false, block will NOT resize when input image matches target size or resize is unnecessary.")]
-    public bool AlwaysEncoder
-    {
-        get => _alwaysEncoder;
-        set
-        {
-            if (_alwaysEncoder != value)
-            {
-                _alwaysEncoder = value;
-                OnPropertyChanged(nameof(AlwaysEncoder));
-            }
-        }
-    }
+
     #endregion
 
     #region INotifyPropertyChanged
@@ -260,15 +242,30 @@ public class ResizeBlock : IBlock
         if (!inputs.TryGetValue(_inputs[0].Id, out var inItems))
             throw new ArgumentException($"Input items not found for the expected input socket {_inputs[0].Id}.", nameof(inputs));
 
-        foreach (WorkItem item in inItems.Cast<WorkItem>())
+        var outputItems = new List<IBasicWorkItem>();
+
+        foreach (var item in inItems)
         {
-            var resizeOptions = BuildResizeOptions(item.Image.Width, item.Image.Height);
-            item.Image.Mutate(x => x.Resize(resizeOptions));
+            if (item is WorkItem sourceItem)
+            {
+                var resizeOptions = BuildResizeOptions(sourceItem.Image.Width, sourceItem.Image.Height);
+                var clonedImage = sourceItem.Image.Clone(x => x.Resize(resizeOptions));
+
+                var newItem = new WorkItem(clonedImage);
+                
+                // Deep-copy metadata
+                foreach (var kvp in sourceItem.Metadata)
+                {
+                    newItem.Metadata[kvp.Key] = kvp.Value;
+                }
+                
+                outputItems.Add(newItem);
+            }
         }
 
         return new Dictionary<Socket, IReadOnlyList<IBasicWorkItem>>
             {
-                { _outputs[0], inItems }
+                { _outputs[0], outputItems }
             };
     }
 

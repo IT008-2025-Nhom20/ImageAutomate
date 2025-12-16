@@ -42,7 +42,6 @@ public class CropBlock : IBlock
     private int _cropHeight = 100;
 
     private AnchorPositionOption _anchorPosition = AnchorPositionOption.Center;
-    private bool _alwaysEncoder = true;
     #endregion
 
     #region IBlock basic
@@ -59,13 +58,11 @@ public class CropBlock : IBlock
                 return $"Crop Mode: {CropMode}\n" +
                        $"Left: {X} Top: {Y}\n" +
                        $"Widht: {CropWidth} Height: {CropHeight}\n" +
-                       $"Anchor Position: {AnchorPosition}\n" +
-                       $"Re-Encode: {AlwaysEncoder}";
+                       $"Anchor Position: {AnchorPosition}\n";
 
             return $"Crop Mode: {CropMode}\n" +
                    $"Widht: {CropWidth} Height: {CropHeight}\n" +
-                   $"Anchor Position: {AnchorPosition}\n" +
-                   $"Re-Encode: {AlwaysEncoder}";
+                   $"Anchor Position: {AnchorPosition}\n";
         }
     }
 
@@ -216,20 +213,6 @@ public class CropBlock : IBlock
         }
     }
 
-    [Category("Configuration")]
-    [Description("Force re-encoding even when format matches")]
-    public bool AlwaysEncoder
-    {
-        get => _alwaysEncoder;
-        set
-        {
-            if (_alwaysEncoder != value)
-            {
-                _alwaysEncoder = value;
-                OnPropertyChanged(nameof(AlwaysEncoder));
-            }
-        }
-    }
     #endregion
 
     #region INotifyPropertyChanged
@@ -255,15 +238,30 @@ public class CropBlock : IBlock
         if (!inputs.TryGetValue(_inputs[0].Id, out var inItems))
             throw new ArgumentException($"Input items not found for the expected input socket {_inputs[0].Id}.", nameof(inputs)); 
 
-        foreach (WorkItem item in inItems.Cast<WorkItem>())
+        var outputItems = new List<IBasicWorkItem>();
+
+        foreach (var item in inItems)
         {
-            var rect = BuildCropRegion(item.Image.Width, item.Image.Height);
-            item.Image.Mutate(x => x.Crop(rect));
+            if (item is WorkItem sourceItem)
+            {
+                var rect = BuildCropRegion(sourceItem.Image.Width, sourceItem.Image.Height);
+                var clonedImage = sourceItem.Image.Clone(x => x.Crop(rect));
+
+                var newItem = new WorkItem(clonedImage);
+                
+                // Deep-copy metadata
+                foreach (var kvp in sourceItem.Metadata)
+                {
+                    newItem.Metadata[kvp.Key] = kvp.Value;
+                }
+                
+                outputItems.Add(newItem);
+            }
         }
         
         return new Dictionary<Socket, IReadOnlyList<IBasicWorkItem>>
         {
-            { _outputs[0], inItems }
+            { _outputs[0], outputItems }
         };
     }
 
