@@ -4,7 +4,7 @@ using System.ComponentModel;
 
 namespace ImageAutomate.StandardBlocks;
 
-internal class ContrastBlock : IBlock
+public class ContrastBlock : IBlock
 {
     #region Fields
 
