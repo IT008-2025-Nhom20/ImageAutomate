@@ -15,6 +15,7 @@ namespace FormsScratch
 
         private void OnGraphChanged(object? sender, EventArgs e)
         {
+            propertyGrid1.SelectedObject = pipelineGraph.Center;
             graphRenderPanel1.Invalidate();
         }
 

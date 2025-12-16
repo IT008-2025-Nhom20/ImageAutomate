@@ -1,6 +1,4 @@
-﻿using ConvertBlockPoC;
-
-namespace ConvertBlockPoC;
+﻿namespace ConvertBlockPoC;
 
 internal static class Program
 {
