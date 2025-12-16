@@ -25,13 +25,13 @@ public interface IBlock: INotifyPropertyChanged, IDisposable
     /// </summary>
     public string Name { get; }
     /// <summary>
-    /// Gets or sets the display header of this block.
+    /// Gets the display header of this block.
     /// </summary>
-    public string Title { get; set; }
+    public string Title { get; }
     /// <summary>
-    /// Gets or sets the display content of this block.
+    /// Gets the display content of this block.
     /// </summary>
-    public string Content { get; set; }
+    public string Content { get; }
     #endregion
 
     #region Layout Properties

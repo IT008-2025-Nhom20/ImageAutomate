@@ -2,14 +2,8 @@
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
-using System;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
-using System.Linq;
-using System.Text;
-using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 
 namespace ImageAutomate.StandardBlocks;
 
@@ -54,31 +48,13 @@ public class GaussianBlurBlock : IBlock
     public string Title
     {
         get => _title;
-        set
-        {
-            if (!string.Equals(_title, value, StringComparison.Ordinal))
-            {
-                _title = value;
-                OnPropertyChanged(nameof(Title));
-            }
-        }
     }
 
     public string Content
     {
         get => $"Sigma: {Sigma}\nRadius: {Radius}\nRe-encode: {AlwaysEncode}";
-        
-        set
-        {
-            if (!string.Equals(_content, value, StringComparison.Ordinal))
-            {
-                _content = value;
-                OnPropertyChanged(nameof(Content));
-            }
-        }
     }
 
-    
     #endregion
 
     #region Layout

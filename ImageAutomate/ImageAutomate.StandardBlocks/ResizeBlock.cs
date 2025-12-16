@@ -4,13 +4,8 @@ using SixLabors.ImageSharp.Formats.Png;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
 using SixLabors.ImageSharp.Processing.Processors.Transforms;
-using System;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace ImageAutomate.StandardBlocks;
 
@@ -79,14 +74,6 @@ public class ResizeBlock : IBlock
     public string Title
     {
         get => _title;
-        set
-        {
-            if (!string.Equals(_title, value, StringComparison.Ordinal))
-            {
-                _title = value;
-                OnPropertyChanged(nameof(Title));
-            }
-        }
     }
 
     public string Content
@@ -112,14 +99,6 @@ public class ResizeBlock : IBlock
                    $"Height: {TargetHeight}\n" +
                    $"Resampler: {Resampler}\n" +
                    $"Re-encode: {AlwaysEncoder}";
-        }
-        set
-        {
-            if (!string.Equals(_content, value, StringComparison.Ordinal))
-            {
-                _content = value;
-                OnPropertyChanged(nameof(Content));
-            }
         }
     }
 

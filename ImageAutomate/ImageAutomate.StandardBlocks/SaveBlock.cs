@@ -11,12 +11,7 @@ using SixLabors.ImageSharp.Formats.Tga;
 using SixLabors.ImageSharp.Formats.Tiff;
 using SixLabors.ImageSharp.Formats.Webp;
 using SixLabors.ImageSharp.PixelFormats;
-using System;
-using System.Collections.Generic;
 using System.ComponentModel;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace ImageAutomate.StandardBlocks;
 
@@ -71,28 +66,11 @@ public class SaveBlock : IBlock
     public string Title
     {
         get => _title;
-        set
-        {
-            if (!string.Equals(_title, value, StringComparison.Ordinal))
-            {
-                _title = value;
-                OnPropertyChanged(nameof(Title));
-            }
-        }
     }
 
     public string Content
     {
         get => $"Output path: {OutputPath}\nOverwrite: {Overwrite}\nCreate directory: {CreateDirectory}\nTarget format: {EncoderFormat}";
-        
-        set
-        {
-            if (!string.Equals(_content, value, StringComparison.Ordinal))
-            {
-                _content = value;
-                OnPropertyChanged(nameof(Content));
-            }
-        }
     }
 
     #endregion

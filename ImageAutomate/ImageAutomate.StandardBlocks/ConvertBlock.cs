@@ -108,14 +108,6 @@ public class ConvertBlock : IBlock
     public string Title 
     { 
         get => _title;
-        set
-        {
-            if (!string.Equals(_title, value, StringComparison.Ordinal))
-            {
-                _title = value;
-                OnPropertyChanged(nameof(Title));
-            }
-        } 
     }
     public string Content
     {
@@ -136,14 +128,6 @@ public class ConvertBlock : IBlock
                 _ => "Options: Default"
             };
             return $"Format: {TargetFormat}\nRe-encode: {AlwaysEncode}\nConfiguration:{optionSummaries}";
-        }
-        set
-        {
-            if(_content != value)
-            {
-                _content = value;
-                OnPropertyChanged(nameof(Content));
-            }    
         }
     }
     

@@ -1,17 +1,9 @@
 ﻿using ImageAutomate.Core;
-using System;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
-using System.IO;
-using System.Net.Http;
-using System.Net.Http.Headers;
-using System.Text;
 using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.Formats;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
-using System.Runtime.CompilerServices;
 
 namespace ImageAutomate.StandardBlocks;
 
@@ -57,27 +49,10 @@ public class LoadBlock : IBlock
     public string Title 
     { 
         get => _title;
-        set
-        {
-            if (_title != value)
-            {
-                _title = value;
-                OnPropertyChanged(nameof(Title));
-            }
-        }
     }
     public string Content 
     { 
         get => $"Path: {SourcePath}\nRe-encode: {AlwaysEncode}";
-        
-        set
-        {
-            if (_content != value)
-            {
-                _content = value;
-                OnPropertyChanged(nameof(Content));
-            }
-        }
     }
 
     [Category("Layout")]
