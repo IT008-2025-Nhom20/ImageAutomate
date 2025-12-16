@@ -1,5 +1,4 @@
 ﻿using ImageAutomate.Core;
-using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats;
 using SixLabors.ImageSharp.Formats.Bmp;
 using SixLabors.ImageSharp.Formats.Gif;
@@ -10,14 +9,13 @@ using SixLabors.ImageSharp.Formats.Qoi;
 using SixLabors.ImageSharp.Formats.Tga;
 using SixLabors.ImageSharp.Formats.Tiff;
 using SixLabors.ImageSharp.Formats.Webp;
-using SixLabors.ImageSharp.PixelFormats;
-using System.Collections.ObjectModel;
 using System.ComponentModel;
 
-
 namespace ImageAutomate.StandardBlocks;
+
 public enum ImageFormat
 {
+    Unknown = 0,
     Bmp,
     Gif,
     Jpeg,
@@ -57,6 +55,7 @@ public enum TiffCompression
     Rle,
     Zip
 }
+
 public class ConvertBlock : IBlock
 {
     #region Fields
@@ -75,7 +74,7 @@ public class ConvertBlock : IBlock
     private TgaEncodingOptions _tgaOptions = new TgaEncodingOptions();
     private WebPEncodingOptions _webpOptions = new WebPEncodingOptions();
     private QoiEncodingOptions _qoiOptions = new QoiEncodingOptions();
-   
+
     private int _width = 200;
     private int _height = 100;
 
@@ -84,6 +83,7 @@ public class ConvertBlock : IBlock
     #endregion
 
     #region Constructor
+
     public ConvertBlock()
     {
         _jpegOptions.PropertyChanged += Options_OnPropertyChanged;
@@ -95,20 +95,22 @@ public class ConvertBlock : IBlock
         _webpOptions.PropertyChanged += Options_OnPropertyChanged;
         _qoiOptions.PropertyChanged += Options_OnPropertyChanged;
     }
+
     #endregion
 
     #region Basic Properties
+
     public string Name => "Convert";
 
-    public string Title 
-    { 
+    public string Title
+    {
         get => _title;
     }
     public string Content
     {
         get
         {
-            var optionSummaries= TargetFormat switch
+            var optionSummaries = TargetFormat switch
             {
                 ImageFormat.Jpeg => $"Quality: {JpegOptions.Quality}",
                 ImageFormat.Png => $"Compression: {PngOptions.CompressionLevel}",
@@ -125,18 +127,19 @@ public class ConvertBlock : IBlock
             return $"Format: {TargetFormat}\nRe-encode: {AlwaysEncode}\nConfiguration:{optionSummaries}";
         }
     }
-    
+
     #endregion
 
     #region Layout
+
     [Category("Layout")]
     [Description("Width of the black node")]
-    public int Width 
-    { 
+    public int Width
+    {
         get => _width;
         set
         {
-            if(Math.Abs(_width - value) > double.Epsilon)
+            if (_width != value)
             {
                 _width = value;
                 OnPropertyChanged(nameof(Width));
@@ -146,26 +149,30 @@ public class ConvertBlock : IBlock
 
     [Category("Layout")]
     [Description("Height of the black node")]
-    public int Height 
+    public int Height
     {
-        get => _height; 
+        get => _height;
         set
         {
-            if (Math.Abs(_height - value) > double.Epsilon)
+            if (_height != value)
             {
                 _height = value;
                 OnPropertyChanged(nameof(Height));
             }
-        } 
+        }
     }
+
     #endregion
 
     #region Sockets
+
     public IReadOnlyList<Socket> Inputs => _inputs;
     public IReadOnlyList<Socket> Outputs => _outputs;
+
     #endregion
 
     #region Configuration
+
     [Category("Configuration")]
     [Description("Target image format for conversion")]
     public ImageFormat TargetFormat
@@ -187,7 +194,7 @@ public class ConvertBlock : IBlock
             }
         }
     }
-    
+
     [Category("Configuration")]
     [Description("Force re-encoding even when format matches")]
     public bool AlwaysEncode
@@ -202,9 +209,11 @@ public class ConvertBlock : IBlock
             }
         }
     }
+
     #endregion
 
     #region Enconding Options Properties
+
     [Category("Encoding Options")]
     [Description("JPEG encoding parameters")]
     [TypeConverter(typeof(ExpandableObjectConverter))]
@@ -341,9 +350,11 @@ public class ConvertBlock : IBlock
             OnPropertyChanged(nameof(QoiOptions));
         }
     }
+
     #endregion
 
-    #region InotifyPropertyChanged
+    #region Notify Property Changed
+
     public event PropertyChangedEventHandler? PropertyChanged;
     protected void OnPropertyChanged(string propertyName)
     {
@@ -368,30 +379,14 @@ public class ConvertBlock : IBlock
         else if (sender is QoiEncodingOptions)
             OnPropertyChanged(nameof(QoiOptions));
     }
+
     #endregion
 
     #region Execute
+
     public IReadOnlyDictionary<Socket, IReadOnlyList<IBasicWorkItem>> Execute(IDictionary<Socket, IReadOnlyList<IBasicWorkItem>> inputs)
     {
-        if (inputs is null) throw new NotImplementedException();
-
-        inputs.TryGetValue(_inputs[0], out var inItems);
-        inItems ??= Array.Empty<IBasicWorkItem>();
-
-        var resultList = new List<IBasicWorkItem>(inItems.Count);
-        foreach (var item in inItems)
-        {
-            var converted = ConvertWorkItem(item);
-            if (converted != null)
-                resultList.Add(converted);
-        }
-
-        var readOnlyResult = new ReadOnlyCollection<IBasicWorkItem>(resultList);
-        var dict = new Dictionary<Socket, IReadOnlyList<IBasicWorkItem>>
-        {
-            {_outputs[0], readOnlyResult}
-        };
-        return dict;
+        throw new NotImplementedException();
     }
 
 
@@ -404,120 +399,80 @@ public class ConvertBlock : IBlock
 
     private IImageEncoder CreateEncoderForTargetFormat()
     {
-        switch (TargetFormat)
+        return TargetFormat switch
         {
-            case ImageFormat.Jpeg:
-                return new JpegEncoder
-                {
-                    Quality = JpegOptions.Quality
-                };
-
-            case ImageFormat.Png:
-                return new PngEncoder
-                {
-                    CompressionLevel =
-                        (SixLabors.ImageSharp.Formats.Png.PngCompressionLevel)(int)PngOptions.CompressionLevel
-                };
-
-            case ImageFormat.Bmp:
-                return new BmpEncoder
-                {
-                    BitsPerPixel = (BmpOptions.BitsPerPixel == BmpBitsPerPixel.Pixel24)
-                       ? SixLabors.ImageSharp.Formats.Bmp.BmpBitsPerPixel.Pixel24
-                       : SixLabors.ImageSharp.Formats.Bmp.BmpBitsPerPixel.Pixel32
-                };
-
-            case ImageFormat.Gif:
-                return new GifEncoder();
-
-            case ImageFormat.Tiff:
-                return new TiffEncoder
-                {
-                    Compression =
-                        (TiffOptions.Compression == TiffCompression.None) ? SixLabors.ImageSharp.Formats.Tiff.Constants.TiffCompression.None :
-                        (TiffOptions.Compression == TiffCompression.Lzw) ? SixLabors.ImageSharp.Formats.Tiff.Constants.TiffCompression.Lzw :
-                        (TiffOptions.Compression == TiffCompression.Ccitt4) ? SixLabors.ImageSharp.Formats.Tiff.Constants.TiffCompression.CcittGroup4Fax :
-                        (TiffOptions.Compression == TiffCompression.Rle) ? SixLabors.ImageSharp.Formats.Tiff.Constants.TiffCompression.PackBits :
-                        SixLabors.ImageSharp.Formats.Tiff.Constants.TiffCompression.Deflate
-                };
-
-            case ImageFormat.Tga:
-                return new TgaEncoder
-                {
-                    Compression = TgaOptions.Compress
-                        ? TgaCompression.RunLength
-                        : TgaCompression.None
-                };
-
-            case ImageFormat.WebP:
-                return new WebpEncoder
-                {
-                    Quality = (int)Math.Clamp(WebPOptions.Quality, 0f, 100f),
-                    FileFormat = WebPOptions.Lossless
-                        ? WebpFileFormatType.Lossless
-                        : WebpFileFormatType.Lossy
-                };
-
-            case ImageFormat.Qoi:
-                return new QoiEncoder
-                {
-                    Channels = QoiOptions.IncludeAlpha ? QoiChannels.Rgba : QoiChannels.Rgb
-                };
-
-            case ImageFormat.Pbm:
-                // Không có options riêng, dùng encoder mặc định
-                return new PbmEncoder();
-
-            default:
-                throw new NotSupportedException($"ConvertBlock: Target format '{TargetFormat}' is not supported.");
-        }
+            ImageFormat.Jpeg => new JpegEncoder
+            {
+                Quality = JpegOptions.Quality
+            },
+            ImageFormat.Png => new PngEncoder
+            {
+                CompressionLevel =
+                    (SixLabors.ImageSharp.Formats.Png.PngCompressionLevel)(int)PngOptions.CompressionLevel
+            },
+            ImageFormat.Bmp => new BmpEncoder
+            {
+                BitsPerPixel = (BmpOptions.BitsPerPixel == BmpBitsPerPixel.Pixel24)
+                   ? SixLabors.ImageSharp.Formats.Bmp.BmpBitsPerPixel.Pixel24
+                   : SixLabors.ImageSharp.Formats.Bmp.BmpBitsPerPixel.Pixel32
+            },
+            ImageFormat.Gif => new GifEncoder(),
+            ImageFormat.Tiff => new TiffEncoder
+            {
+                Compression =
+                    (TiffOptions.Compression == TiffCompression.None) ? SixLabors.ImageSharp.Formats.Tiff.Constants.TiffCompression.None :
+                    (TiffOptions.Compression == TiffCompression.Lzw) ? SixLabors.ImageSharp.Formats.Tiff.Constants.TiffCompression.Lzw :
+                    (TiffOptions.Compression == TiffCompression.Ccitt4) ? SixLabors.ImageSharp.Formats.Tiff.Constants.TiffCompression.CcittGroup4Fax :
+                    (TiffOptions.Compression == TiffCompression.Rle) ? SixLabors.ImageSharp.Formats.Tiff.Constants.TiffCompression.PackBits :
+                    SixLabors.ImageSharp.Formats.Tiff.Constants.TiffCompression.Deflate
+            },
+            ImageFormat.Tga => new TgaEncoder
+            {
+                Compression = TgaOptions.Compress
+                    ? TgaCompression.RunLength
+                    : TgaCompression.None
+            },
+            ImageFormat.WebP => new WebpEncoder
+            {
+                Quality = (int)Math.Clamp(WebPOptions.Quality, 0f, 100f),
+                FileFormat = WebPOptions.Lossless
+                    ? WebpFileFormatType.Lossless
+                    : WebpFileFormatType.Lossy
+            },
+            ImageFormat.Qoi => new QoiEncoder
+            {
+                Channels = QoiOptions.IncludeAlpha ? QoiChannels.Rgba : QoiChannels.Rgb
+            },
+            ImageFormat.Pbm => new PbmEncoder(),
+            _ => throw new NotSupportedException($"ConvertBlock: Target format '{TargetFormat}' is not supported."),
+        };
     }
-    private sealed class BasicWorkItem : IBasicWorkItem
-    {
-        public Guid Id { get; }
-        public IDictionary<string, object> Metadata { get; }
-
-        public BasicWorkItem(IDictionary<string, object> metadata)
-        {
-            Id = Guid.NewGuid();
-            Metadata = metadata ?? throw new ArgumentNullException(nameof(metadata));
-        }
-    }
-
-    #endregion
 
     #region Disposing
+
+    // TODO: properly implement Dispose to manage resource lifecycle
     protected virtual void Dispose(bool disposing)
     {
         if (!disposedValue)
         {
             if (disposing)
             {
-                // TODO: dispose managed state (managed objects)
             }
-
-            // TODO: free unmanaged resources (unmanaged objects) and override finalizer
-            // TODO: set large fields to null
             disposedValue = true;
         }
     }
 
-    // // TODO: override finalizer only if 'Dispose(bool disposing)' has code to free unmanaged resources
-    // ~ConvertBlock()
-    // {
-    //     // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
-    //     Dispose(disposing: false);
-    // }
-
     public void Dispose()
     {
-        // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
-        Dispose(disposing: true);
+        Dispose(true);
         GC.SuppressFinalize(this);
     }
+
     #endregion
 }
+
 #region Encoding Class
+
 [TypeConverter(typeof(ExpandableObjectConverter))]
 public class JpegEncodingOptions : INotifyPropertyChanged
 {
@@ -766,4 +721,25 @@ public class QoiEncodingOptions : INotifyPropertyChanged
 
     public override string ToString() => _includeAlpha ? "Format: RGBA (with Alpha)" : "Format: RGB (No Alpha)";
 }
+
 #endregion
+
+public static class ImageSharpExtensions
+{
+    public static ImageFormat ToSimpleFormat(this IImageFormat format)
+    {
+        return format switch
+        {
+            BmpFormat => ImageFormat.Bmp,
+            GifFormat => ImageFormat.Gif,
+            JpegFormat => ImageFormat.Jpeg,
+            PbmFormat => ImageFormat.Pbm,
+            PngFormat => ImageFormat.Png,
+            TiffFormat => ImageFormat.Tiff,
+            TgaFormat => ImageFormat.Tga,
+            WebpFormat => ImageFormat.WebP,
+            QoiFormat => ImageFormat.Qoi,
+            _ => ImageFormat.Unknown
+        };
+    }
+}

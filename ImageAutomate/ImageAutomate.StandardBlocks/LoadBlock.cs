@@ -10,6 +10,7 @@ namespace ImageAutomate.StandardBlocks;
 public class LoadBlock : IBlock
 {
     #region Fields
+
     private readonly IReadOnlyList<Socket> _inputs = [];
     private readonly IReadOnlyList<Socket> _outputs = [new("Load.out", "Image.out")];
 
@@ -24,23 +25,21 @@ public class LoadBlock : IBlock
 
     private string _title = "Load";
     private string _content = "Load image";
+
     #endregion
 
     #region InotifyPropertyChanged
+
     public event PropertyChangedEventHandler? PropertyChanged;
     protected void OnPropertyChanged(string propertyName)
     {
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
     }
-    #endregion
 
-    #region Constructor
-    public LoadBlock()
-    {
-    }
     #endregion
 
     #region Basic Properties
+
     public string Name => "Load";
 
     public string Title 
@@ -49,7 +48,7 @@ public class LoadBlock : IBlock
     }
     public string Content 
     { 
-        get => $"Path: {SourcePath}\nRe-encode: {AlwaysEncode}";
+        get => $"Path: {SourcePath}\nAuto Orient: {AutoOrient}";
     }
 
     [Category("Layout")]
@@ -114,20 +113,6 @@ public class LoadBlock : IBlock
         }
     }
 
-    [Category("Configuration")]
-    [Description("Force re-encoding even when format matches")]
-    public bool AlwaysEncode
-    {
-        get => _alwaysEncode;
-        set
-        {
-            if (_alwaysEncode != value)
-            {
-                _alwaysEncode = value;
-                OnPropertyChanged(nameof(AlwaysEncode));
-            }
-        }
-    }
     #endregion
 
     #region Socket
@@ -137,6 +122,7 @@ public class LoadBlock : IBlock
     #endregion
 
     #region Execute
+
     public IReadOnlyDictionary<Socket, IReadOnlyList<IBasicWorkItem>> Execute(IDictionary<Socket, IReadOnlyList<IBasicWorkItem>> inputs)
     {
         var items = LoadWorkItems();
@@ -156,122 +142,94 @@ public class LoadBlock : IBlock
         var items = LoadWorkItems();
 
         var list = new List<IBasicWorkItem>(items);
-   
+
         var readOnly = new ReadOnlyCollection<IBasicWorkItem>(list);
 
         return new Dictionary<Socket, IReadOnlyList<IBasicWorkItem>>
             {
-                { _outputs[0].Id, readOnly }
+                { _outputs[0], readOnly }
             };
     }
+    
+    #endregion
 
-    private IEnumerable<IBasicWorkItem?> LoadWorkItems()
+    private IEnumerable<IBasicWorkItem> LoadWorkItems()
     {
         if (string.IsNullOrWhiteSpace(SourcePath))
             throw new InvalidOperationException("LoadBlock: SourcePath is required when LoadFromUrl = false.");
-        return LoadFromFolderInternal();
+        
+        return LoadImageFromDirectory();
     }
 
-    public IEnumerable<IBasicWorkItem?> LoadFromFolderInternal()
+    private IEnumerable<IBasicWorkItem> LoadImageFromDirectory()
     {
-        if (string.IsNullOrWhiteSpace(SourcePath)) throw new InvalidOperationException("LoadBlock: SourcePath is required");
-        if (!Directory.Exists(SourcePath)) throw new DirectoryNotFoundException("LoadBlock: SourPath of directory is not found");
+        if (string.IsNullOrWhiteSpace(SourcePath))
+            throw new InvalidOperationException("LoadBlock: SourcePath is required");
+        if (!Directory.Exists(SourcePath))
+            throw new DirectoryNotFoundException("LoadBlock: directory not found");
 
         var type = "*.jpg; *.png";
         var patterns = type.Split(';');
 
         var files = new List<string>();
 
-        foreach ( var pattern in patterns)
-        {
-            var found = Directory.GetFiles(SourcePath, pattern);
-            files.AddRange(found);
-        }
+        foreach (var pattern in patterns)
+            files.AddRange(Directory.GetFiles(SourcePath, pattern));
+
         files.Sort(StringComparer.OrdinalIgnoreCase);
 
         foreach (var file in files)
         {
-            // Reuse hàm cũ
-            IBasicWorkItem? wi = null;
-
-            wi = LoadFromFileInternal(file);
-
-            if (wi != null)
-            {
-                // Bổ sung metadata cho batch
-                wi.Metadata["BatchFolder"] = SourcePath;
-                wi.Metadata["FileName"] = Path.GetFileName(file);
-                wi.Metadata["FullPath"] = file;
-            }
+            WorkItem wi = LoadImageFile(file);
+            wi.Metadata["BatchFolder"] = SourcePath;
+            wi.Metadata["FileName"] = Path.GetFileName(file);
+            wi.Metadata["FullPath"] = file;
             yield return wi!;
         }
     }
-    public IBasicWorkItem LoadFromFileInternal(string path)
+
+    private WorkItem LoadImageFile(string path)
     {
         if (!File.Exists(path))
             throw new FileNotFoundException($"LoadBlock: File not found at path '{path}'.", path);
 
         try
         {
-            var fs = File.OpenRead(path);
-            var image = Image.Load<Rgba32>(fs);
+            var image = Image.Load<Rgba32>(path);
 
-            var format = image.Metadata.DecodedImageFormat;
-            if (format is null)
-                throw new InvalidOperationException($"LoadBlock: Unsupported or unknown image format for file '{path}'.");
+            var format = image.Metadata.DecodedImageFormat
+                ?? throw new InvalidOperationException($"LoadBlock: Unsupported or unknown image format for file '{path}'.");
             
             if (AutoOrient)
-            {
                 image.Mutate(x => x.AutoOrient());
-            }
-
-            using var ms = new MemoryStream();
-            image.Save(ms, format);
-            var bytes = ms.ToArray();
 
             return new WorkItem(image);
         }
         catch (Exception ex) when (ex is IOException
                                    || ex is UnauthorizedAccessException
-                                   || ex is SixLabors.ImageSharp.UnknownImageFormatException
-                                   || ex is SixLabors.ImageSharp.InvalidImageContentException)
+                                   || ex is UnknownImageFormatException
+                                   || ex is InvalidImageContentException)
         {
             throw new InvalidOperationException(
                 $"LoadBlock: Failed to load image from file '{path}': {ex.Message}", ex);
         }
     }
 
-    #endregion
-
     #region IDisposable
+
     protected virtual void Dispose(bool disposing)
     {
         if (!disposedValue)
         {
-            if (disposing)
-            {
-                // TODO: dispose managed state (managed objects)
-            }
-
-            // TODO: free unmanaged resources (unmanaged objects) and override finalizer
-            // TODO: set large fields to null
             disposedValue = true;
         }
     }
 
-    // // TODO: override finalizer only if 'Dispose(bool disposing)' has code to free unmanaged resources
-    // ~LoadBlock()
-    // {
-    //     // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
-    //     Dispose(disposing: false);
-    // }
-
     public void Dispose()
     {
-        // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
         Dispose(disposing: true);
         GC.SuppressFinalize(this);
     }
-    #endregion
 
+    #endregion
 }

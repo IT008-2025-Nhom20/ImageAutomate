@@ -1,8 +1,6 @@
 ﻿using ImageAutomate.Core;
 using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
-using System.Collections.ObjectModel;
 using System.ComponentModel;
 namespace ImageAutomate.StandardBlocks;
 public enum CropModeOption
@@ -258,150 +256,59 @@ public class CropBlock : IBlock
 
     #endregion
 
-    #region Execute (Socket keyed)
+    #region Execute
 
     public IReadOnlyDictionary<Socket, IReadOnlyList<IBasicWorkItem>> Execute(
         IDictionary<Socket, IReadOnlyList<IBasicWorkItem>> inputs)
     {
-        if (inputs is null) throw new ArgumentNullException(nameof(inputs));
-
-        inputs.TryGetValue(_inputs[0], out var inItems);
-        inItems ??= Array.Empty<IBasicWorkItem>();
-
-        var resultList = new List<IBasicWorkItem>(inItems.Count);
-
-        foreach (var item in inItems)
-        {
-            var cropped = CropWorkItem(item);
-            if (cropped != null)
-                resultList.Add(cropped);
-        }
-
-        var readOnly = new ReadOnlyCollection<IBasicWorkItem>(resultList);
-
-        return new Dictionary<Socket, IReadOnlyList<IBasicWorkItem>>
-            {
-                { _outputs[0], readOnly }
-            };
+        return Execute(inputs.ToDictionary(kvp => kvp.Key.Id, kvp => kvp.Value));
     }
-
-    #endregion
-
-    #region Execute (string keyed)
 
     public IReadOnlyDictionary<Socket, IReadOnlyList<IBasicWorkItem>> Execute(
         IDictionary<string, IReadOnlyList<IBasicWorkItem>> inputs)
     {
-        if (inputs is null) throw new ArgumentNullException(nameof(inputs));
+        if (!inputs.TryGetValue(_inputs[0].Id, out var inItems))
+            throw new ArgumentException($"Input items not found for the expected input socket {_inputs[0].Id}.", nameof(inputs)); 
 
-        inputs.TryGetValue(_inputs[0].Id, out var inItems);
-        inItems ??= Array.Empty<IBasicWorkItem>();
-
-        var resultList = new List<IBasicWorkItem>(inItems.Count);
-
-        foreach (var item in inItems)
+        foreach (WorkItem item in inItems.Cast<WorkItem>())
         {
-            var cropped = CropWorkItem(item);
-            if (cropped != null)
-                resultList.Add(cropped);
+            var rect = BuildCropRegion(item.Image.Width, item.Image.Height);
+            item.Image.Mutate(x => x.Crop(rect));
         }
-
-        var readOnly = new ReadOnlyCollection<IBasicWorkItem>(resultList);
-
+        
         return new Dictionary<Socket, IReadOnlyList<IBasicWorkItem>>
-            {
-                { _outputs[0], readOnly }
-            };
+        {
+            { _outputs[0], inItems }
+        };
     }
 
     #endregion
 
-    #region Core crop logic
+    #region Crop Region Builders
 
-    private IBasicWorkItem? CropWorkItem(IBasicWorkItem item)
+    private Rectangle BuildCropRegion(int sourceWidth, int sourceHeight)
     {
-        if (item is null)
-            throw new ArgumentNullException(nameof(item));
-
-        if (!_alwaysEncoder)
-            return item;
-
-        if (!item.Metadata.TryGetValue("ImageData", out var dataObj) ||
-            dataObj is not byte[] imageBytes ||
-            imageBytes.Length == 0)
+        return CropMode switch
         {
-            // Không có ảnh → pass-through
-            return item;
-        }
-
-        using var image = Image.Load<Rgba32>(imageBytes);
-        var srcW = image.Width;
-        var srcH = image.Height;
-
-        // Tính rectangle crop
-        var rect = BuildCropRectangle(srcW, srcH);
-
-        // Validate trong bounds
-        if (rect.X < 0 || rect.Y < 0 ||
-            rect.Right > srcW || rect.Bottom > srcH)
-        {
-            throw new InvalidOperationException(
-                $"CropBlock: Crop rectangle {rect} is outside image bounds ({srcW}x{srcH}).");
-        }
-
-        // Thực hiện crop
-        image.Mutate(x => x.Crop(rect));
-
-        // Giữ nguyên format decode nếu có, fallback PNG
-        var decodedFormat = image.Metadata.DecodedImageFormat
-                            ?? SixLabors.ImageSharp.Formats.Png.PngFormat.Instance;
-
-        using var ms = new MemoryStream();
-        image.Save(ms, decodedFormat);
-        var outBytes = ms.ToArray();
-
-        var newMetadata = new Dictionary<string, object>(item.Metadata)
-        {
-            ["ImageData"] = outBytes,
-            ["Width"] = image.Width,
-            ["Height"] = image.Height,
-            ["CroppedAtUtc"] = DateTime.UtcNow
+            CropModeOption.Rectangle => BuildRectangleCropRegion(sourceWidth, sourceHeight),
+            CropModeOption.Center => BuildCenteredCropRegion(sourceWidth, sourceHeight),
+            CropModeOption.Anchor => BuildAnchorCropRegion(sourceWidth, sourceHeight),
+            _ => throw new NotSupportedException($"CropBlock: Unsupported CropMode '{CropMode}'."),
         };
-
-        return new CropBlockWorkItem(newMetadata);
     }
 
-    private Rectangle BuildCropRectangle(int srcWidth, int srcHeight)
-    {
-        switch (CropMode)
-        {
-            case CropModeOption.Rectangle:
-                return BuildRectangleMode(srcWidth, srcHeight);
-
-            case CropModeOption.Center:
-                return BuildCenterMode(srcWidth, srcHeight);
-
-            case CropModeOption.Anchor:
-                return BuildAnchorMode(srcWidth, srcHeight);
-
-            default:
-                throw new NotSupportedException($"CropBlock: Unsupported CropMode '{CropMode}'.");
-        }
-    }
-
-    private Rectangle BuildRectangleMode(int srcWidth, int srcHeight)
+    private Rectangle BuildRectangleCropRegion(int sourceWidth, int sourceHeight)
     {
         if (CropWidth <= 0 || CropHeight <= 0)
             throw new InvalidOperationException("CropBlock (Rectangle): CropWidth and CropHeight must be positive.");
 
-        // X, Y đã validate >= 0 ở setter
-        if (X >= srcWidth || Y >= srcHeight)
+        if (X >= sourceWidth || Y >= sourceHeight)
             throw new InvalidOperationException("CropBlock (Rectangle): X/Y start outside image bounds.");
 
         return new Rectangle(X, Y, CropWidth, CropHeight);
     }
 
-    private Rectangle BuildCenterMode(int srcWidth, int srcHeight)
+    private Rectangle BuildCenteredCropRegion(int srcWidth, int srcHeight)
     {
         if (CropWidth <= 0 || CropHeight <= 0)
             throw new InvalidOperationException("CropBlock (Center): CropWidth and CropHeight must be positive.");
@@ -416,7 +323,7 @@ public class CropBlock : IBlock
         return new Rectangle(x, y, CropWidth, CropHeight);
     }
 
-    private Rectangle BuildAnchorMode(int srcWidth, int srcHeight)
+    private Rectangle BuildAnchorCropRegion(int srcWidth, int srcHeight)
     {
         if (CropWidth <= 0 || CropHeight <= 0)
             throw new InvalidOperationException("CropBlock (Anchor): CropWidth and CropHeight must be positive.");
@@ -497,22 +404,6 @@ public class CropBlock : IBlock
     {
         Dispose(true);
         GC.SuppressFinalize(this);
-    }
-
-    #endregion
-
-    #region Nested WorkItem
-
-    private sealed class CropBlockWorkItem : IBasicWorkItem
-    {
-        public Guid Id { get; } = Guid.NewGuid();
-
-        public IDictionary<string, object> Metadata { get; }
-
-        public CropBlockWorkItem(IDictionary<string, object> metadata)
-        {
-            Metadata = metadata ?? throw new ArgumentNullException(nameof(metadata));
-        }
     }
 
     #endregion

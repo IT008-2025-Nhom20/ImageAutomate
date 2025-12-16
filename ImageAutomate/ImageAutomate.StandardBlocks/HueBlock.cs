@@ -135,110 +135,31 @@ public class HueBlock
 
     #endregion
 
-    #region Execute (Socket keyed)
+    #region Execute
 
     public IReadOnlyDictionary<Socket, IReadOnlyList<IBasicWorkItem>> Execute(
         IDictionary<Socket, IReadOnlyList<IBasicWorkItem>> inputs)
     {
-        if (inputs is null) throw new ArgumentNullException(nameof(inputs));
-
-        inputs.TryGetValue(_inputs[0], out var inItems);
-        inItems ??= Array.Empty<IBasicWorkItem>();
-
-        var resultList = new List<IBasicWorkItem>(inItems.Count);
-
-        foreach (var item in inItems)
-        {
-            var adjusted = ApplyHue(item);
-            if (adjusted != null)
-                resultList.Add(adjusted);
-        }
-
-        var readOnly = new ReadOnlyCollection<IBasicWorkItem>(resultList);
-
-        return new Dictionary<Socket, IReadOnlyList<IBasicWorkItem>>
-            {
-                { _outputs[0], readOnly }
-            };
+        return Execute(inputs.ToDictionary(kvp => kvp.Key.Id, kvp => kvp.Value));
     }
-
-    #endregion
-
-    #region Execute (string keyed)
 
     public IReadOnlyDictionary<Socket, IReadOnlyList<IBasicWorkItem>> Execute(
         IDictionary<string, IReadOnlyList<IBasicWorkItem>> inputs)
     {
-        if (inputs is null) throw new ArgumentNullException(nameof(inputs));
+        if (!inputs.TryGetValue(_inputs[0].Id, out var inItems))
+            throw new ArgumentException($"Input items not found for the expected input socket {_inputs[0].Id}.", nameof(inputs));
 
-        inputs.TryGetValue(_inputs[0].Id, out var inItems);
-        inItems ??= Array.Empty<IBasicWorkItem>();
-
-        var resultList = new List<IBasicWorkItem>(inItems.Count);
-
-        foreach (var item in inItems)
+        foreach (WorkItem item in inItems.Cast<WorkItem>())
         {
-            var adjusted = ApplyHue(item);
-            if (adjusted != null)
-                resultList.Add(adjusted);
+            if (Math.Abs(HueShift) < 0.01f)
+                continue;
+            item.Image.Mutate(x => x.Hue(HueShift));
         }
-
-        var readOnly = new ReadOnlyCollection<IBasicWorkItem>(resultList);
 
         return new Dictionary<Socket, IReadOnlyList<IBasicWorkItem>>
             {
-                { _outputs[0].Id, readOnly }
+                { _outputs[0], inItems }
             };
-    }
-
-    #endregion
-
-    #region Core hue logic
-
-    private IBasicWorkItem? ApplyHue(IBasicWorkItem item)
-    {
-        if (item is null)
-            throw new ArgumentNullException(nameof(item));
-
-        if (!_alwaysEncode)
-            return item;
-
-        // Không có ảnh → trả nguyên item
-        if (!item.Metadata.TryGetValue("ImageData", out var dataObj) ||
-            dataObj is not byte[] imageBytes ||
-            imageBytes.Length == 0)
-        {
-            return item;
-        }
-
-        // Nếu HueShift = 0 → no-op (có thể optimize nếu muốn)
-        if (Math.Abs(HueShift) < float.Epsilon)
-        {
-            return item;
-        }
-
-        using var image = Image.Load<Rgba32>(imageBytes);
-
-        // Hue rotation theo ImageSharp (đơn vị degree)
-        image.Mutate(x => x.Hue(HueShift));
-
-        var decodedFormat = image.Metadata.DecodedImageFormat
-                            ?? SixLabors.ImageSharp.Formats.Png.PngFormat.Instance;
-
-        using var ms = new MemoryStream();
-        image.Save(ms, decodedFormat);
-        var outBytes = ms.ToArray();
-
-        var newMetadata = new Dictionary<string, object>(item.Metadata)
-        {
-            ["ImageData"] = outBytes,
-            ["Width"] = image.Width,
-            ["Height"] = image.Height,
-            ["HueShift"] = HueShift,
-            ["HueAdjustedAtUtc"] = DateTime.UtcNow
-        };
-
-        return new HueBlockWorkItem(newMetadata);
     }
 
     #endregion
@@ -257,22 +178,6 @@ public class HueBlock
     {
         Dispose(true);
         GC.SuppressFinalize(this);
-    }
-
-    #endregion
-
-    #region Nested WorkItem
-
-    private sealed class HueBlockWorkItem : IBasicWorkItem
-    {
-        public Guid Id { get; } = Guid.NewGuid();
-
-        public IDictionary<string, object> Metadata { get; }
-
-        public HueBlockWorkItem(IDictionary<string, object> metadata)
-        {
-            Metadata = metadata ?? throw new ArgumentNullException(nameof(metadata));
-        }
     }
 
     #endregion

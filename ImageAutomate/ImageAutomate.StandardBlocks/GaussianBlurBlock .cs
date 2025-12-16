@@ -1,8 +1,5 @@
 ﻿using ImageAutomate.Core;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
-using System.Collections.ObjectModel;
 using System.ComponentModel;
 
 namespace ImageAutomate.StandardBlocks;
@@ -161,104 +158,27 @@ public class GaussianBlurBlock : IBlock
     public IReadOnlyDictionary<Socket, IReadOnlyList<IBasicWorkItem>> Execute(
         IDictionary<Socket, IReadOnlyList<IBasicWorkItem>> inputs)
     {
-        if (inputs is null) throw new ArgumentNullException(nameof(inputs));
-
-        inputs.TryGetValue(_inputs[0], out var inItems);
-        inItems ??= Array.Empty<IBasicWorkItem>();
-
-        var resultList = new List<IBasicWorkItem>(inItems.Count);
-
-        foreach (var item in inItems)
-        {
-            var blurred = ApplyGaussianBlur(item);
-            if (blurred != null)
-                resultList.Add(blurred);
-        }
-
-        var readOnly = new ReadOnlyCollection<IBasicWorkItem>(resultList);
-
-        return new Dictionary<Socket, IReadOnlyList<IBasicWorkItem>>
-            {
-                { _outputs[0], readOnly }
-            };
+        return Execute(inputs.ToDictionary(kvp => kvp.Key.Id, kvp => kvp.Value));
     }
 
     public IReadOnlyDictionary<Socket, IReadOnlyList<IBasicWorkItem>> Execute(
         IDictionary<string, IReadOnlyList<IBasicWorkItem>> inputs)
     {
-        if (inputs is null) throw new ArgumentNullException(nameof(inputs));
+        if (!inputs.TryGetValue(_inputs[0].Id, out var inItems))
+            throw new ArgumentException($"Input items not found for the expected input socket {_inputs[0].Id}.", nameof(inputs));
 
-        inputs.TryGetValue(_inputs[0].Id, out var inItems);
-        inItems ??= Array.Empty<IBasicWorkItem>();
-
-        var resultList = new List<IBasicWorkItem>(inItems.Count);
-
-        foreach (var item in inItems)
+        foreach (WorkItem item in inItems.Cast<WorkItem>())
         {
-            var blurred = ApplyGaussianBlur(item);
-            if (blurred != null)
-                resultList.Add(blurred);
+            if (Sigma <= 0.0f)
+                continue;
+            item.Image.Mutate(x => x.GaussianBlur(Sigma));
         }
-
-        var readOnly = new ReadOnlyCollection<IBasicWorkItem>(resultList);
-
+        
         return new Dictionary<Socket, IReadOnlyList<IBasicWorkItem>>
             {
-                { _outputs[0].Id, readOnly }
+                { _outputs[0], inItems }
             };
     }
-
-    #endregion
-
-    #region Core blur logic
-
-    private IBasicWorkItem? ApplyGaussianBlur(IBasicWorkItem item)
-    {
-        if (item is null)
-            throw new ArgumentNullException(nameof(item));
-
-        if (!_alwaysEncode)
-            return item;
-
-        // No image
-        if (!item.Metadata.TryGetValue("ImageData", out var dataObj) ||
-            dataObj is not byte[] imageBytes ||
-            imageBytes.Length == 0)
-        {
-            return item;
-        }
-
-        // sigma = 0.0f → no-op
-        if (Sigma <= 0.0f)
-        {
-            return item;
-        }
-
-        using var image = Image.Load<Rgba32>(imageBytes);
-
-        // Current ImageSharp version supports GaussianBlur(sigma)
-        image.Mutate(x => x.GaussianBlur(Sigma));
-
-        var decodedFormat = image.Metadata.DecodedImageFormat
-                            ?? SixLabors.ImageSharp.Formats.Png.PngFormat.Instance;
-
-        using var ms = new MemoryStream();
-        image.Save(ms, decodedFormat);
-        var outBytes = ms.ToArray();
-
-        var newMetadata = new Dictionary<string, object>(item.Metadata)
-        {
-            ["ImageData"] = outBytes,
-            ["Width"] = image.Width,
-            ["Height"] = image.Height,
-            ["GaussianBlurSigma"] = Sigma,
-            ["GaussianBlurRadius"] = Radius,      // chỉ lưu metadata, không ảnh hưởng xử lý
-            ["BlurredAtUtc"] = DateTime.UtcNow
-        };
-
-        return new GaussianBlurBlockWorkItem(newMetadata);
-    }
-
 
     #endregion
 
@@ -279,22 +199,4 @@ public class GaussianBlurBlock : IBlock
     }
 
     #endregion
-
-    #region Nested WorkItem
-
-    private sealed class GaussianBlurBlockWorkItem : IBasicWorkItem
-    {
-        public Guid Id { get; } = Guid.NewGuid();
-
-        public IDictionary<string, object> Metadata { get; }
-
-        public GaussianBlurBlockWorkItem(IDictionary<string, object> metadata)
-        {
-            Metadata = metadata ?? throw new ArgumentNullException(nameof(metadata));
-        }
-    }
-
-    #endregion
 }
-
-    

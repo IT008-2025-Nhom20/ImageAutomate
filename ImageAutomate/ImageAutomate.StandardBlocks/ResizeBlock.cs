@@ -1,10 +1,7 @@
 ﻿using ImageAutomate.Core;
 using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.Formats.Png;
-using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
 using SixLabors.ImageSharp.Processing.Processors.Transforms;
-using System.Collections.ObjectModel;
 using System.ComponentModel;
 
 namespace ImageAutomate.StandardBlocks;
@@ -36,10 +33,6 @@ public class ResizeBlock : IBlock
 
     private bool _disposed;
 
-    // UI / basic
-    private string _title = "Resize";
-    private string _content = "Resize image";
-
     private int _nodeWidth = 200;
     private int _nodeHeight = 110;
 
@@ -55,21 +48,13 @@ public class ResizeBlock : IBlock
 
     #endregion
 
-    #region Ctor
-
-    public ResizeBlock()
-    {
-    }
-
-    #endregion
-
     #region IBlock basic properties
 
     public string Name => "Resize";
 
     public string Title
     {
-        get => _title;
+        get => "Resize";
     }
 
     public string Content
@@ -263,111 +248,33 @@ public class ResizeBlock : IBlock
 
     #endregion
 
-    #region Execute (Socket keyed)
+    #region Execute
 
     public IReadOnlyDictionary<Socket, IReadOnlyList<IBasicWorkItem>> Execute(IDictionary<Socket, IReadOnlyList<IBasicWorkItem>> inputs)
     {
-        if (inputs is null) throw new ArgumentNullException(nameof(inputs));
-
-        inputs.TryGetValue(_inputs[0], out var inItems);
-        inItems ??= Array.Empty<IBasicWorkItem>();
-
-        var resultList = new List<IBasicWorkItem>(inItems.Count);
-
-        foreach (var item in inItems)
-        {
-            var resized = ResizeWorkItem(item);
-            if (resized != null)
-                resultList.Add(resized);
-        }
-
-        var readOnly = new ReadOnlyCollection<IBasicWorkItem>(resultList);
-
-        return new Dictionary<Socket, IReadOnlyList<IBasicWorkItem>>
-            {
-                { _outputs[0], readOnly }
-            };
+        return Execute(inputs.ToDictionary(kvp => kvp.Key.Id, kvp => kvp.Value));
     }
-
-    #endregion
-
-    #region Execute (string keyed)
 
     public IReadOnlyDictionary<Socket, IReadOnlyList<IBasicWorkItem>> Execute(IDictionary<string, IReadOnlyList<IBasicWorkItem>> inputs)
     {
-        if (inputs is null) throw new ArgumentNullException(nameof(inputs));
+        if (!inputs.TryGetValue(_inputs[0].Id, out var inItems))
+            throw new ArgumentException($"Input items not found for the expected input socket {_inputs[0].Id}.", nameof(inputs));
 
-        inputs.TryGetValue(_inputs[0].Id, out var inItems);
-        inItems ??= Array.Empty<IBasicWorkItem>();
-
-        var resultList = new List<IBasicWorkItem>(inItems.Count);
-
-        foreach (var item in inItems)
+        foreach (WorkItem item in inItems.Cast<WorkItem>())
         {
-            var resized = ResizeWorkItem(item);
-            if (resized != null)
-                resultList.Add(resized);
+            var resizeOptions = BuildResizeOptions(item.Image.Width, item.Image.Height);
+            item.Image.Mutate(x => x.Resize(resizeOptions));
         }
-
-        var readOnly = new ReadOnlyCollection<IBasicWorkItem>(resultList);
 
         return new Dictionary<Socket, IReadOnlyList<IBasicWorkItem>>
             {
-                { _outputs[0].Id, readOnly }
+                { _outputs[0], inItems }
             };
     }
 
     #endregion
 
-    #region Core resize logic
-
-    private IBasicWorkItem? ResizeWorkItem(IBasicWorkItem item)
-    {
-        if (item is null)
-            throw new ArgumentNullException(nameof(item));
-
-
-        if (!AlwaysEncoder)
-        {
-            return item;
-        }
-
-        // 1. Lấy image bytes
-        if (!item.Metadata.TryGetValue("ImageData", out var dataObj) ||
-            dataObj is not byte[] imageBytes ||
-            imageBytes.Length == 0)
-        {
-            // Không có ảnh → pass-through
-            return item;
-        }
-
-        // 2. Load ảnh bằng ImageSharp
-        using var image = Image.Load<Rgba32>(imageBytes);
-
-        // 3. Tính toán ResizeOptions
-        var options = BuildResizeOptions(image.Width, image.Height);
-
-        // 4. Resize
-        image.Mutate(x => x.Resize(options));
-
-        // 5. Encode lại, giữ nguyên format (nếu biết), mặc định PNG
-        var decodedFormat = image.Metadata.DecodedImageFormat ?? PngFormat.Instance;
-
-        using var ms = new MemoryStream();
-        image.Save(ms, decodedFormat);
-        var outBytes = ms.ToArray();
-
-        // 6. Cập nhật metadata (giữ nguyên các key khác)
-        var newMetadata = new Dictionary<string, object>(item.Metadata)
-        {
-            ["ImageData"] = outBytes,
-            ["Width"] = image.Width,
-            ["Height"] = image.Height,
-            ["ResizedAtUtc"] = DateTime.UtcNow
-        };
-
-        return new ResizeBlockWorkItem(newMetadata);
-    }
+    #region Resize Option Builder
 
     private ResizeOptions BuildResizeOptions(int srcWidth, int srcHeight)
     {
@@ -486,7 +393,7 @@ public class ResizeBlock : IBlock
         }
     }
 
-    private IResampler MapResampler(ResizeResampler resampler)
+    static private IResampler MapResampler(ResizeResampler resampler)
     {
         return resampler switch
         {
@@ -500,7 +407,7 @@ public class ResizeBlock : IBlock
         };
     }
 
-    private SixLabors.ImageSharp.Processing.ResizeMode MapResizeMode(ResizeModeOption mode, bool preserveAspect)
+    static private ResizeMode MapResizeMode(ResizeModeOption mode, bool preserveAspect)
     {
         return mode switch
         {
@@ -522,7 +429,6 @@ public class ResizeBlock : IBlock
     {
         if (!_disposed)
         {
-            // hiện chưa giữ resource managed nào đặc biệt
             _disposed = true;
         }
     }
@@ -531,22 +437,6 @@ public class ResizeBlock : IBlock
     {
         Dispose(true);
         GC.SuppressFinalize(this);
-    }
-
-    #endregion
-
-    #region Nested WorkItem
-
-    private sealed class ResizeBlockWorkItem : IBasicWorkItem
-    {
-        public Guid Id { get; } = Guid.NewGuid();
-
-        public IDictionary<string, object> Metadata { get; }
-
-        public ResizeBlockWorkItem(IDictionary<string, object> metadata)
-        {
-            Metadata = metadata ?? throw new ArgumentNullException(nameof(metadata));
-        }
     }
 
     #endregion

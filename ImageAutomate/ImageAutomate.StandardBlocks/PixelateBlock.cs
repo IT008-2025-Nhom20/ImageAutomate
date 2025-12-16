@@ -1,13 +1,10 @@
 ﻿using ImageAutomate.Core;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
-using System.Collections.ObjectModel;
 using System.ComponentModel;
 
 namespace ImageAutomate.StandardBlocks;
 
-public class PixelateBlock
+public class PixelateBlock: IBlock
 {
     #region Fields
 
@@ -28,14 +25,6 @@ public class PixelateBlock
     private bool _alwaysEncode = true;
     #endregion
 
-    #region Ctor
-
-    public PixelateBlock()
-    {
-    }
-
-    #endregion
-
     #region IBlock basic
 
     public string Name => "Pixelate";
@@ -47,7 +36,7 @@ public class PixelateBlock
 
     public string Content
     {
-        get => $"Size: {Size}\nRe-encode: {AlwaysEncode}";
+        get => $"Size: {Size}";
     }
 
     #endregion
@@ -96,7 +85,7 @@ public class PixelateBlock
     #region Configuration
 
     [Category("Configuration")]
-    [Description("Pixel block size (1–100). Higher values produce larger pixel blocks.")]
+    [Description("Pixel block size (1-100). Higher values produce larger pixel blocks.")]
     public int Size
     {
         get => _size;
@@ -111,20 +100,6 @@ public class PixelateBlock
         }
     }
 
-    [Category("Configuration")]
-    [Description("Force re-encoding even when format matches")]
-    public bool AlwaysEncode
-    {
-        get => _alwaysEncode;
-        set
-        {
-            if(_alwaysEncode != value)
-            {
-                _alwaysEncode = value;
-                OnPropertyChanged(nameof(AlwaysEncode));
-            }    
-        }
-    }
     #endregion
 
     #region INotifyPropertyChanged
@@ -141,99 +116,24 @@ public class PixelateBlock
     public IReadOnlyDictionary<Socket, IReadOnlyList<IBasicWorkItem>> Execute(
         IDictionary<Socket, IReadOnlyList<IBasicWorkItem>> inputs)
     {
-        if (inputs is null) throw new ArgumentNullException(nameof(inputs));
-
-        inputs.TryGetValue(_inputs[0], out var inItems);
-        inItems ??= Array.Empty<IBasicWorkItem>();
-
-        var resultList = new List<IBasicWorkItem>(inItems.Count);
-
-        foreach (var item in inItems)
-        {
-            var pixelated = ApplyPixelate(item);
-            if (pixelated != null)
-                resultList.Add(pixelated);
-        }
-
-        var readOnly = new ReadOnlyCollection<IBasicWorkItem>(resultList);
-
-        return new Dictionary<Socket, IReadOnlyList<IBasicWorkItem>>
-            {
-                { _outputs[0], readOnly }
-            };
+        return Execute(inputs.ToDictionary(kvp => kvp.Key.Id, kvp => kvp.Value));
     }
-
-    #endregion
-
-    #region Execute (string keyed)
 
     public IReadOnlyDictionary<Socket, IReadOnlyList<IBasicWorkItem>> Execute(
         IDictionary<string, IReadOnlyList<IBasicWorkItem>> inputs)
     {
-        if (inputs is null) throw new ArgumentNullException(nameof(inputs));
+        if (!inputs.TryGetValue(_inputs[0].Id, out var inItems))
+            throw new ArgumentException($"Input items not found for the expected input socket {_inputs[0].Id}.", nameof(inputs));
 
-        inputs.TryGetValue(_inputs[0].Id, out var inItems);
-        inItems ??= Array.Empty<IBasicWorkItem>();
-
-        var resultList = new List<IBasicWorkItem>(inItems.Count);
-
-        foreach (var item in inItems)
+        foreach (WorkItem item in inItems.Cast<WorkItem>())
         {
-            var pixelated = ApplyPixelate(item);
-            if (pixelated != null)
-                resultList.Add(pixelated);
+            item.Image.Mutate(x => x.Pixelate(Size));
         }
-
-        var readOnly = new ReadOnlyCollection<IBasicWorkItem>(resultList);
 
         return new Dictionary<Socket, IReadOnlyList<IBasicWorkItem>>
             {
-                { _outputs[0].Id, readOnly }
+                { _outputs[0], inItems }
             };
-    }
-
-    #endregion
-
-    #region Core pixelate logic
-
-    private IBasicWorkItem? ApplyPixelate(IBasicWorkItem item)
-    {
-        if (item is null)
-            throw new ArgumentNullException(nameof(item));
-
-        if (!_alwaysEncode)
-            return item;
-
-        // Không có ảnh → trả nguyên item
-        if (!item.Metadata.TryGetValue("ImageData", out var dataObj) ||
-            dataObj is not byte[] imageBytes ||
-            imageBytes.Length == 0)
-        {
-            return item;
-        }
-
-        using var image = Image.Load<Rgba32>(imageBytes);
-
-        // Pixelate qua ImageSharp
-        image.Mutate(x => x.Pixelate(Size));
-
-        var decodedFormat = image.Metadata.DecodedImageFormat
-                            ?? SixLabors.ImageSharp.Formats.Png.PngFormat.Instance;
-
-        using var ms = new MemoryStream();
-        image.Save(ms, decodedFormat);
-        var outBytes = ms.ToArray();
-
-        var newMetadata = new Dictionary<string, object>(item.Metadata)
-        {
-            ["ImageData"] = outBytes,
-            ["Width"] = image.Width,
-            ["Height"] = image.Height,
-            ["PixelateSize"] = Size,
-            ["PixelatedAtUtc"] = DateTime.UtcNow
-        };
-
-        return new PixelateBlockWorkItem(newMetadata);
     }
 
     #endregion
@@ -252,22 +152,6 @@ public class PixelateBlock
     {
         Dispose(true);
         GC.SuppressFinalize(this);
-    }
-
-    #endregion
-
-    #region Nested WorkItem
-
-    private sealed class PixelateBlockWorkItem : IBasicWorkItem
-    {
-        public Guid Id { get; } = Guid.NewGuid();
-
-        public IDictionary<string, object> Metadata { get; }
-
-        public PixelateBlockWorkItem(IDictionary<string, object> metadata)
-        {
-            Metadata = metadata ?? throw new ArgumentNullException(nameof(metadata));
-        }
     }
 
     #endregion
