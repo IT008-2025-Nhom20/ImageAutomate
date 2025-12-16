@@ -25,7 +25,6 @@ public class SaveBlock : IBlock
     private int _nodeWidth = 200;
     private int _nodeHeight = 100;
 
-    // Configuration
     private string _outputPath = string.Empty;
     private bool _overwrite = false;
     private bool _createDirectory = true;
@@ -36,15 +35,9 @@ public class SaveBlock : IBlock
 
     public string Name => "Save";
 
-    public string Title
-    {
-        get => "Save";
-    }
+    public string Title => "Save";
 
-    public string Content
-    {
-        get => $"Output path: {OutputPath}\nOverwrite: {Overwrite}\nCreate directory: {CreateDirectory}";
-    }
+    public string Content => $"Output path: {OutputPath}\nOverwrite: {Overwrite}\nCreate directory: {CreateDirectory}";
 
     #endregion
 

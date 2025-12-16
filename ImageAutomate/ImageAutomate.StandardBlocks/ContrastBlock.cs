@@ -13,13 +13,9 @@ internal class ContrastBlock : IBlock
 
     private bool _disposed;
 
-    private string _title = "Contrast";
-    private string _content = "Adjust image contrast";
-
     private int _nodeWidth = 200;
     private int _nodeHeight = 100;
 
-    // Contrast factor in [0.0, 3.0]. Default 1.0.
     private float _contrast = 1.0f;
     private bool _alwaysEncode = true;
 
@@ -29,15 +25,9 @@ internal class ContrastBlock : IBlock
 
     public string Name => "Contrast";
 
-    public string Title
-    {
-        get => _title;
-    }
+    public string Title => "Contrast";
 
-    public string Content
-    {
-        get => $"Contrast: {Contrast}\nRe-encode: {AlwaysEncode}";
-    }
+    public string Content => $"Contrast: {Contrast}\nRe-encode: {AlwaysEncode}";
 
     #endregion
 

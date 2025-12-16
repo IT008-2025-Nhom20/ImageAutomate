@@ -17,14 +17,10 @@ public class LoadBlock : IBlock
     private string _sourcePath = string.Empty;
     private bool _autoOrient = false;
 
-    private bool _alwaysEncode = false;
     private bool disposedValue = false;
 
     private int _width = 200;
     private int _height = 100;
-
-    private string _title = "Load";
-    private string _content = "Load image";
 
     #endregion
 
@@ -42,14 +38,9 @@ public class LoadBlock : IBlock
 
     public string Name => "Load";
 
-    public string Title 
-    { 
-        get => _title;
-    }
-    public string Content 
-    { 
-        get => $"Path: {SourcePath}\nAuto Orient: {AutoOrient}";
-    }
+    public string Title => "Load";
+
+    public string Content => $"Path: {SourcePath}\nAuto Orient: {AutoOrient}";
 
     [Category("Layout")]
     [Description("Width of the black node")]

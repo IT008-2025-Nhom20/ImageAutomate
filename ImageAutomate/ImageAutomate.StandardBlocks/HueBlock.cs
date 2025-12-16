@@ -1,13 +1,10 @@
 ﻿using ImageAutomate.Core;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
-using System.Collections.ObjectModel;
 using System.ComponentModel;
 
 namespace ImageAutomate.StandardBlocks;
 
-public class HueBlock
+public class HueBlock : IBlock
 {
     #region Fields
 
@@ -16,38 +13,20 @@ public class HueBlock
 
     private bool _disposed;
 
-    private string _title = "Hue";
-    private string _content = "Adjust hue";
-
     private int _nodeWidth = 200;
     private int _nodeHeight = 100;
 
-    // Hue shift in degrees: [-180, 180]
     private float _hueShift = 0.0f;
     private bool _alwaysEncode = true;
-    #endregion
-
-    #region Ctor
-
-    public HueBlock()
-    {
-    }
-
     #endregion
 
     #region IBlock basic
 
     public string Name => "Hue";
 
-    public string Title
-    {
-        get => $"Hue shift: {HueShift}\nRe-encode: {AlwaysEncode}";
-    }
+    public string Title => "Hue";
 
-    public string Content
-    {
-        get => _content;
-    }
+    public string Content => $"Hue shift: {HueShift}\nRe-encode: {AlwaysEncode}";
 
     #endregion
 
@@ -101,7 +80,6 @@ public class HueBlock
         get => _hueShift;
         set
         {
-            // Clamp vào [-180, 180]
             var clamped = Math.Clamp(value, -180.0f, 180.0f);
             if (Math.Abs(_hueShift - clamped) > float.Epsilon)
             {

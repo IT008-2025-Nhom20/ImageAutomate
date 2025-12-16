@@ -18,9 +18,6 @@ public class FlipBlock : IBlock
 
     private bool _disposed;
 
-    private string _title = "Flip";
-    private string _content = "Flip image";
-
     private int _nodeWidth = 200;
     private int _nodeHeight = 100;
 
@@ -28,27 +25,13 @@ public class FlipBlock : IBlock
     private bool _alwaysEncode = true;
     #endregion
 
-    #region Ctor
-
-    public FlipBlock()
-    {
-    }
-
-    #endregion
-
     #region IBlock basic
 
     public string Name => "Flip";
 
-    public string Title
-    {
-        get => _title;
-    }
+    public string Title => "Flip";
 
-    public string Content
-    {
-        get => $"Flip direction: {FlipMode}\n Re-encode: {AlwaysEncode}";
-    }
+    public string Content => $"Flip direction: {FlipMode}\n Re-encode: {AlwaysEncode}";
 
     #endregion
 

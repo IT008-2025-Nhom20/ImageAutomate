@@ -13,13 +13,9 @@ public class PixelateBlock: IBlock
 
     private bool _disposed;
 
-    private string _title = "Pixelate";
-    private string _content = "Apply pixelation";
-
     private int _nodeWidth = 200;
     private int _nodeHeight = 100;
 
-    // Pixel size: 1–100
     private int _size = 8;
 
     private bool _alwaysEncode = true;
@@ -29,15 +25,9 @@ public class PixelateBlock: IBlock
 
     public string Name => "Pixelate";
 
-    public string Title
-    {
-        get => _title;
-    }
+    public string Title => "Pixelate";
 
-    public string Content
-    {
-        get => $"Size: {Size}";
-    }
+    public string Content => $"Size: {Size}";
 
     #endregion
 

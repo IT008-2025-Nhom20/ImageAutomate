@@ -78,11 +78,7 @@ public class ConvertBlock : IBlock
     private int _width = 200;
     private int _height = 100;
 
-    private string _title = "Convert";
-    private string _content = "Convert image format";
     #endregion
-
-    #region Constructor
 
     public ConvertBlock()
     {
@@ -96,16 +92,12 @@ public class ConvertBlock : IBlock
         _qoiOptions.PropertyChanged += Options_OnPropertyChanged;
     }
 
-    #endregion
-
     #region Basic Properties
 
     public string Name => "Convert";
 
-    public string Title
-    {
-        get => _title;
-    }
+    public string Title => "Convert";
+
     public string Content
     {
         get
@@ -450,14 +442,10 @@ public class ConvertBlock : IBlock
 
     #region Disposing
 
-    // TODO: properly implement Dispose to manage resource lifecycle
     protected virtual void Dispose(bool disposing)
     {
         if (!disposedValue)
         {
-            if (disposing)
-            {
-            }
             disposedValue = true;
         }
     }

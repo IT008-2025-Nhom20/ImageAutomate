@@ -4,7 +4,7 @@ using System.ComponentModel;
 
 namespace ImageAutomate.StandardBlocks;
 
-public class SharpenBlock
+public class SharpenBlock : IBlock
 {
     #region Fields
 
@@ -13,42 +13,20 @@ public class SharpenBlock
 
     private bool _disposed;
 
-    private string _title = "Sharpen";
-    private string _content = "Sharpen image";
-
     private int _nodeWidth = 200;
     private int _nodeHeight = 100;
 
-    /// <summary>
-    /// Sharpen intensity.
-    /// 0.0 = no sharpening, 1.0 = normal sharpening, >1.0 = stronger.
-    /// Clamped to [0.0, 3.0].
-    /// </summary>
     private float _amount = 1.0f;
     private bool _alwaysEncode = true;
-    #endregion
-
-    #region Ctor
-
-    public SharpenBlock()
-    {
-    }
-
     #endregion
 
     #region IBlock basic
 
     public string Name => "Sharpen";
 
-    public string Title
-    {
-        get => _title;
-    }
+    public string Title => "Sharpen";
 
-    public string Content
-    {
-        get => $"Amount: {Amount}\nRe-encode: {AlwaysEncode}";
-    }
+    public string Content => $"Amount: {Amount}\nRe-encode: {AlwaysEncode}";
 
     #endregion
 

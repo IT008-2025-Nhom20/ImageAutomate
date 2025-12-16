@@ -31,13 +31,9 @@ public class CropBlock : IBlock
 
     private bool _disposed;
 
-    private string _title = "Crop";
-    private string _content = "Crop image";
-
     private int _nodeWidth = 200;
     private int _nodeHeight = 110;
 
-    // Configuration
     private CropModeOption _cropMode = CropModeOption.Rectangle;
 
     private int _x;
@@ -49,22 +45,11 @@ public class CropBlock : IBlock
     private bool _alwaysEncoder = true;
     #endregion
 
-    #region Ctor
-
-    public CropBlock()
-    {
-    }
-
-    #endregion
-
     #region IBlock basic
 
     public string Name => "Crop";
 
-    public string Title
-    {
-        get => _title;
-    }
+    public string Title => "Crop";
 
     public string Content
     {

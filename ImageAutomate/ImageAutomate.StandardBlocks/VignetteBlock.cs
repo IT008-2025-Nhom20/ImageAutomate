@@ -5,7 +5,7 @@ using System.ComponentModel;
 
 namespace ImageAutomate.StandardBlocks;
 
-public class VignetteBlock
+public class VignetteBlock : IBlock
 {
     #region Fields
 
@@ -15,23 +15,11 @@ public class VignetteBlock
     private int _width = 200;
     private int _height = 100;
 
-    private string _title = "Vignette";
-    private string _content = "Apply vignette effect";
-
-    // Config
     private Color _color = Color.Black;
-    private float _strength = 0.6f; // 0–1
+    private float _strength = 0.6f;
 
     private bool _disposed;
     private bool _alwaysEncode = true;
-    #endregion
-
-    #region ctor
-
-    public VignetteBlock()
-    {
-    }
-
     #endregion
 
     #region INotifyPropertyChanged
@@ -47,15 +35,9 @@ public class VignetteBlock
 
     public string Name => "Vignette";
 
-    public string Title
-    {
-        get => _title;
-    }
+    public string Title => "Vignette";
 
-    public string Content
-    {
-        get => $"Color: {Color}\nStrength: {Strength}\nRe-encode: {AlwaysEncode}";
-    }
+    public string Content => $"Color: {Color}\nStrength: {Strength}\nRe-encode: {AlwaysEncode}";
 
     [Category("Layout")]
     [Description("Width of the block node")]
@@ -180,7 +162,6 @@ public class VignetteBlock
     {
         if (!_disposed)
         {
-            // Hiện tại block không giữ unmanaged resources nên không cần làm gì thêm
             _disposed = true;
         }
     }

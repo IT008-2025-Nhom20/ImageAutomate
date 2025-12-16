@@ -315,8 +315,8 @@ public class ResizeBlock : IBlock
         switch (_resizeMode)
         {
             case ResizeModeOption.Fixed:
-                // Fixed: nếu PreserveAspectRatio = false -> stretch,
-                // nếu true -> scale theo min factor.
+                // Fixed: if PreserveAspectRatio = false, stretch;
+                // if true, scale by min factor
                 if (!PreserveAspectRatio)
                 {
                     if (tw <= 0 || th <= 0)
@@ -326,7 +326,7 @@ public class ResizeBlock : IBlock
                 }
                 else
                 {
-                    // scale theo min factor, không đảm bảo đúng tw x th nhưng giữ ratio
+                    // Scale by min factor, doesn't guarantee exact tw x th but preserves ratio
                     if (tw <= 0 && th <= 0)
                         throw new InvalidOperationException("ResizeBlock (Fixed+PreserveAspectRatio): At least one of TargetWidth or TargetHeight must be positive.");
 
@@ -353,7 +353,7 @@ public class ResizeBlock : IBlock
 
             case ResizeModeOption.KeepAspect:
                 {
-                    // Scale theo 1 chiều, giữ aspect
+                    // Scale in one dimension, preserve aspect ratio
                     if (tw <= 0 && th <= 0)
                         throw new InvalidOperationException("ResizeBlock (KeepAspect): At least one of TargetWidth or TargetHeight must be positive.");
 

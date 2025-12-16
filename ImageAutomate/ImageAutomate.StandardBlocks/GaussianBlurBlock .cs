@@ -13,40 +13,22 @@ public class GaussianBlurBlock : IBlock
 
     private bool _disposed;
 
-    private string _title = "Gaussian Blur";
-    private string _content = "Apply Gaussian blur";
-
     private int _nodeWidth = 220;
     private int _nodeHeight = 110;
 
-    // Configuration
-    private float _sigma = 1.0f;      // blur intensity
-    private int? _radius = null;      // kernel radius (optional)
+    private float _sigma = 1.0f;
+    private int? _radius = null;
 
     private bool _alwaysEncode = true;
-    #endregion
-
-    #region Ctor
-
-    public GaussianBlurBlock()
-    {
-    }
-
     #endregion
 
     #region IBlock basic
 
     public string Name => "GaussianBlur";
 
-    public string Title
-    {
-        get => _title;
-    }
+    public string Title => "Gaussian Blur";
 
-    public string Content
-    {
-        get => $"Sigma: {Sigma}\nRadius: {Radius}\nRe-encode: {AlwaysEncode}";
-    }
+    public string Content => $"Sigma: {Sigma}\nRadius: {Radius}\nRe-encode: {AlwaysEncode}";
 
     #endregion
 
@@ -100,7 +82,6 @@ public class GaussianBlurBlock : IBlock
         get => _sigma;
         set
         {
-            //* Note: 0.5–25.0 recommended. 0.0 = no-op
             var clamped = Math.Clamp(value, 0.0f, 25.0f);
             if (Math.Abs(_sigma - clamped) > float.Epsilon)
             {

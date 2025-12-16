@@ -4,7 +4,7 @@ using System.ComponentModel;
 
 namespace ImageAutomate.StandardBlocks;
 
-public class SaturationBlock
+public class SaturationBlock : IBlock
 {
     #region Fields
 
@@ -13,41 +13,20 @@ public class SaturationBlock
 
     private bool _disposed;
 
-    private string _title = "Saturation";
-    private string _content = "Adjust saturation";
-
     private int _nodeWidth = 200;
     private int _nodeHeight = 100;
 
-    /// <summary>
-    /// Saturation factor in [0.0, 3.0].
-    /// 1.0 = no change, <1.0 = desaturate, >1.0 = more saturated.
-    /// </summary>
     private float _saturation = 1.0f;
     private bool _alwaysEncode = true;
-    #endregion
-
-    #region Ctor
-
-    public SaturationBlock()
-    {
-    }
-
     #endregion
 
     #region IBlock basic
 
     public string Name => "Saturation";
 
-    public string Title
-    {
-        get => _title;
-    }
+    public string Title => "Saturation";
 
-    public string Content
-    {
-        get =>$"Sarutation: {Saturation}\nRe-encode: {AlwaysEncode}";
-    }
+    public string Content => $"Saturation: {Saturation}\nRe-encode: {AlwaysEncode}";
 
     #endregion
 
