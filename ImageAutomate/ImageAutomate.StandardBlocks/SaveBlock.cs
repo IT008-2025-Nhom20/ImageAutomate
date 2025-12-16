@@ -24,9 +24,8 @@ public class SaveBlock : IBlock
 {
     #region Fields
 
-    private readonly Socket _inputSocket = new("Save.In", "Image.In");
-    private readonly IReadOnlyList<Socket> _inputs;
-    private readonly IReadOnlyList<Socket> _outputs;
+    private readonly IReadOnlyList<Socket> _inputs = [new("Save.In", "Image.In")];
+    private readonly IReadOnlyList<Socket> _outputs = [];
 
     private bool _disposed;
 
@@ -53,9 +52,6 @@ public class SaveBlock : IBlock
 
     public SaveBlock()
     {
-        _inputs = new[] { _inputSocket };
-        _outputs = Array.Empty<Socket>();
-
         _jpegOptions.PropertyChanged += Options_OnPropertyChanged;
         _pngOptions.PropertyChanged += Options_OnPropertyChanged;
         _webpOptions.PropertyChanged += Options_OnPropertyChanged;
@@ -302,7 +298,7 @@ public class SaveBlock : IBlock
     {
         if (inputs is null) throw new ArgumentNullException(nameof(inputs));
 
-        inputs.TryGetValue(_inputSocket, out var inItems);
+        inputs.TryGetValue(_inputs[0], out var inItems);
         inItems ??= Array.Empty<IBasicWorkItem>();
 
         foreach (var item in inItems)
@@ -323,7 +319,7 @@ public class SaveBlock : IBlock
     {
         if (inputs is null) throw new ArgumentNullException(nameof(inputs));
 
-        inputs.TryGetValue(_inputSocket.Id, out var inItems);
+        inputs.TryGetValue(_inputs[0].Id, out var inItems);
         inItems ??= Array.Empty<IBasicWorkItem>();
 
         foreach (var item in inItems)

@@ -18,9 +18,8 @@ namespace ImageAutomate.StandardBlocks;
 public class LoadBlock : IBlock
 {
     #region Fields
-    private readonly Socket _outputSocket = new("Load.out", "Image.out");
-    private readonly IReadOnlyList<Socket> _inputs;
-    private readonly IReadOnlyList<Socket> _outputs;
+    private readonly IReadOnlyList<Socket> _inputs = [];
+    private readonly IReadOnlyList<Socket> _outputs = [new("Load.out", "Image.out")];
 
     private string _sourcePath = string.Empty;
     private bool _autoOrient = false;
@@ -46,8 +45,6 @@ public class LoadBlock : IBlock
     #region Constructor
     public LoadBlock()
     {
-        _inputs = Array.Empty<Socket>();
-        _outputs = new[] { _outputSocket};
     }
     #endregion
 
@@ -175,7 +172,7 @@ public class LoadBlock : IBlock
 
         return new Dictionary<Socket, IReadOnlyList<IBasicWorkItem>>
             {
-                { _outputSocket, readOnly }
+                { _outputs[0], readOnly }
             };
     }
 
@@ -189,7 +186,7 @@ public class LoadBlock : IBlock
 
         return new Dictionary<string, IReadOnlyList<IBasicWorkItem>>
             {
-                { _outputSocket.Id, readOnly }
+                { _outputs[0].Id, readOnly }
             };
     }
 

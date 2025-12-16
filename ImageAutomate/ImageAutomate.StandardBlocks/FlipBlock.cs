@@ -21,10 +21,8 @@ public class FlipBlock : IBlock
 {
     #region Fields
 
-    private readonly Socket _inputSocket = new("Flip.In", "Image.In");
-    private readonly Socket _outputSocket = new("Flip.Out", "Image.Out");
-    private readonly IReadOnlyList<Socket> _inputs;
-    private readonly IReadOnlyList<Socket> _outputs;
+    private readonly IReadOnlyList<Socket> _inputs = [new("Flip.In", "Image.In")];
+    private readonly IReadOnlyList<Socket> _outputs = [new("Flip.Out", "Image.Out")];
 
     private bool _disposed;
 
@@ -42,8 +40,6 @@ public class FlipBlock : IBlock
 
     public FlipBlock()
     {
-        _inputs = new[] { _inputSocket };
-        _outputs = new[] { _outputSocket };
     }
 
     #endregion
@@ -170,7 +166,7 @@ public class FlipBlock : IBlock
     {
         if (inputs is null) throw new ArgumentNullException(nameof(inputs));
 
-        inputs.TryGetValue(_inputSocket, out var inItems);
+        inputs.TryGetValue(_inputs[0], out var inItems);
         inItems ??= Array.Empty<IBasicWorkItem>();
 
         var resultList = new List<IBasicWorkItem>(inItems.Count);
@@ -186,7 +182,7 @@ public class FlipBlock : IBlock
 
         return new Dictionary<Socket, IReadOnlyList<IBasicWorkItem>>
             {
-                { _outputSocket, readOnly }
+                { _outputs[0], readOnly }
             };
     }
 
@@ -199,7 +195,7 @@ public class FlipBlock : IBlock
     {
         if (inputs is null) throw new ArgumentNullException(nameof(inputs));
 
-        inputs.TryGetValue(_inputSocket.Id, out var inItems);
+        inputs.TryGetValue(_inputs[0].Id, out var inItems);
         inItems ??= Array.Empty<IBasicWorkItem>();
 
         var resultList = new List<IBasicWorkItem>(inItems.Count);
@@ -215,7 +211,7 @@ public class FlipBlock : IBlock
 
         return new Dictionary<string, IReadOnlyList<IBasicWorkItem>>
             {
-                { _outputSocket.Id, readOnly }
+                { _outputs[0].Id, readOnly }
             };
     }
 

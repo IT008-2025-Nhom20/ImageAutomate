@@ -60,10 +60,8 @@ public enum TiffCompression
 public class ConvertBlock : IBlock
 {
     #region Fields
-    private readonly Socket _inputSocket = new("Convert.In", "Image.Input");
-    private readonly Socket _outputSocket = new("Convert.Out", "Image.Out");
-    private readonly IReadOnlyList<Socket> _inputs;
-    private readonly IReadOnlyList<Socket> _outputs;
+    private readonly IReadOnlyList<Socket> _inputs = [new("Convert.In", "Image.Input")];
+    private readonly IReadOnlyList<Socket> _outputs = [new("Convert.Out", "Image.Out")];
 
     private ImageFormat _targetFormat = ImageFormat.Png;
     private bool _alwaysEncoder = false;
@@ -88,9 +86,6 @@ public class ConvertBlock : IBlock
     #region Constructor
     public ConvertBlock()
     {
-        _inputs = new[] { _inputSocket };
-        _outputs = new[] { _outputSocket };
-
         _jpegOptions.PropertyChanged += Options_OnPropertyChanged;
         _pngOptions.PropertyChanged += Options_OnPropertyChanged;
         _bmpOptions.PropertyChanged += Options_OnPropertyChanged;
@@ -396,7 +391,7 @@ public class ConvertBlock : IBlock
     {
         if (inputs is null) throw new NotImplementedException();
 
-        inputs.TryGetValue(_inputSocket, out var inItems);
+        inputs.TryGetValue(_inputs[0], out var inItems);
         inItems ??= Array.Empty<IBasicWorkItem>();
 
         var resultList = new List<IBasicWorkItem>(inItems.Count);
@@ -410,7 +405,7 @@ public class ConvertBlock : IBlock
         var readOnlyResult = new ReadOnlyCollection<IBasicWorkItem>(resultList);
         var dict = new Dictionary<Socket, IReadOnlyList<IBasicWorkItem>>
         {
-            {_outputSocket, readOnlyResult}
+            {_outputs[0], readOnlyResult}
         };
         return dict;
     }
@@ -420,7 +415,7 @@ public class ConvertBlock : IBlock
     {
         if (inputs is null) throw new ArgumentNullException(nameof(inputs));
 
-        inputs.TryGetValue(_inputSocket.Id, out var inItems);
+        inputs.TryGetValue(_inputs[0], out var inItems);
         inItems ??= Array.Empty<IBasicWorkItem>();
 
         var resultList = new List<IBasicWorkItem>(inItems.Count);
@@ -434,7 +429,7 @@ public class ConvertBlock : IBlock
         var readOnlyResult = new ReadOnlyCollection<IBasicWorkItem>(resultList);
         var dict = new Dictionary<string, IReadOnlyList<IBasicWorkItem>>
         {
-            { _outputSocket.Id, readOnlyResult }
+            { _outputs[0].Id, readOnlyResult }
         };
 
         return dict;

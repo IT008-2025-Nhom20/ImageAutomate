@@ -2,14 +2,8 @@
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
-using System;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
-using System.Linq;
-using System.Text;
-using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 
 namespace ImageAutomate.StandardBlocks;
 
@@ -17,10 +11,8 @@ public class GaussianBlurBlock : IBlock
 {
     #region Fields
 
-    private readonly Socket _inputSocket = new("GaussianBlur.In", "Image.In");
-    private readonly Socket _outputSocket = new("GaussianBlur.Out", "Image.Out");
-    private readonly IReadOnlyList<Socket> _inputs;
-    private readonly IReadOnlyList<Socket> _outputs;
+    private readonly IReadOnlyList<Socket> _inputs = [new("GaussianBlur.In", "Image.In")];
+    private readonly IReadOnlyList<Socket> _outputs = [new("GaussianBlur.Out", "Image.Out")];
 
     private bool _disposed;
 
@@ -31,8 +23,8 @@ public class GaussianBlurBlock : IBlock
     private int _nodeHeight = 110;
 
     // Configuration
-    private float _sigma = 1.0f;      // cường độ blur
-    private int? _radius = null;      // bán kính kernel (optional)
+    private float _sigma = 1.0f;      // blur intensity
+    private int? _radius = null;      // kernel radius (optional)
 
     private bool _alwaysEncode = true;
     #endregion
@@ -41,8 +33,6 @@ public class GaussianBlurBlock : IBlock
 
     public GaussianBlurBlock()
     {
-        _inputs = new[] { _inputSocket };
-        _outputs = new[] { _outputSocket };
     }
 
     #endregion
@@ -131,7 +121,7 @@ public class GaussianBlurBlock : IBlock
         get => _sigma;
         set
         {
-            // FR: 0.5–25.0 recommended, nhưng cho phép 0.0 = no-op
+            //* Note: 0.5–25.0 recommended. 0.0 = no-op
             var clamped = Math.Clamp(value, 0.0f, 25.0f);
             if (Math.Abs(_sigma - clamped) > float.Epsilon)
             {
@@ -184,14 +174,14 @@ public class GaussianBlurBlock : IBlock
 
     #endregion
 
-    #region Execute (Socket keyed)
+    #region Execute
 
     public IReadOnlyDictionary<Socket, IReadOnlyList<IBasicWorkItem>> Execute(
         IDictionary<Socket, IReadOnlyList<IBasicWorkItem>> inputs)
     {
         if (inputs is null) throw new ArgumentNullException(nameof(inputs));
 
-        inputs.TryGetValue(_inputSocket, out var inItems);
+        inputs.TryGetValue(_inputs[0], out var inItems);
         inItems ??= Array.Empty<IBasicWorkItem>();
 
         var resultList = new List<IBasicWorkItem>(inItems.Count);
@@ -207,20 +197,16 @@ public class GaussianBlurBlock : IBlock
 
         return new Dictionary<Socket, IReadOnlyList<IBasicWorkItem>>
             {
-                { _outputSocket, readOnly }
+                { _outputs[0], readOnly }
             };
     }
-
-    #endregion
-
-    #region Execute (string keyed)
 
     public IReadOnlyDictionary<string, IReadOnlyList<IBasicWorkItem>> Execute(
         IDictionary<string, IReadOnlyList<IBasicWorkItem>> inputs)
     {
         if (inputs is null) throw new ArgumentNullException(nameof(inputs));
 
-        inputs.TryGetValue(_inputSocket.Id, out var inItems);
+        inputs.TryGetValue(_inputs[0].Id, out var inItems);
         inItems ??= Array.Empty<IBasicWorkItem>();
 
         var resultList = new List<IBasicWorkItem>(inItems.Count);
@@ -236,7 +222,7 @@ public class GaussianBlurBlock : IBlock
 
         return new Dictionary<string, IReadOnlyList<IBasicWorkItem>>
             {
-                { _outputSocket.Id, readOnly }
+                { _outputs[0].Id, readOnly }
             };
     }
 
@@ -252,7 +238,7 @@ public class GaussianBlurBlock : IBlock
         if (!_alwaysEncode)
             return item;
 
-        // Không có image data → trả nguyên item
+        // No image
         if (!item.Metadata.TryGetValue("ImageData", out var dataObj) ||
             dataObj is not byte[] imageBytes ||
             imageBytes.Length == 0)
@@ -260,7 +246,7 @@ public class GaussianBlurBlock : IBlock
             return item;
         }
 
-        // Nếu sigma = 0.0f → no-op
+        // sigma = 0.0f → no-op
         if (Sigma <= 0.0f)
         {
             return item;
@@ -268,7 +254,7 @@ public class GaussianBlurBlock : IBlock
 
         using var image = Image.Load<Rgba32>(imageBytes);
 
-        // Phiên bản ImageSharp hiện tại chỉ hỗ trợ GaussianBlur(sigma)
+        // Current ImageSharp version supports GaussianBlur(sigma)
         image.Mutate(x => x.GaussianBlur(Sigma));
 
         var decodedFormat = image.Metadata.DecodedImageFormat
