@@ -8,8 +8,8 @@ The `IBlock` interface defines the contract for all graph nodes (blocks) within 
 public interface IBlock : INotifyPropertyChanged, IDisposable
 {
     string Name { get; }
-    string Title { get; set; }
-    string Content { get; set; }
+    string Title { get; }
+    string Content { get; }
     int Width { get; set; }
     int Height { get; set; }
 
@@ -17,7 +17,7 @@ public interface IBlock : INotifyPropertyChanged, IDisposable
     IReadOnlyList<Socket> Outputs { get; }
 
     IReadOnlyDictionary<Socket, IReadOnlyList<IBasicWorkItem>> Execute(IDictionary<Socket, IReadOnlyList<IBasicWorkItem>> inputs);
-    IReadOnlyDictionary<string, IReadOnlyList<IBasicWorkItem>> Execute(IDictionary<string, IReadOnlyList<IBasicWorkItem>> inputs);
+    IReadOnlyDictionary<Socket, IReadOnlyList<IBasicWorkItem>> Execute(IDictionary<string, IReadOnlyList<IBasicWorkItem>> inputs);
 }
 ```
 
