@@ -51,5 +51,33 @@ public interface IBlock : INotifyPropertyChanged, IDisposable
 ## Methods
 
 ### `Execute`
-*   **Description**: Executes the block's operation on the provided inputs.
-*   **Returns**: A dictionary of results mapped to output sockets.
+
+The `Execute` method has two overloads that form the core execution protocol:
+
+#### Socket-Keyed Execute (Canonical Protocol)
+```csharp
+IReadOnlyDictionary<Socket, IReadOnlyList<IBasicWorkItem>> Execute(IDictionary<Socket, IReadOnlyList<IBasicWorkItem>> inputs)
+```
+*   **Description**: The canonical execution method that accepts Socket-keyed inputs.
+*   **Parameters**: `inputs` - Dictionary mapping input sockets to their work items.
+*   **Returns**: Dictionary mapping output sockets to their work items.
+*   **Implementation Note**: Typically delegates to the string-keyed overload by converting Socket keys to their IDs (via `socket.Id` property access), since retrieving a socket ID is trivial while finding a Socket from an ID requires searching.
+
+#### String-Keyed Execute (Convenience Overload)
+```csharp
+IReadOnlyDictionary<Socket, IReadOnlyList<IBasicWorkItem>> Execute(IDictionary<string, IReadOnlyList<IBasicWorkItem>> inputs)
+```
+*   **Description**: Convenience overload that accepts string socket IDs instead of Socket objects.
+*   **Parameters**: `inputs` - Dictionary mapping socket IDs to their work items.
+*   **Returns**: Dictionary mapping output sockets to their work items.
+*   **Implementation Note**: Contains the actual execution logic. Returns Socket-keyed results to maintain a unified return type.
+
+#### Return Type Design
+Both overloads return `IReadOnlyDictionary<Socket, IReadOnlyList<IBasicWorkItem>>` to enable method chaining regardless of input key type. For example:
+```csharp
+// Chain executions with different key types
+var stringKeyedData = new Dictionary<string, IReadOnlyList<IBasicWorkItem>>();
+var socketKeyedResult1 = block1.Execute(stringKeyedData);  // string keys in, Socket keys out
+var socketKeyedResult2 = block2.Execute(socketKeyedResult1);  // Socket keys in, Socket keys out
+```
+Both blocks return Socket-keyed results that can be seamlessly passed to subsequent blocks.
