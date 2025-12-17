@@ -6,14 +6,6 @@ using System.ComponentModel;
 
 namespace ImageAutomate.StandardBlocks;
 
-public enum ResizeModeOption
-{
-    Fixed,
-    KeepAspect,
-    Fit,
-    Fill,
-    Pad
-}
 
 public enum ResizeResampler
 {
@@ -37,12 +29,9 @@ public class ResizeBlock : IBlock
     private int _nodeHeight = 110;
 
     // Configuration
-    private ResizeModeOption _resizeMode = ResizeModeOption.Fit;
-    private int? _targetWidth;
-    private int? _targetHeight;
-    private bool _preserveAspectRatio = true;
+    private int _targetWidth = 0;
+    private int _targetHeight = 0;
     private ResizeResampler _resampler = ResizeResampler.Lanczos3;
-    private Color _backgroundColor = Color.Transparent;
 
     #endregion
 
@@ -59,20 +48,7 @@ public class ResizeBlock : IBlock
     {
         get
         {
-            if (ResizeMode is ResizeModeOption.Fixed)
-                return $"Resize mode: {ResizeMode}\n" +
-                       $"Width: {TargetWidth}\n" +
-                       $"Height: {TargetHeight}\n" +
-                       $"Preserve aspect ratio: {PreserveAspectRatio}\n" +
-                       $"Resampler: {Resampler}\n";
-            else if (ResizeMode is ResizeModeOption.Pad)
-                return $"Resize mode: {ResizeMode}\n" +
-                       $"Width: {TargetWidth}\n" +
-                       $"Height: {TargetHeight}\n" +
-                       $"Resampler: {Resampler}\n" +
-                       $"Back ground color: {BackgroundColor}\n";
-            return $"Resize mode: {ResizeMode}\n" +
-                   $"Width: {TargetWidth}\n" +
+            return $"Width: {TargetWidth}\n" +
                    $"Height: {TargetHeight}\n" +
                    $"Resampler: {Resampler}\n";
         }
@@ -122,32 +98,16 @@ public class ResizeBlock : IBlock
     #endregion
 
     #region Configuration properties
-
-    [Category("Configuration")]
-    [Description("Resize mode controlling how the target size is interpreted")]
-    public ResizeModeOption ResizeMode
-    {
-        get => _resizeMode;
-        set
-        {
-            if (_resizeMode != value)
-            {
-                _resizeMode = value;
-                OnPropertyChanged(nameof(ResizeMode));
-            }
-        }
-    }
-
     [Category("Configuration")]
     [Description("Target width in pixels. Interpretation depends on ResizeMode.")]
-    public int? TargetWidth
+    public int TargetWidth
     {
         get => _targetWidth;
         set
         {
             if (_targetWidth != value)
             {
-                if (value.HasValue && value.Value <= 0)
+                if (value <= 0)
                     throw new ArgumentOutOfRangeException(nameof(TargetWidth), "TargetWidth must be positive.");
 
                 _targetWidth = value;
@@ -158,33 +118,18 @@ public class ResizeBlock : IBlock
 
     [Category("Configuration")]
     [Description("Target height in pixels. Interpretation depends on ResizeMode.")]
-    public int? TargetHeight
+    public int TargetHeight
     {
         get => _targetHeight;
         set
         {
             if (_targetHeight != value)
             {
-                if (value.HasValue && value.Value <= 0)
+                if (value <= 0)
                     throw new ArgumentOutOfRangeException(nameof(TargetHeight), "TargetHeight must be positive.");
 
                 _targetHeight = value;
                 OnPropertyChanged(nameof(TargetHeight));
-            }
-        }
-    }
-
-    [Category("Configuration")]
-    [Description("If true, preserves aspect ratio in Fixed mode.")]
-    public bool PreserveAspectRatio
-    {
-        get => _preserveAspectRatio;
-        set
-        {
-            if (_preserveAspectRatio != value)
-            {
-                _preserveAspectRatio = value;
-                OnPropertyChanged(nameof(PreserveAspectRatio));
             }
         }
     }
@@ -203,22 +148,6 @@ public class ResizeBlock : IBlock
             }
         }
     }
-
-    [Category("Configuration")]
-    [Description("Background color used when ResizeMode = Pad.")]
-    public Color BackgroundColor
-    {
-        get => _backgroundColor;
-        set
-        {
-            if (_backgroundColor != value)
-            {
-                _backgroundColor = value;
-                OnPropertyChanged(nameof(BackgroundColor));
-            }
-        }
-    }
-
     #endregion
 
     #region INotifyPropertyChanged
@@ -246,8 +175,8 @@ public class ResizeBlock : IBlock
 
         foreach (var sourceItem in inItems.OfType<WorkItem>())
         {
-            var resizeOptions = BuildResizeOptions(sourceItem.Image.Width, sourceItem.Image.Height);
-            sourceItem.Image.Mutate(x => x.Resize(resizeOptions));
+            var resamplerOptions = MapResampler(Resampler);
+            sourceItem.Image.Mutate(x => x.Resize(TargetWidth, TargetHeight, resamplerOptions));
             outputItems.Add(sourceItem);
         }
 
@@ -260,123 +189,6 @@ public class ResizeBlock : IBlock
     #endregion
 
     #region Resize Option Builder
-
-    private ResizeOptions BuildResizeOptions(int srcWidth, int srcHeight)
-    {
-        if (srcWidth <= 0 || srcHeight <= 0)
-            throw new InvalidOperationException("ResizeBlock: Source image has invalid dimensions.");
-
-        // validate target dims
-        if (!TargetWidth.HasValue && !TargetHeight.HasValue)
-            throw new InvalidOperationException("ResizeBlock: At least one of TargetWidth or TargetHeight must be specified.");
-
-        var sampler = MapResampler(Resampler);
-        var mode = MapResizeMode(_resizeMode, PreserveAspectRatio);
-
-        var targetSize = ComputeTargetSize(srcWidth, srcHeight);
-
-        var options = new ResizeOptions
-        {
-            Size = targetSize,
-            Mode = mode,
-            Sampler = sampler,
-            PremultiplyAlpha = true,
-            Position = AnchorPositionMode.Center
-        };
-
-        if (_resizeMode == ResizeModeOption.Pad)
-        {
-            options.PadColor = BackgroundColor;
-        }
-
-        return options;
-    }
-
-    private Size ComputeTargetSize(int srcWidth, int srcHeight)
-    {
-        int tw = TargetWidth ?? 0;
-        int th = TargetHeight ?? 0;
-
-        switch (_resizeMode)
-        {
-            case ResizeModeOption.Fixed:
-                // Fixed: if PreserveAspectRatio = false, stretch;
-                // if true, scale by min factor
-                if (!PreserveAspectRatio)
-                {
-                    if (tw <= 0 || th <= 0)
-                        throw new InvalidOperationException("ResizeBlock (Fixed): TargetWidth and TargetHeight must be positive.");
-
-                    return new Size(tw, th);
-                }
-                else
-                {
-                    // Scale by min factor, doesn't guarantee exact tw x th but preserves ratio
-                    if (tw <= 0 && th <= 0)
-                        throw new InvalidOperationException("ResizeBlock (Fixed+PreserveAspectRatio): At least one of TargetWidth or TargetHeight must be positive.");
-
-                    double scale;
-                    if (tw > 0 && th > 0)
-                    {
-                        var scaleW = (double)tw / srcWidth;
-                        var scaleH = (double)th / srcHeight;
-                        scale = Math.Min(scaleW, scaleH);
-                    }
-                    else if (tw > 0)
-                    {
-                        scale = (double)tw / srcWidth;
-                    }
-                    else
-                    {
-                        scale = (double)th / srcHeight;
-                    }
-
-                    int rw = Math.Max(1, (int)Math.Round(srcWidth * scale));
-                    int rh = Math.Max(1, (int)Math.Round(srcHeight * scale));
-                    return new Size(rw, rh);
-                }
-
-            case ResizeModeOption.KeepAspect:
-                {
-                    // Scale in one dimension, preserve aspect ratio
-                    if (tw <= 0 && th <= 0)
-                        throw new InvalidOperationException("ResizeBlock (KeepAspect): At least one of TargetWidth or TargetHeight must be positive.");
-
-                    double scale;
-                    if (tw > 0 && th > 0)
-                    {
-                        var scaleW = (double)tw / srcWidth;
-                        var scaleH = (double)th / srcHeight;
-                        scale = Math.Min(scaleW, scaleH);
-                    }
-                    else if (tw > 0)
-                    {
-                        scale = (double)tw / srcWidth;
-                    }
-                    else
-                    {
-                        scale = (double)th / srcHeight;
-                    }
-
-                    int rw = Math.Max(1, (int)Math.Round(srcWidth * scale));
-                    int rh = Math.Max(1, (int)Math.Round(srcHeight * scale));
-                    return new Size(rw, rh);
-                }
-
-            case ResizeModeOption.Fit:
-            case ResizeModeOption.Fill:
-            case ResizeModeOption.Pad:
-                {
-                    if (tw <= 0 || th <= 0)
-                        throw new InvalidOperationException("ResizeBlock (Fit/Fill/Pad): TargetWidth and TargetHeight must be positive.");
-
-                    return new Size(tw, th);
-                }
-
-            default:
-                throw new NotSupportedException($"ResizeBlock: Unsupported ResizeMode '{_resizeMode}'.");
-        }
-    }
 
     static private IResampler MapResampler(ResizeResampler resampler)
     {
@@ -391,21 +203,6 @@ public class ResizeBlock : IBlock
             _ => KnownResamplers.Lanczos3
         };
     }
-
-    static private ResizeMode MapResizeMode(ResizeModeOption mode, bool preserveAspect)
-    {
-        return mode switch
-        {
-            ResizeModeOption.Fixed when !preserveAspect => SixLabors.ImageSharp.Processing.ResizeMode.Stretch,
-            ResizeModeOption.Fixed when preserveAspect => SixLabors.ImageSharp.Processing.ResizeMode.Max,
-            ResizeModeOption.KeepAspect => SixLabors.ImageSharp.Processing.ResizeMode.Max,
-            ResizeModeOption.Fit => SixLabors.ImageSharp.Processing.ResizeMode.Max,
-            ResizeModeOption.Fill => SixLabors.ImageSharp.Processing.ResizeMode.Crop,
-            ResizeModeOption.Pad => SixLabors.ImageSharp.Processing.ResizeMode.Pad,
-            _ => SixLabors.ImageSharp.Processing.ResizeMode.Max
-        };
-    }
-
     #endregion
 
     #region IDisposable
