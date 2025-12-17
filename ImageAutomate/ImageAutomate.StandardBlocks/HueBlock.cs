@@ -116,14 +116,11 @@ public class HueBlock : IBlock
 
         var outputItems = new List<IBasicWorkItem>();
 
-        foreach (var item in inItems)
+        foreach (var sourceItem in inItems.OfType<WorkItem>())
         {
-            if (item is WorkItem sourceItem)
-            {
-                if (Math.Abs(HueShift) >= 0.01f)
-                    sourceItem.Image.Mutate(x => x.Hue(HueShift));
-                outputItems.Add(sourceItem);
-            }
+            if (Math.Abs(HueShift) >= 0.01f)
+                sourceItem.Image.Mutate(x => x.Hue(HueShift));
+            outputItems.Add(sourceItem);
         }
 
         return new Dictionary<Socket, IReadOnlyList<IBasicWorkItem>>

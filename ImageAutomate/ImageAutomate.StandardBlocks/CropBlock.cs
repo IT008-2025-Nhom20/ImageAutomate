@@ -242,14 +242,11 @@ public class CropBlock : IBlock
 
         var outputItems = new List<IBasicWorkItem>();
 
-        foreach (var item in inItems)
+        foreach (var sourceItem in inItems.OfType<WorkItem>())
         {
-            if (item is WorkItem sourceItem)
-            {
-                var rect = BuildCropRegion(sourceItem.Image.Width, sourceItem.Image.Height);
-                sourceItem.Image.Mutate(x => x.Crop(rect));
-                outputItems.Add(sourceItem);
-            }
+            var rect = BuildCropRegion(sourceItem.Image.Width, sourceItem.Image.Height);
+            sourceItem.Image.Mutate(x => x.Crop(rect));
+            outputItems.Add(sourceItem);
         }
         
         return new Dictionary<Socket, IReadOnlyList<IBasicWorkItem>>

@@ -115,14 +115,11 @@ public class SharpenBlock : IBlock
 
         var outputItems = new List<IBasicWorkItem>();
 
-        foreach (var item in inItems)
+        foreach (var sourceItem in inItems.OfType<WorkItem>())
         {
-            if (item is WorkItem sourceItem)
-            {
-                if (Amount > 0.0f)
-                    sourceItem.Image.Mutate(x => x.GaussianSharpen(Amount));
-                outputItems.Add(sourceItem);
-            }
+            if (Amount > 0.0f)
+                sourceItem.Image.Mutate(x => x.GaussianSharpen(Amount));
+            outputItems.Add(sourceItem);
         }
 
         return new Dictionary<Socket, IReadOnlyList<IBasicWorkItem>>

@@ -128,24 +128,21 @@ public class VignetteBlock : IBlock
 
         var outputItems = new List<IBasicWorkItem>();
 
-        foreach (var item in inItems)
+        foreach (var sourceItem in inItems.OfType<WorkItem>())
         {
-            if (item is WorkItem sourceItem)
+            if (_strength > 0f)
             {
-                if (_strength > 0f)
-                {
-                    sourceItem.Image.Mutate(
-                        x => x.Vignette(
-                            new GraphicsOptions
-                            {
-                                BlendPercentage = _strength
-                            },
-                            _color
-                        )
-                    );
-                }
-                outputItems.Add(sourceItem);
+                sourceItem.Image.Mutate(
+                    x => x.Vignette(
+                        new GraphicsOptions
+                        {
+                            BlendPercentage = _strength
+                        },
+                        _color
+                    )
+                );
             }
+            outputItems.Add(sourceItem);
         }
 
         return new Dictionary<Socket, IReadOnlyList<IBasicWorkItem>>

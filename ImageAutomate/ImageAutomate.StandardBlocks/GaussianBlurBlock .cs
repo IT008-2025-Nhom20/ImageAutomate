@@ -135,14 +135,11 @@ public class GaussianBlurBlock : IBlock
 
         var outputItems = new List<IBasicWorkItem>();
 
-        foreach (var item in inItems)
+        foreach (var sourceItem in inItems.OfType<WorkItem>())
         {
-            if (item is WorkItem sourceItem)
-            {
-                if (Sigma > 0.0f)
-                    sourceItem.Image.Mutate(x => x.GaussianBlur(Sigma));
-                outputItems.Add(sourceItem);
-            }
+            if (Sigma > 0.0f)
+                sourceItem.Image.Mutate(x => x.GaussianBlur(Sigma));
+            outputItems.Add(sourceItem);
         }
         
         return new Dictionary<Socket, IReadOnlyList<IBasicWorkItem>>

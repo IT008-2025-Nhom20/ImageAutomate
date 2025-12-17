@@ -116,13 +116,10 @@ public class PixelateBlock: IBlock
 
         var outputItems = new List<IBasicWorkItem>();
 
-        foreach (var item in inItems)
+        foreach (var sourceItem in inItems.OfType<WorkItem>())
         {
-            if (item is WorkItem sourceItem)
-            {
-                sourceItem.Image.Mutate(x => x.Pixelate(Size));
-                outputItems.Add(sourceItem);
-            }
+            sourceItem.Image.Mutate(x => x.Pixelate(Size));
+            outputItems.Add(sourceItem);
         }
 
         return new Dictionary<Socket, IReadOnlyList<IBasicWorkItem>>

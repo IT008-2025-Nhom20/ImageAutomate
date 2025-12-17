@@ -115,14 +115,11 @@ public class SaturationBlock : IBlock
 
         var outputItems = new List<IBasicWorkItem>();
 
-        foreach (var item in inItems)
+        foreach (var sourceItem in inItems.OfType<WorkItem>())
         {
-            if (item is WorkItem sourceItem)
-            {
-                if (Math.Abs(Saturation - 1.0f) >= float.Epsilon)
-                    sourceItem.Image.Mutate(x => x.Saturate(Saturation));
-                outputItems.Add(sourceItem);
-            }
+            if (Math.Abs(Saturation - 1.0f) >= float.Epsilon)
+                sourceItem.Image.Mutate(x => x.Saturate(Saturation));
+            outputItems.Add(sourceItem);
         }
 
         return new Dictionary<Socket, IReadOnlyList<IBasicWorkItem>>

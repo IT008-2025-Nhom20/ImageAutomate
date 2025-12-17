@@ -391,39 +391,35 @@ public class ConvertBlock : IBlock
 
     public IReadOnlyDictionary<Socket, IReadOnlyList<IBasicWorkItem>> Execute(IDictionary<string, IReadOnlyList<IBasicWorkItem>> inputs)
     {
-        // Agent exempt: do not implement
         if (!inputs.TryGetValue(_inputs[0].Id, out var inItems))
             throw new ArgumentException($"Input items not found for the expected input socket {_inputs[0].Id}.", nameof(inputs));
 
         var outputItems = new List<IBasicWorkItem>();
 
-        foreach (var item in inItems)
+        foreach (WorkItem sourceItem in inItems.OfType<WorkItem>())
         {
-            if (item is WorkItem sourceItem)
+            IImmutableDictionary<string, object> metadata = sourceItem.Metadata;
+            metadata = metadata.SetItem("Format", TargetFormat.ToString());
+            metadata = metadata.SetItem("EncodingOptions", TargetFormat switch
             {
-                IImmutableDictionary<string, object> metadata = sourceItem.Metadata;
-                metadata = metadata.SetItem("Format", TargetFormat.ToString());
-                metadata = metadata.SetItem("EncodingOptions", TargetFormat switch
-                {
-                    ImageFormat.Jpeg => (object)JpegOptions,
-                    ImageFormat.Png => (object)PngOptions,
-                    ImageFormat.Bmp => (object)BmpOptions,
-                    ImageFormat.Gif => (object)GifOptions,
-                    ImageFormat.Tiff => (object)TiffOptions,
-                    ImageFormat.Tga => (object)TgaOptions,
-                    ImageFormat.WebP => (object)WebPOptions,
-                    ImageFormat.Qoi => (object)QoiOptions,
-                    ImageFormat.Unknown => throw new NotImplementedException(),
-                    ImageFormat.Pbm => throw new NotImplementedException(),
-                    _ => null
-                } ?? null!);
-                outputItems.Add(
-                    new WorkItem(
-                        sourceItem.Image,
-                        metadata
-                    )
-                );
-            }
+                ImageFormat.Jpeg => (object)JpegOptions,
+                ImageFormat.Png => (object)PngOptions,
+                ImageFormat.Bmp => (object)BmpOptions,
+                ImageFormat.Gif => (object)GifOptions,
+                ImageFormat.Tiff => (object)TiffOptions,
+                ImageFormat.Tga => (object)TgaOptions,
+                ImageFormat.WebP => (object)WebPOptions,
+                ImageFormat.Qoi => (object)QoiOptions,
+                ImageFormat.Unknown => throw new NotImplementedException(),
+                ImageFormat.Pbm => throw new NotImplementedException(),
+                _ => null
+            } ?? null!);
+            outputItems.Add(
+                new WorkItem(
+                    sourceItem.Image,
+                    metadata
+                )
+            );
         }
 
         return new Dictionary<Socket, IReadOnlyList<IBasicWorkItem>> { { _outputs[0], outputItems } };

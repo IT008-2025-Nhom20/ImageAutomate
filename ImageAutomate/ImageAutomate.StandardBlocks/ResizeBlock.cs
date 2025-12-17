@@ -244,14 +244,11 @@ public class ResizeBlock : IBlock
 
         var outputItems = new List<IBasicWorkItem>();
 
-        foreach (var item in inItems)
+        foreach (var sourceItem in inItems.OfType<WorkItem>())
         {
-            if (item is WorkItem sourceItem)
-            {
-                var resizeOptions = BuildResizeOptions(sourceItem.Image.Width, sourceItem.Image.Height);
-                sourceItem.Image.Mutate(x => x.Resize(resizeOptions));
-                outputItems.Add(sourceItem);
-            }
+            var resizeOptions = BuildResizeOptions(sourceItem.Image.Width, sourceItem.Image.Height);
+            sourceItem.Image.Mutate(x => x.Resize(resizeOptions));
+            outputItems.Add(sourceItem);
         }
 
         return new Dictionary<Socket, IReadOnlyList<IBasicWorkItem>>
