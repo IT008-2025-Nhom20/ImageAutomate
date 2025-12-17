@@ -1,4 +1,5 @@
-﻿using SixLabors.ImageSharp;
+﻿using System.Collections.Immutable;
+using SixLabors.ImageSharp;
 
 namespace ImageAutomate.Core;
 
@@ -13,7 +14,7 @@ namespace ImageAutomate.Core;
 public interface IBasicWorkItem
 {
     Guid Id { get; }
-    IDictionary<string, object> Metadata { get; }
+    IImmutableDictionary<string, object> Metadata { get; }
 }
 
 /// <summary>

@@ -250,15 +250,7 @@ public class ResizeBlock : IBlock
             {
                 var resizeOptions = BuildResizeOptions(sourceItem.Image.Width, sourceItem.Image.Height);
                 var clonedImage = sourceItem.Image.Clone(x => x.Resize(resizeOptions));
-
-                var newItem = new WorkItem(clonedImage);
-                
-                // Deep-copy metadata
-                foreach (var kvp in sourceItem.Metadata)
-                {
-                    newItem.Metadata[kvp.Key] = kvp.Value;
-                }
-                
+                var newItem = new WorkItem(clonedImage, sourceItem.Metadata);
                 outputItems.Add(newItem);
             }
         }

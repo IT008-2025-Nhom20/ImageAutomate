@@ -139,33 +139,13 @@ public class GaussianBlurBlock : IBlock
         {
             if (item is WorkItem sourceItem)
             {
+                SixLabors.ImageSharp.Image clonedImage;
                 if (Sigma <= 0.0f)
-                {
-                    // Skip processing but still clone to preserve immutability
-                    var clonedImage = sourceItem.Image.Clone(x => { });
-                    var newItem = new WorkItem(clonedImage);
-                    
-                    // Deep-copy metadata
-                    foreach (var kvp in sourceItem.Metadata)
-                    {
-                        newItem.Metadata[kvp.Key] = kvp.Value;
-                    }
-                    
-                    outputItems.Add(newItem);
-                }
+                    clonedImage = sourceItem.Image.Clone(x => { });
                 else
-                {
-                    var clonedImage = sourceItem.Image.Clone(x => x.GaussianBlur(Sigma));
-                    var newItem = new WorkItem(clonedImage);
-                    
-                    // Deep-copy metadata
-                    foreach (var kvp in sourceItem.Metadata)
-                    {
-                        newItem.Metadata[kvp.Key] = kvp.Value;
-                    }
-                    
-                    outputItems.Add(newItem);
-                }
+                    clonedImage = sourceItem.Image.Clone(x => x.GaussianBlur(Sigma));
+                var newItem = new WorkItem(clonedImage, sourceItem.Metadata);
+                outputItems.Add(newItem);
             }
         }
         

@@ -378,12 +378,14 @@ public class ConvertBlock : IBlock
 
     public IReadOnlyDictionary<Socket, IReadOnlyList<IBasicWorkItem>> Execute(IDictionary<Socket, IReadOnlyList<IBasicWorkItem>> inputs)
     {
+        // Agent exempt: do not implement
         throw new NotImplementedException();
     }
 
 
     public IReadOnlyDictionary<Socket, IReadOnlyList<IBasicWorkItem>> Execute(IDictionary<string, IReadOnlyList<IBasicWorkItem>> inputs)
     {
+        // Agent exempt: do not implement
         throw new NotImplementedException();
     }
 

@@ -2,7 +2,9 @@
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Processing;
 using System.ComponentModel;
+
 namespace ImageAutomate.StandardBlocks;
+
 public enum CropModeOption
 {
     Rectangle,
@@ -246,14 +248,7 @@ public class CropBlock : IBlock
             {
                 var rect = BuildCropRegion(sourceItem.Image.Width, sourceItem.Image.Height);
                 var clonedImage = sourceItem.Image.Clone(x => x.Crop(rect));
-
-                var newItem = new WorkItem(clonedImage);
-                
-                // Deep-copy metadata
-                foreach (var kvp in sourceItem.Metadata)
-                {
-                    newItem.Metadata[kvp.Key] = kvp.Value;
-                }
+                var newItem = new WorkItem(clonedImage, sourceItem.Metadata);
                 
                 outputItems.Add(newItem);
             }

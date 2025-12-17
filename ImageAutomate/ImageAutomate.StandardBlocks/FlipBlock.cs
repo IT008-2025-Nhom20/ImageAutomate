@@ -127,14 +127,7 @@ public class FlipBlock : IBlock
                     _flipMode == FlipModeOption.Horizontal
                     ? SixLabors.ImageSharp.Processing.FlipMode.Horizontal
                     : SixLabors.ImageSharp.Processing.FlipMode.Vertical));
-
-                var newItem = new WorkItem(clonedImage);
-                
-                // Deep-copy metadata
-                foreach (var kvp in sourceItem.Metadata)
-                {
-                    newItem.Metadata[kvp.Key] = kvp.Value;
-                }
+                var newItem = new WorkItem(clonedImage, sourceItem.Metadata);
                 
                 outputItems.Add(newItem);
             }

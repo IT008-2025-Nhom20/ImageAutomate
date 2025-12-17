@@ -2,8 +2,8 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
+using System.Collections.Immutable;
 
 namespace ImageAutomate.StandardBlocks;
 
@@ -44,8 +44,8 @@ public class LoadBlock : IBlock
 
     [Category("Layout")]
     [Description("Width of the black node")]
-    public int Width 
-    { 
+    public int Width
+    {
         get => _width;
         set
         {
@@ -59,16 +59,16 @@ public class LoadBlock : IBlock
 
     [Category("Layout")]
     [Description("Width of the black node")]
-    public int Height 
-    { 
+    public int Height
+    {
         get => _height;
-        set 
+        set
         {
             if (_height != value)
             {
                 _height = value;
                 OnPropertyChanged(nameof(Height));
-            }    
+            }
         }
     }
     #endregion
@@ -85,7 +85,7 @@ public class LoadBlock : IBlock
             {
                 _sourcePath = value;
                 OnPropertyChanged(nameof(SourcePath));
-            }    
+            }
         }
     }
 
@@ -141,14 +141,14 @@ public class LoadBlock : IBlock
                 { _outputs[0], readOnly }
             };
     }
-    
+
     #endregion
 
     private IEnumerable<IBasicWorkItem> LoadWorkItems()
     {
         if (string.IsNullOrWhiteSpace(SourcePath))
             throw new InvalidOperationException("LoadBlock: SourcePath is required when LoadFromUrl = false.");
-        
+
         return LoadImageFromDirectory();
     }
 
@@ -167,11 +167,13 @@ public class LoadBlock : IBlock
 
         foreach (var file in files)
         {
-            WorkItem wi = LoadImageFile(file);
-            wi.Metadata["BatchFolder"] = SourcePath;
-            wi.Metadata["FileName"] = Path.GetFileName(file);
-            wi.Metadata["FullPath"] = file;
-            yield return wi!;
+            var builder = ImmutableDictionary.CreateBuilder<string, object>();
+            builder.Add("BatchFolder", SourcePath);
+            builder.Add("FileName", Path.GetFileName(file));
+            builder.Add("FullPath", file);
+            var metadata = builder.ToImmutable();
+            WorkItem wi = new(LoadImageFile(file), metadata);
+            yield return wi;
         }
     }
 
@@ -179,7 +181,7 @@ public class LoadBlock : IBlock
     {
         try
         {
-            var info = Image.Identify(path);
+            var info = SixLabors.ImageSharp.Image.Identify(path);
             return info != null;
         }
         catch (Exception ex) when (ex is NotSupportedException
@@ -191,22 +193,19 @@ public class LoadBlock : IBlock
         }
     }
 
-    private WorkItem LoadImageFile(string path)
+    private SixLabors.ImageSharp.Image LoadImageFile(string path)
     {
         if (!File.Exists(path))
             throw new FileNotFoundException($"LoadBlock: File not found at path '{path}'.", path);
 
         try
         {
-            var image = Image.Load<Rgba32>(path);
+            var image = SixLabors.ImageSharp.Image.Load(path);
 
-            var format = image.Metadata.DecodedImageFormat
-                ?? throw new InvalidOperationException($"LoadBlock: Unsupported or unknown image format for file '{path}'.");
-            
             if (AutoOrient)
                 image.Mutate(x => x.AutoOrient());
 
-            return new WorkItem(image);
+            return image;
         }
         catch (Exception ex) when (ex is IOException
                                    || ex is UnauthorizedAccessException

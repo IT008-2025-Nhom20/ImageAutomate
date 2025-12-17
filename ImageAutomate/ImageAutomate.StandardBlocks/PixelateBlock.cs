@@ -121,15 +121,7 @@ public class PixelateBlock: IBlock
             if (item is WorkItem sourceItem)
             {
                 var clonedImage = sourceItem.Image.Clone(x => x.Pixelate(Size));
-
-                var newItem = new WorkItem(clonedImage);
-                
-                // Deep-copy metadata
-                foreach (var kvp in sourceItem.Metadata)
-                {
-                    newItem.Metadata[kvp.Key] = kvp.Value;
-                }
-                
+                var newItem = new WorkItem(clonedImage, sourceItem.Metadata);
                 outputItems.Add(newItem);
             }
         }

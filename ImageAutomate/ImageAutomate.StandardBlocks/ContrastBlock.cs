@@ -121,15 +121,8 @@ public class ContrastBlock : IBlock
             if (item is WorkItem sourceItem)
             {
                 var clonedImage = sourceItem.Image.Clone(x => x.Contrast(Contrast));
+                var newItem = new WorkItem(clonedImage, sourceItem.Metadata);
 
-                var newItem = new WorkItem(clonedImage);
-                
-                // Deep-copy metadata
-                foreach (var kvp in sourceItem.Metadata)
-                {
-                    newItem.Metadata[kvp.Key] = kvp.Value;
-                }
-                
                 outputItems.Add(newItem);
             }
         }

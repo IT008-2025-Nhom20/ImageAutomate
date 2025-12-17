@@ -1,4 +1,5 @@
-﻿using SixLabors.ImageSharp;
+﻿using System.Collections.Immutable;
+using SixLabors.ImageSharp;
 
 namespace ImageAutomate.Core;
 
@@ -10,14 +11,16 @@ namespace ImageAutomate.Core;
 /// the work item is disposed. The Metadata dictionary can be used to store additional information relevant to the work
 /// item.
 /// </remarks>
+/// <exception cref=""ArgumentNullException">Thrown when the provided image is null.</exception>
 /// <param name="image">The image to associate with this work item. Cannot be null.</param>
-public sealed class WorkItem(Image image) : IWorkItem
+/// <param name="metadata">Optional metadata dictionary associated with this work item.</param>
+public sealed class WorkItem(Image image, IImmutableDictionary<string, object>? metadata = null) : IWorkItem
 {
-    private Dictionary<string, object>? _metadata;
-    
     public Guid Id { get; } = Guid.NewGuid();
-    public Image Image { get; } = image;
-    public IDictionary<string, object> Metadata => _metadata ??= [];
+    public Image Image { get; } = image ?? throw new ArgumentNullException(nameof(image));
+    private IImmutableDictionary<string, object>? _metadata = metadata;
+    public IImmutableDictionary<string, object> Metadata =>
+        _metadata ??= ImmutableDictionary<string, object>.Empty;
 
     public void Dispose()
     {
@@ -33,15 +36,15 @@ public sealed class WorkItem(Image image) : IWorkItem
 /// the work item is disposed. The Metadata dictionary can be used to store additional information relevant to the work
 /// item.
 /// </remarks>
+/// <exception cref="ArgumentNullException">Thrown when the provided list of images is null.</exception>
 /// <param name="images">The list of images to associate with this work item. Cannot be null.</param>
-public sealed class BatchWorkItem(IEnumerable<Image> images) : IBatchWorkItem
+public sealed class BatchWorkItem(IEnumerable<Image> images, IImmutableDictionary<string, object>? metadata = null) : IBatchWorkItem
 {
-    private Dictionary<string, object>? _metadata;
-    
     public Guid Id { get; } = Guid.NewGuid();
-    public IReadOnlyList<Image> Images { get; } = [.. images];
-    public IDictionary<string, object> Metadata => _metadata ??= [];
-
+    private IImmutableDictionary<string, object>? _metadata = metadata;
+    public IReadOnlyList<Image> Images { get; } = [.. images ?? throw new ArgumentNullException(nameof(images))];
+    public IImmutableDictionary<string, object> Metadata =>
+        _metadata ??= ImmutableDictionary<string, object>.Empty;
     public void Dispose()
     {
         foreach (var image in Images)
