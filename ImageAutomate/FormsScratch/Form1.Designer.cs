@@ -28,13 +28,14 @@
         /// </summary>
         private void InitializeComponent()
         {
-            graphRenderPanel1 = new ImageAutomate.UI.GraphRenderPanel();
+            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(Form1));
             splitContainer1 = new SplitContainer();
             splitContainer2 = new SplitContainer();
             button3 = new Button();
             button2 = new Button();
             button1 = new Button();
             propertyGrid1 = new PropertyGrid();
+            pictureBox1 = new PictureBox();
             ((System.ComponentModel.ISupportInitialize)splitContainer1).BeginInit();
             splitContainer1.Panel1.SuspendLayout();
             splitContainer1.Panel2.SuspendLayout();
@@ -43,21 +44,8 @@
             splitContainer2.Panel1.SuspendLayout();
             splitContainer2.Panel2.SuspendLayout();
             splitContainer2.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)pictureBox1).BeginInit();
             SuspendLayout();
-            // 
-            // graphRenderPanel1
-            // 
-            graphRenderPanel1.BackColor = Color.White;
-            graphRenderPanel1.ColumnSpacing = 250D;
-            graphRenderPanel1.Dock = DockStyle.Fill;
-            graphRenderPanel1.Location = new Point(0, 0);
-            graphRenderPanel1.Name = "graphRenderPanel1";
-            graphRenderPanel1.NodeSpacing = 30D;
-            graphRenderPanel1.RenderScale = 0.75F;
-            graphRenderPanel1.SelectedBlockOutlineColor = Color.Red;
-            graphRenderPanel1.Size = new Size(530, 450);
-            graphRenderPanel1.SocketRadius = 6D;
-            graphRenderPanel1.TabIndex = 0;
             // 
             // splitContainer1
             // 
@@ -71,7 +59,7 @@
             // 
             // splitContainer1.Panel2
             // 
-            splitContainer1.Panel2.Controls.Add(graphRenderPanel1);
+            splitContainer1.Panel2.Controls.Add(pictureBox1);
             splitContainer1.Size = new Size(800, 450);
             splitContainer1.SplitterDistance = 266;
             splitContainer1.TabIndex = 1;
@@ -138,6 +126,16 @@
             propertyGrid1.Size = new Size(266, 302);
             propertyGrid1.TabIndex = 0;
             // 
+            // pictureBox1
+            // 
+            pictureBox1.AccessibleRole = AccessibleRole.None;
+            pictureBox1.Image = (Image)resources.GetObject("pictureBox1.Image");
+            pictureBox1.Location = new Point(69, 61);
+            pictureBox1.Name = "pictureBox1";
+            pictureBox1.Size = new Size(191, 146);
+            pictureBox1.TabIndex = 0;
+            pictureBox1.TabStop = false;
+            // 
             // Form1
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
@@ -155,6 +153,7 @@
             splitContainer2.Panel2.ResumeLayout(false);
             ((System.ComponentModel.ISupportInitialize)splitContainer2).EndInit();
             splitContainer2.ResumeLayout(false);
+            ((System.ComponentModel.ISupportInitialize)pictureBox1).EndInit();
             ResumeLayout(false);
         }
 
@@ -167,5 +166,6 @@
         private Button button1;
         private Button button3;
         private Button button2;
+        private PictureBox pictureBox1;
     }
 }

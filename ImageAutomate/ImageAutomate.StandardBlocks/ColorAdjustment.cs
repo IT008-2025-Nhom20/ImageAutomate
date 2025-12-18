@@ -11,12 +11,12 @@ using SixLabors.ImageSharp.PixelFormats;
 
 namespace ImageAutomate.StandardBlocks;
 
-public class BackgroundcolorBlock : IBlock
+public class ColorAdjustment : IBlock
 {
     #region Fields
 
     private readonly IReadOnlyList<Socket> _inputs = [new("Backgroundcolor.In", "Image.In")];
-    private readonly IReadOnlyList<Socket> _outputs = [new("Backgroundcolor.Out", "Image.Out")];
+    private readonly IReadOnlyList<Socket> _outputs = [new("ColorAdjusment.Out", "Image.Out")];
 
     private bool _disposed;
 
@@ -28,9 +28,9 @@ public class BackgroundcolorBlock : IBlock
 
     #region IBlock basic
 
-    public string Name => "Backgroundcolor";
+    public string Name => "ColorAdjusment";
 
-    public string Title => "Backgroundcolor";
+    public string Title => "ColorAdjusment";
 
     public string Content => $"Color: {HexColor}";
 
