@@ -19,7 +19,7 @@ Range: 0.0–1.0
 
 ## Operational Behaviour
 ```csharp
-image.Mutate(x => x.Vignette(color));
+image.Mutate(x => x.Vignette(new GraphicOptions{BlendPercentage = Strength}, Color));
 ```
 Or with default:
 ```csharp
