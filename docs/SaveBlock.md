@@ -1,7 +1,7 @@
 # FR-SAV-001: Save Image Block
 
 ## Description
-The Save Block outputs the processed image to disk or to an in-memory stream.  
+The Save Block outputs the processed image to disk. 
 Supports all ImageSharp encoders and handles directory validation and overwrite rules.
 
 ---
@@ -23,7 +23,7 @@ If true, missing folders in the OutputPath are created automatically.
 
 ### EncoderFormat
 Optional override to specify the encoder explicitly:  
-Bmp, Gif, Jpeg, Png, Tiff, Tga, WebP, Qoi.  
+Bmp, Gif, Jpeg, Png, Pbm, Tiff, Tga, WebP, Qoi.  
 If omitted, format is inferred from the file extension.
 
 ### EncoderOptions
@@ -32,7 +32,11 @@ Format-specific encoder settings (same structure as ConvertBlock):
 - PNG: CompressionLevel
 - WEBP: Quality, Lossless
 - TIFF: Compression
-
+- BMP: BitsPerPixel
+- PBM: ColorType
+- GIF: UseDithering, ColorPaletteSize
+- TGA: Compress
+- QOI: IncludeAlpha
 ---
 
 ## Acceptance Criteria
