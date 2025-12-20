@@ -14,9 +14,9 @@ namespace ImageAutomate.Execution;
 internal sealed class Warehouse
 {
     private readonly Lock _lock = new(); // mutex lock to protect buffer access
-    private ImmutableDictionary<Socket, ImmutableList<IBasicWorkItem>>? _data; // immutable data buffer for thread-safe reads
+    private ImmutableDictionary<Socket, ImmutableList<IBasicWorkItem>>? _inventory; // immutable data buffer for thread-safe reads
     private int _consumerCount; // number of remaining consumers (dependencies) of this warehouse
-    private bool _isSealed; // whether the warehouse has been committed
+    private bool _isImported; // whether outputs has been imported into the warehouse
 
     /// <summary>
     /// Initializes a new warehouse with the specified consumer count (out-degree).
@@ -28,18 +28,18 @@ internal sealed class Warehouse
             throw new ArgumentOutOfRangeException(nameof(consumerCount), "Consumer count cannot be negative.");
         
         _consumerCount = consumerCount;
-        _isSealed = false;
+        _isImported = false;
     }
 
     /// <summary>
     /// Commits the block's output to the warehouse.
     /// </summary>
     /// <param name="outputs">Block execution outputs mapped by socket.</param>
-    public void Commit(IReadOnlyDictionary<Socket, IReadOnlyList<IBasicWorkItem>> outputs)
+    public void Import(IReadOnlyDictionary<Socket, IReadOnlyList<IBasicWorkItem>> outputs)
     {
         lock (_lock)
         {
-            if (_isSealed)
+            if (_isImported)
                 throw new InvalidOperationException("Warehouse is already sealed. Cannot commit twice.");
 
             var builder = ImmutableDictionary.CreateBuilder<Socket, ImmutableList<IBasicWorkItem>>();
@@ -48,8 +48,8 @@ internal sealed class Warehouse
                 builder[kvp.Key] = [.. kvp.Value];
             }
 
-            _data = builder.ToImmutable();
-            _isSealed = true;
+            _inventory = builder.ToImmutable();
+            _isImported = true;
         }
     }
 
@@ -60,9 +60,9 @@ internal sealed class Warehouse
     /// Dictionary of socket to work items. Items are cloned if other consumers remain,
     /// or transferred if caller is the last consumer.
     /// </returns>
-    public IReadOnlyDictionary<Socket, IReadOnlyList<IBasicWorkItem>> GetInputs()
+    public IReadOnlyDictionary<Socket, IReadOnlyList<IBasicWorkItem>> GetInventory()
     {
-        if (_data == null)
+        if (_inventory == null)
             throw new InvalidOperationException("Warehouse has not been committed yet.");
 
         // Atomically decrement consumer count
@@ -74,7 +74,7 @@ internal sealed class Warehouse
         if (remainingConsumers == 0)
         {
             // Last consumer: Transfer ownership
-            var result = _data.ToDictionary(
+            var result = _inventory.ToDictionary(
                 kvp => kvp.Key,
                 kvp => (IReadOnlyList<IBasicWorkItem>)kvp.Value
             );
@@ -82,14 +82,14 @@ internal sealed class Warehouse
             // Clear internal storage (allow GC)
             lock (_lock)
             {
-                _data = null;
+                _inventory = null;
             }
 
             return result;
         }
         else
         {
-            var result = _data.ToDictionary(
+            var result = _inventory.ToDictionary(
                 kvp => kvp.Key,
                 kvp => (IReadOnlyList<IBasicWorkItem>)kvp.Value
                     .Select(item => (IBasicWorkItem)item.Clone())
@@ -112,7 +112,7 @@ internal sealed class Warehouse
     {
         get
         {
-            var data = _data;
+            var data = _inventory;
             if (data == null) return 0;
 
             return data.Values
