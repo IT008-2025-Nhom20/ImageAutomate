@@ -32,7 +32,7 @@ internal sealed class Warehouse
     }
 
     /// <summary>
-    /// Commits the block's output to the warehouse.
+    /// Import the block's output into the warehouse.
     /// </summary>
     /// <param name="outputs">Block execution outputs mapped by socket.</param>
     public void Import(IReadOnlyDictionary<Socket, IReadOnlyList<IBasicWorkItem>> outputs)
