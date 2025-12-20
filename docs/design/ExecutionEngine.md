@@ -1,103 +1,146 @@
-# Execution Engine Design
+# Image Processing Pipeline: Execution Engine Architecture
 
-The **Execution Engine** is the core component responsible for traversing the `PipelineGraph` and orchestrating the execution of `IBlock` nodes. It ensures that data flows correctly from source to target blocks, handling synchronization, data isolation (branching), and resource management.
+## 1\. Architectural Style
 
-## Overview
+The Execution Engine implements a **Pipes and Filters** architecture governed by a **Dataflow** model.
 
-The engine operates on a conceptual "Push" model where blocks produce work items that are pushed to their successors. However, the execution is managed centrally to ensure correctness and efficiency.
+- **Filters (Blocks):** Stateless processing units responsible for transforming data.  
+- **Pipes (Links):** Managed by "Mailboxes" that handle buffering and synchronization.  
+- **Control Flow:** Driven strictly by data availability (Data-Driven), orchestrated by a central runtime (The Engine).
 
-Key responsibilities:
-1.  **Validation**: Ensuring the graph is a valid Directed Acyclic Graph (DAG) and all connections are valid.
-2.  **Scheduling**: Determining which blocks are ready to execute based on data availability.
-3.  **Data Isolation**: Ensuring that branches in the graph receive independent copies of data (Cloning).
-4.  **Synchronization (Latching)**: Waiting for all required inputs before a block executes.
+## **2\. Structural Components**
 
-## Core Concepts
+### **2.1. The Mailbox (Buffered Channel & Barrier)**
 
-### 1. Work Item Propagation
-Blocks exchange `WorkItem`s. When a block finishes execution, its output work items are propagated to the input sockets of connected downstream blocks.
+The "Mailbox" is a structural component residing on the edges of the DAG. It combines the roles of a **Buffered Channel** and a **Synchronization Barrier**.
 
-### 2. Branching & Cloning
-A critical requirement is **Data Isolation**. If a block's output socket is connected to multiple target blocks (branching), the engine must ensure that each target receives its own independent copy of the image data.
+- **Affinity:** **Downstream (Consumer-Centric).** A Mailbox is attached to the *Input Port* of a specific Target Block. It declares "I need data from these upstream sources."  
+- **Observer Role:** The Mailbox implements the **Observer Pattern**. It subscribes to the execution events of upstream blocks. When an upstream block completes, it pushes output to the Mailbox.  
+- **Barrier Role:** It acts as a **CountDownLatch** or Barrier. It maintains the state of dependency resolution for its specific downstream target.
 
-*   **Scenario**: `LoadBlock` connects to `ResizeBlock` and `CropBlock`.
-*   **Mechanism**: The engine detects multiple outgoing connections from a single socket. It clones the underlying image and wraps it in a new `WorkItem` for each target branch.
-*   **Optimization**: To minimize overhead, the engine employs a "Transfer last, Clone others" strategy. The original work item is transferred to one target (the last one processed), while clones are created for all preceding targets.
-*   **Benefit**: Modifications in one branch do not affect the other, and unnecessary allocation is avoided for the final consumer.
+### **2.2. The Engine (Orchestrator)**
 
-![Branching Example](../assets/Executor_Sample.jpg)
-*Figure 1: Left - Branching (Load to Resize/Crop) requires cloning. Right - Merge (Icon/Backdrop to Overlay) requires waiting.*
+The Engine functions as a **Process Manager** or Runtime Scheduler. It is responsible for:
 
-### 3. Latching (Synchronization)
-Nodes with multiple input sockets (e.g., `OverlayBlock` or `ConvertBlock` in the example) must wait until **all** connected inputs have received data before they can execute.
+1. **Lifecycle Management:** Instantiating blocks and mailboxes.  
+2. **Topology Verification:** Static analysis of the DAG.  
+3. **Task Scheduling:** Dispatching "Ready" blocks to the thread pool based on optimization heuristics.
 
-*   **Latch Count**: Each node has a latch counter initialized to its "In-Degree" (number of incoming connections).
-*   **Atomic Decrement**: As an upstream block delivers a work item, the target's latch is decremented.
-*   **Trigger**: When the latch reaches zero, the block is scheduled for execution.
+## **3\. Interaction Patterns**
 
-## Execution Flow
+### **3.1. Synchronization (Barrier Protocol)**
 
-The execution follows a multi-phase process, as illustrated below.
+Synchronization follows a strict **Barrier** pattern to ensure data integrity before execution.
 
-![Execution Flowchart](../assets/Executor_Concept_Flowchart.jpg)
-*Figure 2: Conceptual Flowchart of the Execution Engine.*
+- **Initialization:** The Barrier counter is set to the Target Block's **In-Degree** (Total incoming connections).  
+- **Signal:** The arrival of data from an upstream block triggers an atomic decrement of the counter.  
+- **Release:** The transition of the counter to zero indicates the barrier is tripped. This fires a notification to the Engine that the associated Block is "Ready".
 
-### Phase 1: Validation
-Before execution begins, the engine validates the graph:
-1.  **DAG Check**: Ensures there are no cycles.
-2.  **Connectivity**: Verifies that all required inputs are connected.
-3.  **Type Compatibility**: Checks if connected sockets are compatible.
-4.  **Source Identification**: Locates source nodes (e.g., `LoadBlock`).
+### **3.2. Topology & Routing**
 
-### Phase 2: Initialization
-The engine prepares the **Execution State**:
-*   **Latch Table**: Calculates the in-degree for every node and stores it in a thread-safe table.
-*   **Buffer Stores**:Allocates buffers to hold incoming `WorkItem`s for each node's input sockets.
+The Engine creates specific routing behaviors based on the graph topology, implementing standard Integration Patterns:
 
-### Phase 3: Execution Loop (Async)
-The engine spawns tasks for source nodes and enters an async execution loop.
+A. Fan-In (Concatenation) \-\> The Aggregator with a "Wait for All" completion strategy.
 
-1.  **Execute Node**: The block's `Execute()` method is called with input items.
-2.  **Iterate Outgoing Edges**: For each output socket:
-    *   Identify all connected target links.
-    *   **Clone if Branching**: If there are multiple targets, clone the image/WorkItem for all but the last target. The last target receives the original.
-    *   **Push to Buffer**: Store the result in the target's specific input buffer.
-    *   **Decrement Latch**: Atomically decrement the target's latch counter.
-3.  **Check Latch**:
-    *   If `Latch == 0`: This was the last required input.
-    *   **Gather Payload**: Retrieve all buffered inputs for the target.
-    *   **Schedule Target**: Dispatch the target node for execution (subject to concurrency limits).
-    *   If `Latch > 0`: Do nothing; the target is still waiting for other inputs.
-4.  **Completion**: When all tasks are done and no nodes are pending, the pipeline is complete.
+- **Implementation:** When multiple upstream links converge on a single socket, the Mailbox acts as an Aggregator, collecting inputs into a Composite list. Order is determined by arrival time (Time-Ordered) unless index preservation is explicitly enforced.
 
-## Concurrency & Scalability
+B. Fan-Out (Branching) \-\> The Recipient List combined with the **Prototype Pattern**.
 
-In wide graphs, simply spawning a new `Task` for every ready node can lead to thread pool saturation and context switching overhead. To ensure robustness and scalability:
+- **Implementation:** When a socket connects to multiple downstream blocks:  
+  1. The Engine identifies the list of recipients.  
+  2. It creates a deep copy of the WorkItem for each recipient using the **Prototype** pattern (Cloning).  
+  3. *Constraint:* This ensures **Defensive Copying**, preventing side effects in parallel execution branches.
 
-*   **Concurrency Limiting**: The engine should enforce a maximum degree of parallelism (e.g., via `ParallelOptions.MaxDegreeOfParallelism` or a `SemaphoreSlim`).
-*   **Task Scheduling**: Instead of `Task.Run` immediately, ready nodes should be queued to a bounded scheduler that manages worker threads efficiently.
-*   **Benefits**: Prevents system overload during heavy processing and ensures predictable performance characteristics regardless of graph width.
+## **4\. Execution Lifecycle**
 
-## Resource Management & Disposal Strategy
+### **Phase 1: Static Validation**
 
-Proper disposal of image resources (`WorkItem`s) is crucial to prevent memory leaks, especially when processing high-resolution images.
+The Engine performs structural validation prior to runtime:
 
-### 1. Ownership & Consumption
-*   **Engine Ownership**: The `ExecutionState` is the ultimate owner of all in-flight `WorkItem`s while they are buffered or being passed between blocks.
-*   **Block Execution**: When a block executes, it receives `WorkItem`s as input. It treats them as read-only (unless it's the sole owner and modifies in-place, though immutability is preferred). It produces *new* `WorkItem`s as output.
-*   **Input Disposal**: Once a block has successfully executed and produced its output:
-    *   The Engine is responsible for disposing of the **Input WorkItems** that were passed to that block.
-    *   **Rationale**: Those specific instances of `WorkItem` have served their purpose (feeding the block) and are no longer needed.
-    *   **Note**: Because of the branching strategy (cloning), each branch has its own unique `WorkItem` instances. Disposing the input to one branch does not affect others.
+1. **Cycle Detection:** Verifies the graph is a Directed Acyclic Graph (DAG).  
+2. **Port Binding:** Ensures all mandatory input ports are bound.  
+3. **Sink Verification:** Confirms the existence of at least one **Event-Driven Consumer** (Sink/Save Block).  
+4. **Type Checking:** Validates data contract compatibility between linked ports.
 
-### 2. Pipeline Cleanup
-*   **Successful Completion**: Upon pipeline completion, the `ExecutionState` disposes of any lingering resources. (Ideally, all inputs were consumed and disposed during execution, and final outputs are handed over to the caller).
-*   **Error Termination**: If the pipeline is aborted due to an error:
-    *   The `ExecutionState` iterates through all **Buffer Stores**.
-    *   It calls `Dispose()` on every buffered `WorkItem` that was waiting to be processed.
-    *   This ensures that images stranded in the pipeline are correctly released.
+### **Phase 2: Initialization**
 
-### 3. Final Outputs
-*   The `WorkItem`s produced by the final blocks (leaf nodes) are **not** disposed by the Engine.
-*   They are collected and returned to the caller of the pipeline execution.
-*   **Caller Responsibility**: The caller assumes ownership of the final results and is responsible for disposing them after use.
+- **Graph Materialization:** The abstract graph is converted into an executable structure.  
+- **Barrier Setup:** Mailboxes are created, and In-Degree counters are pre-calculated.
+
+### **Phase 3: Runtime Loop (Event-Driven)**
+
+The runtime operates on a **Reactor**\-like event loop:
+
+1. **Bootstrap:** Source nodes (In-Degree 0\) are scheduled.  
+2. **Processing:** Blocks execute on worker threads.  
+3. **Publication:** Upon completion, the Engine routes outputs to downstream Mailboxes (applying **Prototype** cloning if branching exists).  
+4. **Barrier Update:** Mailboxes receive data and decrement counters.  
+5. **Activation:** Mailboxes traversing the 0-threshold signal the Engine.  
+6. **Dispatch:** The Engine packages buffered data and schedules the now-ready Target Block.
+
+## **5\. Resource Management**
+
+### **5.1. Memory Lifecycle (Reference Counting)**
+
+Given the high memory footprint of image data, the system relies on deterministic disposal rather than non-deterministic Garbage Collection.
+
+- **Ownership Transfer:** The Mailbox holds ownership of in-flight data.  
+- **Borrowing:** During execution, the Block "borrows" the data.  
+- **Disposal:** Immediately upon successful dispatch (handoff to the Block's execution stack), the Engine disposes of the *Mailbox's references* to the input data.  
+  - *Note:* If the data was cloned (Branching), only that specific clone is disposed.
+
+### **5.2. Concurrency & Scheduling Heuristics**
+
+The Engine implements a **Bounded Parallelism** model with a **Greedy Optimization Strategy**.
+
+- **No Deadlocks:** Since "Waiting" is a passive state (data in buffer) and not a blocking thread operation, the system is immune to Thread Starvation Deadlock, provided the graph is acyclic.  
+- **Optimization Goal:** Minimize "Memory Waste" (time data spends idle in buffers).  
+- **Full-Fill Priority:** When multiple nodes are eligible for execution, the Scheduler prioritizes nodes that will cause a downstream Mailbox to transition to "Full" (Ready).  
+  - *Rationale:* Triggering a downstream consumer immediately clears the buffer and releases memory pressure, whereas partially filling a large mailbox increases the duration data is held in RAM without progress.
+
+## **6\. Optimization Strategy: Graph Compilation**
+
+To bridge the gap between static topology knowledge and dynamic runtime conditions, the Engine employs a **"Compile Once, Run Anywhere"** strategy for scheduling logic.
+
+### **6.1. Static Priority Compilation (Pre-Run)**
+
+Since the topology is immutable during a run, the Engine "compiles" the graph into a **Static Priority Map** before execution begins. This replaces purely reactive scheduling with **List Scheduling** logic \[6\].
+
+- **Topological Leveling:** The compiler assigns a static rank to every block based on its distance to the Sink (Bottom-Level) or Source (Top-Level).  
+- **Critical Path Approximation:** Blocks on the longest path to the Sink are assigned higher priority.  
+- **Hybrid Dispatch:** The Runtime Scheduler remains dynamic (handling IO variance) but uses the Static Priority Map to break ties in the Ready Queue. This ensures the "Critical Path" is processed first, reducing total makespan.
+
+### **6.2. Execution Plan Caching**
+
+To avoid re-analyzing complex graphs at every startup, the Priority Map is serialized. Invalidation logic ensures the cache remains relevant despite hardware or environmental changes.
+
+- Hardware Fingerprint (The "Ancient Run" Guard):  
+  The plan header contains a hash of the system configuration (CPU Model \+ GPU Model \+ Total RAM).  
+  - *Policy:* If the runtime fingerprint differs from the cached fingerprint (e.g., user upgraded GPU, or moved file to a new PC), the cache is **immediately invalidated** and the graph is re-compiled.  
+- Topology Checksum:  
+  The plan includes a hash of the graph structure. Any modification to nodes or links triggers re-compilation.  
+- Performance Drift (Staleness):  
+  If the graph runs significantly faster or slower than the cached expectation (e.g., \> 25% variance) for 3 consecutive runs (Drift Counter), the plan is marked stale. This prevents reaction to single-instance outliers ("lucky runs") while adapting to sustained changes (e.g., driver updates).
+
+### **6.3. Profile-Guided Optimization (PGO)**
+
+The system maintains a **Global Block Profile** (database of regression weights) separate from individual graph plans.
+
+- Metric Standardization:  
+  Performance is recorded as Normalized Cost in milliseconds per megapixel (ms/MP): $Cost \= \\frac{T\_{exec} (ms)}{PixelCount (MP)}$. This allows heuristics to scale across different image batch sizes.  
+- Weighted Critical Path:  
+  Graph compilation uses the Global Profile to estimate path weights. If the Global Profile changes (e.g., "Denoise" block becomes 50% faster after re-weighting), graphs containing that block are flagged for Lazy Re-compilation on their next execution.  
+- Exponential Moving Average (EMA):  
+  New run data updates the Global Profile using an EMA with a low alpha (e.g., 0.1). This smooths out noise while strictly tracking trends.  
+  - *Policy:* Outliers (e.g., \> 3 standard deviations from mean) are discarded and do not update the model.  
+- Synthetic Benchmarking (Initialization):  
+  Triggered automatically on first start or manually by the user, the Engine executes a "Calibration Mode". This runs standard blocks against random synthetic data to generate an initial performance profile (Impression), seeding the regression model weights before real production data is processed.
+
+## **7\. References**
+
+1. **POSA:** Buschmann, F., et al. (1996). *Pattern-Oriented Software Architecture Volume 1: A System of Patterns*. Wiley. (Pipes and Filters).  
+2. **EIP:** Hohpe, G., & Woolf, B. (2003). *Enterprise Integration Patterns*. Addison-Wesley. (Aggregator, Recipient List, Message Channel, Process Manager).  
+3. **Java Concurrency:** Goetz, B., et al. (2006). *Java Concurrency in Practice*. Addison-Wesley. (Latch/Barrier).  
+4. **GoF:** Gamma, E., et al. (1994). *Design Patterns: Elements of Reusable Object-Oriented Software*. Addison-Wesley. (Observer, Prototype).  
+5. **Effective Java:** Bloch, J. (2018). *Effective Java*. Addison-Wesley. (Defensive Copying).  
+6. **Scheduling Theory:** Sinnen, O. (2007). *Task Scheduling for Parallel Systems*. Wiley. (List Scheduling, Critical Path Method).
