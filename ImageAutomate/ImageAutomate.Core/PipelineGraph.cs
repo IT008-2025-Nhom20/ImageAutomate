@@ -47,7 +47,7 @@ public class PipelineGraph
             GraphChanged?.Invoke(this, EventArgs.Empty);
         }
     }
-    public IReadOnlyList<IBlock> Blocks => _blocks;
+    public IList<IBlock> Blocks => _blocks;
     public IReadOnlyList<Connection> Connections => _connections;
     /// <summary>
     /// Occurs when the graph structure changes (nodes/edges added or removed).
