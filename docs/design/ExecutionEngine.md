@@ -484,3 +484,187 @@ To prevent OOM, the Engine enforces memory limits:
 3. **Barrier Allocation:** Even with lazy initialization, Barriers are allocated per-block (not per-execution). A graph with 1000 blocks uses ~8KB for Barriers even if only 10 run concurrently.
 4. **Priority Queue Scalability:** Single queue design limits scalability beyond ~100 threads (see A.1).
 5. **No Priority Inheritance:** If a high-priority block depends on a low-priority block, the system doesn't propagate priority (can cause priority inversion under heavy load).
+
+## B. Appendix: Diagrams
+
+### B.1. High-level diagram
+
+```mermaid
+flowchart TB
+    subgraph Control_Plane [Control Plane: Orchestration & Signaling]
+        direction TB
+        Engine[("<b>The Engine</b><br/>(Process Manager)")]
+        ReadyQ[("<b>Ready Queue</b><br/>(Priority Sorted)")]
+        Barrier[("<b>Dependency Barrier</b><br/>(Atomic Counter)")]
+    end
+
+    subgraph Data_Plane [Data Plane: Storage & Flow]
+        direction TB
+        Producer[("<b>Producer Block</b><br/>(Filter)")]
+        Warehouse[("<b>The Warehouse</b><br/>(Output Buffer & Inventory)")]
+        Consumer[("<b>Consumer Block</b><br/>(Filter)")]
+    end
+
+    %% Execution Flow
+    Producer -- "1. Executes & Commits Result" --> Warehouse
+    
+    %% Signaling Flow
+    Warehouse -. "2. Notify Completion" .-> Engine
+    Engine -- "3. Decrement Counter" --> Barrier
+    Barrier -- "4. Counter == 0? Signal Ready" --> ReadyQ
+    ReadyQ -- "5. Dispatch (DFS Priority)" --> Engine
+    Engine -- "6. Schedule on ThreadPool" --> Consumer
+
+    %% Data Pull Flow
+    Consumer -- "7. Pull Data (JIT Clone/Move)" --> Warehouse
+    Warehouse -- "8. Return WorkItem" --> Consumer
+
+    classDef component fill:#f9f,stroke:#333,stroke-width:2px;
+    classDef storage fill:#eee,stroke:#333,stroke-width:2px,stroke-dasharray: 5 5;
+    classDef logic fill:#d4edda,stroke:#333,stroke-width:2px;
+
+    class Producer,Consumer component;
+    class Warehouse,ReadyQ,Barrier storage;
+    class Engine logic;
+```
+
+### B.2. Detailed Diagram
+
+```mermaid
+flowchart LR
+    subgraph Orchestrator [The Engine (Orchestrator)]
+        direction TB
+        Lifecycle[("<b>Lifecycle Manager</b><br/>Graph Validation & Instantiation")]
+        Scheduler[("<b>Scheduler</b><br/>DFS Optimization Strategy")]
+        ErrorHandler[("<b>Error Propagator</b><br/>Poisoning & Cancellation")]
+        
+        Lifecycle --> Scheduler
+    end
+
+    subgraph Storage [The Warehouse (Producer-Centric)]
+        direction TB
+        Buffer[("<b>Immutable Buffer</b><br/>Dict&lt;Socket, List&lt;WorkItem&gt;&gt;")]
+        ConsCounter[("<b>Consumer Counter</b><br/>Atomic Int32 (Out-Degree)")]
+        JITLogic{"<b>JIT Logic</b><br/>(Interlocked.Decrement)"}
+        
+        Buffer --- ConsCounter
+        ConsCounter --> JITLogic
+        JITLogic -- "Remaining > 0" --> Clone["<b>Defensive Clone</b><br/>(Deep Copy)"]
+        JITLogic -- "Remaining == 0" --> Move["<b>Reference Handover</b><br/>(Ownership Transfer)"]
+    end
+
+    subgraph Synchronization [The Barrier (Consumer-Centric)]
+        direction TB
+        DepCounter[("<b>Dependency Counter</b><br/>Atomic Int32 (In-Degree)")]
+        EnqFlag[("<b>Enqueue Flag</b><br/>Atomic CAS (1 bit)")]
+        
+        DepCounter -- "Reach 0" --> EnqFlag
+        EnqFlag -- "CompareExchange(0,1)" --> Signal["Signal Ready"]
+    end
+
+    subgraph Execution [Worker Environment]
+        Thread[".NET ThreadPool Worker"]
+        WorkItem["<b>WorkItem</b><br/>Image&lt;TPixel&gt; + Metadata"]
+    end
+
+    %% Interactions
+    Signal --> Scheduler
+    Scheduler -- "Dequeue(Priority)" --> Thread
+    Thread -- "Execute()" --> WorkItem
+    Thread -- "Fetch Input" --> JITLogic
+    Thread -- "Commit Output" --> Buffer
+    
+    %% Priority Logic Note
+    Scheduler -.- PriorityNote["<b>Priority Formula:</b><br/>Sum(WarehouseSize / RemainingConsumers)"]
+
+    classDef managed fill:#e1f5fe,stroke:#01579b,stroke-width:2px;
+    classDef atomic fill:#fff9c4,stroke:#fbc02d,stroke-width:2px;
+    classDef logic fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px;
+
+    class Orchestrator,Lifecycle,Scheduler,ErrorHandler managed;
+    class ConsCounter,DepCounter,EnqFlag atomic;
+    class JITLogic,Clone,Move logic;
+```
+
+### B.3. Execution Diagram
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Engine
+    participant ThreadPool
+    
+    box rgb(240, 248, 255) Upstream
+    participant BlockA as Block A (Source)
+    participant WhA as Warehouse A<br/>(Consumers: 2)
+    end
+    
+    box rgb(255, 245, 238) Parallel Branches
+    participant BlockB as Block B<br/>(Needs A)
+    participant BlockC as Block C<br/>(Needs A)
+    participant BarrB as Barrier B
+    participant BarrC as Barrier C
+    end
+    
+    box rgb(240, 255, 240) Downstream
+    participant BlockD as Block D<br/>(Sink)
+    participant BarrD as Barrier D<br/>(Count: 2)
+    end
+
+    note over Engine: <b>PHASE 1: INITIALIZATION</b>
+    Engine->>ThreadPool: Schedule Source (A)
+    activate BlockA
+    BlockA->>WhA: 1. Generate Image & Commit
+    deactivate BlockA
+    
+    note over WhA: <b>State:</b> Data Present, ConsCounter=2
+    
+    WhA->>Engine: Signal Completion
+    
+    par Signal Downstream
+        Engine->>BarrB: Decr Counter (1 -> 0)
+        BarrB->>Engine: <b>Signal Ready!</b>
+        and
+        Engine->>BarrC: Decr Counter (1 -> 0)
+        BarrC->>Engine: <b>Signal Ready!</b>
+    end
+    
+    Engine->>Engine: Enqueue B & C to ReadyQueue
+    
+    note over Engine: <b>PHASE 2: EXECUTION (Branching)</b>
+    
+    %% Scheduler picks B first (Arbitrary or DFS priority)
+    Engine->>ThreadPool: Dispatch Block B
+    activate BlockB
+    BlockB->>WhA: 2. Request Data
+    
+    note right of WhA: <b>JIT Logic:</b><br/>Decrement(2 -> 1)<br/>Result > 0 implies waiting consumers.
+    WhA-->>BlockB: <b>Return CLONE of Image</b>
+    
+    BlockB->>BlockB: Process (Grayscale)
+    BlockB-->>BarrD: 3. Signal D (Decr 2 -> 1)
+    deactivate BlockB
+    note right of BarrD: Count is 1. Not Ready.
+    
+    %% Scheduler picks C
+    Engine->>ThreadPool: Dispatch Block C
+    activate BlockC
+    BlockC->>WhA: 4. Request Data
+    
+    note right of WhA: <b>JIT Logic:</b><br/>Decrement(1 -> 0)<br/>Result == 0 implies Last Consumer.
+    WhA-->>BlockC: <b>Return ORIGINAL Image (Move)</b>
+    note over WhA: Internal Reference Cleared (GC eligible)
+    
+    BlockC->>BlockC: Process (Resize)
+    BlockC-->>BarrD: 5. Signal D (Decr 1 -> 0)
+    deactivate BlockC
+    
+    BarrD-->>Engine: <b>Signal Ready!</b>
+    
+    note over Engine: <b>PHASE 3: MERGE</b>
+    Engine->>ThreadPool: Dispatch Block D
+    activate BlockD
+    BlockD->>BlockD: Consume inputs from WhB & WhC
+    BlockD->>BlockD: Dispose Inputs
+    deactivate BlockD
+```
