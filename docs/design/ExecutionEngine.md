@@ -518,14 +518,6 @@ flowchart TB
     %% Data Pull Flow
     Consumer -- "7. Pull Data (JIT Clone/Move)" --> Warehouse
     Warehouse -- "8. Return WorkItem" --> Consumer
-
-    classDef component fill:#f9f,stroke:#333,stroke-width:2px;
-    classDef storage fill:#eee,stroke:#333,stroke-width:2px,stroke-dasharray: 5 5;
-    classDef logic fill:#d4edda,stroke:#333,stroke-width:2px;
-
-    class Producer,Consumer component;
-    class Warehouse,ReadyQ,Barrier storage;
-    class Engine logic;
 ```
 
 ### B.2. Detailed Diagram
@@ -576,14 +568,6 @@ flowchart LR
     
     %% Priority Logic Note
     Scheduler -.- PriorityNote["<b>Priority Formula:</b><br/>Sum(WarehouseSize / RemainingConsumers)"]
-
-    classDef managed fill:#e1f5fe,stroke:#01579b,stroke-width:2px;
-    classDef atomic fill:#fff9c4,stroke:#fbc02d,stroke-width:2px;
-    classDef logic fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px;
-
-    class Orchestrator,Lifecycle,Scheduler,ErrorHandler managed;
-    class ConsCounter,DepCounter,EnqFlag atomic;
-    class JITLogic,Clone,Move logic;
 ```
 
 ### B.3. Execution Diagram
@@ -594,19 +578,19 @@ sequenceDiagram
     participant Engine
     participant ThreadPool
     
-    box rgb(240, 248, 255) Upstream
+    box Upstream
     participant BlockA as Block A (Source)
     participant WhA as Warehouse A<br/>(Consumers: 2)
     end
     
-    box rgb(255, 245, 238) Parallel Branches
+    box Parallel Branches
     participant BlockB as Block B<br/>(Needs A)
     participant BlockC as Block C<br/>(Needs A)
     participant BarrB as Barrier B
     participant BarrC as Barrier C
     end
     
-    box rgb(240, 255, 240) Downstream
+    box Downstream
     participant BlockD as Block D<br/>(Sink)
     participant BarrD as Barrier D<br/>(Count: 2)
     end
