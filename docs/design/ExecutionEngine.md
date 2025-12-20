@@ -102,10 +102,11 @@ To optimize memory usage, cloning is deferred until the exact moment of dispatch
 
 ### **Phase 1: Static Validation**
 
-1. **Cycle Detection:** Verifies the graph is a Directed Acyclic Graph (DAG).  
-2. **Port Binding:** Ensures all mandatory input ports are bound.  
-3. **Sink Verification:** Confirms at least one Sink/Save Block exists.  
-4. **Type Checking:** Validates data contracts.
+1. **Sink Verification:** Confirms at least one Sink/Save Block exists.  
+2. **Source Verification:** Confirms at least one Source/Load Block exists.  
+3. **Port Binding:** Ensures all mandatory input ports are bound.  
+4. **Cycle Detection:** Verifies the graph is a Directed Acyclic Graph (DAG).  
+5. ~~**Type Checking:** Validates data contracts.~~ (Deferred)
 
 ### **Phase 2: Initialization**
 
