@@ -17,39 +17,33 @@ namespace ImageAutomate.Execution.Scheduling;
 /// </remarks>
 internal sealed class SimpleDfsScheduler : IScheduler
 {
-    // Scheduler queue; Critical section
     private readonly PriorityQueue<IBlock, float> _queue = new();
     private readonly HashSet<IBlock> _enqueuedBlocks = [];
     private readonly Lock _lock = new();
 
-    public bool IsEmpty
+    /// <inheritdoc />
+    public bool HasPendingWork
     {
         get
         {
             lock (_lock)
             {
-                return _queue.Count == 0;
+                return _queue.Count > 0;
             }
         }
     }
 
     /// <inheritdoc />
-    public bool TryEnqueue(IBlock block, ExecutionContext context)
+    public void Initialize(ExecutionContext context)
     {
-        // Don't enqueue blocked blocks
-        if (context.IsBlocked(block))
-            return false;
-
-        lock (_lock)
+        // Find and enqueue all source blocks (IShipmentSource with in-degree 0)
+        foreach (var block in context.Graph.Blocks)
         {
-            // Prevent duplicate enqueueing
-            if (!_enqueuedBlocks.Add(block))
-                return false;
-
-            // Calculate priority at enqueue time for accurate scheduling
-            float priority = CalculatePriority(block, context);
-            _queue.Enqueue(block, priority);
-            return true;
+            if (block is IShipmentSource && context.InDegree[block] == 0)
+            {
+                context.BlockStates[block] = BlockExecutionState.Ready;
+                Enqueue(block, context);
+            }
         }
     }
 
@@ -75,37 +69,13 @@ internal sealed class SimpleDfsScheduler : IScheduler
     }
 
     /// <inheritdoc />
-    public void SignalCompletion(IBlock completedBlock, ExecutionContext context)
+    public void NotifyCompleted(IBlock completedBlock, ExecutionContext context)
     {
-        // Find all downstream blocks using precomputed adjacency
-        if (!context.DownstreamBlocks.TryGetValue(completedBlock, out var downstreamBlocks))
-            return;
-
-        foreach (var downstreamBlock in downstreamBlocks)
-        {
-            // Get or create barrier (lazy initialization)
-            // Use active in-degree to handle cases where some upstream sources are exhausted
-            var lazyBarrier = context.Barriers.GetOrAdd(
-                downstreamBlock,
-                _ => new Lazy<DependencyBarrier>(
-                    () => new DependencyBarrier(downstreamBlock, context.GetActiveInDegree(downstreamBlock))));
-
-            var barrier = lazyBarrier.Value;
-
-            // Signal and check if ready
-            if (barrier.Signal())
-            {
-                // All dependencies satisfied - transition to Ready
-                context.BlockStates[downstreamBlock] = BlockExecutionState.Ready;
-
-                // Enqueue for execution (if not blocked)
-                TryEnqueue(downstreamBlock, context);
-            }
-        }
+        SignalDownstreamBarriers(completedBlock, context);
     }
 
     /// <inheritdoc />
-    public void HandleBlockedBlock(IBlock blockedBlock, ExecutionContext context)
+    public void NotifyBlocked(IBlock blockedBlock, ExecutionContext context)
     {
         // Decrement warehouse counters for upstream blocks (cleanup)
         if (context.UpstreamBlocks.TryGetValue(blockedBlock, out var upstreamBlocks))
@@ -120,14 +90,14 @@ internal sealed class SimpleDfsScheduler : IScheduler
         }
 
         // Signal downstream (so they can also be skipped when ready)
-        SignalCompletion(blockedBlock, context);
+        SignalDownstreamBarriers(blockedBlock, context);
 
         // Count as completed (skipped)
         context.IncrementProcessedShipments();
     }
 
     /// <inheritdoc />
-    public void PrepareNextShipmentCycle(ExecutionContext context)
+    public void BeginNextShipmentCycle(ExecutionContext context)
     {
         lock (context.ActiveSourcesLock)
         {
@@ -135,8 +105,55 @@ internal sealed class SimpleDfsScheduler : IScheduler
             {
                 if (!context.IsBlocked(source))
                 {
-                    TryEnqueue(source, context);
+                    Enqueue(source, context);
                 }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Enqueues a block for execution (internal operation).
+    /// </summary>
+    private void Enqueue(IBlock block, ExecutionContext context)
+    {
+        // Don't enqueue blocked blocks
+        if (context.IsBlocked(block))
+            return;
+
+        lock (_lock)
+        {
+            // Prevent duplicate enqueueing
+            if (!_enqueuedBlocks.Add(block))
+                return;
+
+            float priority = CalculatePriority(block, context);
+            _queue.Enqueue(block, priority);
+        }
+    }
+
+    /// <summary>
+    /// Signals downstream dependency barriers and enqueues ready blocks.
+    /// </summary>
+    private void SignalDownstreamBarriers(IBlock completedBlock, ExecutionContext context)
+    {
+        if (!context.DownstreamBlocks.TryGetValue(completedBlock, out var downstreamBlocks))
+            return;
+
+        foreach (var downstreamBlock in downstreamBlocks)
+        {
+            // Get or create barrier (lazy initialization)
+            var lazyBarrier = context.Barriers.GetOrAdd(
+                downstreamBlock,
+                _ => new Lazy<DependencyBarrier>(
+                    () => new DependencyBarrier(downstreamBlock, context.GetActiveInDegree(downstreamBlock))));
+
+            var barrier = lazyBarrier.Value;
+
+            // Signal and check if ready
+            if (barrier.Signal())
+            {
+                context.BlockStates[downstreamBlock] = BlockExecutionState.Ready;
+                Enqueue(downstreamBlock, context);
             }
         }
     }
@@ -144,24 +161,16 @@ internal sealed class SimpleDfsScheduler : IScheduler
     /// <summary>
     /// Calculates greedy priority based purely on completion pressure.
     /// </summary>
-    /// <remarks>
-    /// Priority = -CompletionPressure (negative for min-heap)
-    /// </remarks>
     private float CalculatePriority(IBlock block, ExecutionContext context)
         => -CalculateCompletionPressure(block, context);
 
     /// <summary>
     /// Calculates Completion Pressure priority for a block.
     /// </summary>
-    /// <remarks>
-    /// Priority = Σ(WarehouseSize / RemainingConsumers) for all predecessors.
-    /// Higher values indicate more memory pressure (should execute sooner).
-    /// </remarks>
     private float CalculateCompletionPressure(IBlock block, ExecutionContext context)
     {
         float totalPressure = 0;
 
-        // Use precomputed upstream blocks instead of LINQ
         if (!context.UpstreamBlocks.TryGetValue(block, out var predecessors))
             return totalPressure;
 

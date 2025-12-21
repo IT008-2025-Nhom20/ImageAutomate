@@ -50,13 +50,14 @@ public class GraphExecutor(IGraphValidator validator) : IGraphExecutor
             {
                 shipmentSource.MaxShipmentSize = configuration.MaxShipmentSize;
                 context.MarkSourceActive(block);
-                context.BlockStates[block] = BlockExecutionState.Ready;
-                scheduler.TryEnqueue(block, context);
             }
         }
 
         // Initialize upstream cache after all sources are marked active
         context.InitializeUpstreamCache();
+
+        // Let scheduler discover and enqueue source blocks
+        scheduler.Initialize(context);
 
         // Phase 3: Runtime Loop
         await ExecuteRuntimeLoopAsync(context);
@@ -78,7 +79,7 @@ public class GraphExecutor(IGraphValidator validator) : IGraphExecutor
         var watchdogTimer = Stopwatch.StartNew();
         var activeTasks = new List<Task>();
 
-        while (!context.Scheduler.IsEmpty || context.ActiveBlockCount > 0)
+        while (context.Scheduler.HasPendingWork || context.ActiveBlockCount > 0)
         {
             // Check cancellation
             if (context.CancellationToken.IsCancellationRequested)
@@ -94,7 +95,7 @@ public class GraphExecutor(IGraphValidator validator) : IGraphExecutor
                 {
                     throw new PipelineDeadlockException(
                         $"No progress detected for {timeSinceProgress.TotalSeconds:F1} seconds. " +
-                        $"Active blocks: {context.ActiveBlockCount}, Queue empty: {context.Scheduler.IsEmpty}");
+                        $"Active blocks: {context.ActiveBlockCount}, Pending work: {context.Scheduler.HasPendingWork}");
                 }
                 watchdogTimer.Restart();
             }
@@ -109,7 +110,7 @@ public class GraphExecutor(IGraphValidator validator) : IGraphExecutor
                 // Check if blocked (skip execution via scheduler)
                 if (context.IsBlocked(block))
                 {
-                    context.Scheduler.HandleBlockedBlock(block, context);
+                    context.Scheduler.NotifyBlocked(block, context);
                     continue;
                 }
 
@@ -135,7 +136,7 @@ public class GraphExecutor(IGraphValidator validator) : IGraphExecutor
                     context.Exceptions.Add(ex);
                 }
             }
-            else if (context.Scheduler.IsEmpty && context.ActiveBlockCount == 0)
+            else if (!context.Scheduler.HasPendingWork && context.ActiveBlockCount == 0)
             {
                 // Shipment cycle complete - check if we should start next cycle
                 lock (context.ActiveSourcesLock)
@@ -144,7 +145,7 @@ public class GraphExecutor(IGraphValidator validator) : IGraphExecutor
                     {
                         // Sources still have shipments - reset and start next cycle
                         context.ResetForNextShipment();
-                        context.Scheduler.PrepareNextShipmentCycle(context);
+                        context.Scheduler.BeginNextShipmentCycle(context);
                     }
                     else
                     {
@@ -222,8 +223,8 @@ public class GraphExecutor(IGraphValidator validator) : IGraphExecutor
             // Track progress
             context.IncrementProcessedShipments();
 
-            // Signal downstream barriers via scheduler
-            context.Scheduler.SignalCompletion(block, context);
+            // Notify scheduler of completion (it will signal barriers and enqueue ready blocks)
+            context.Scheduler.NotifyCompleted(block, context);
         }
         catch (Exception ex)
         {
@@ -418,8 +419,8 @@ public class GraphExecutor(IGraphValidator validator) : IGraphExecutor
         // have no alternative active sources for their required sockets
         BlockOrphanedBranch(block, context);
 
-        // Signal downstream barriers via scheduler (so blocked blocks can be skipped)
-        context.Scheduler.SignalCompletion(block, context);
+        // Notify scheduler (it will signal barriers so blocked blocks can be skipped)
+        context.Scheduler.NotifyCompleted(block, context);
     }
 
 }

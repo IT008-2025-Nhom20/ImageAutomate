@@ -13,42 +13,48 @@ namespace ImageAutomate.Execution.Scheduling;
 /// <item>Handling blocked block propagation</item>
 /// <item>Managing shipment cycle transitions</item>
 /// </list>
+/// 
+/// The executor only asks two questions:
+/// <list type="number">
+/// <item>Is there pending work? (<see cref="HasPendingWork"/>)</item>
+/// <item>What's the next block? (<see cref="TryDequeue"/>)</item>
+/// </list>
+/// 
+/// And notifies outcomes:
+/// <list type="bullet">
+/// <item>Block completed (<see cref="NotifyCompleted"/>)</item>
+/// <item>Block blocked/failed (<see cref="NotifyBlocked"/>)</item>
+/// </list>
 /// </remarks>
 internal interface IScheduler
 {
     /// <summary>
-    /// Gets whether the scheduler queue is empty.
+    /// Gets whether the scheduler has pending work (queued or could be queued).
     /// </summary>
-    bool IsEmpty { get; }
+    bool HasPendingWork { get; }
 
     /// <summary>
-    /// Enqueues a block for execution if it's ready.
+    /// Initializes the scheduler with source blocks from the context.
     /// </summary>
-    /// <param name="block">The block to enqueue.</param>
     /// <param name="context">The execution context.</param>
-    /// <returns>True if the block was enqueued; false if blocked or already queued.</returns>
-    bool TryEnqueue(IBlock block, ExecutionContext context);
+    void Initialize(ExecutionContext context);
 
     /// <summary>
-    /// Attempts to dequeue the highest priority block that is ready for execution.
+    /// Attempts to dequeue the next block ready for execution.
     /// </summary>
     /// <param name="context">The execution context.</param>
     /// <returns>The next block to execute, or null if no ready blocks available.</returns>
     IBlock? TryDequeue(ExecutionContext context);
 
     /// <summary>
-    /// Signals that a block has completed execution, updating downstream barriers.
+    /// Notifies the scheduler that a block has completed execution.
     /// </summary>
     /// <param name="completedBlock">The block that completed.</param>
     /// <param name="context">The execution context.</param>
     /// <remarks>
-    /// This method handles:
-    /// <list type="bullet">
-    /// <item>Signaling dependency barriers for downstream blocks</item>
-    /// <item>Enqueueing blocks whose dependencies are satisfied</item>
-    /// </list>
+    /// The scheduler will internally signal barriers and enqueue ready downstream blocks.
     /// </remarks>
-    void SignalCompletion(IBlock completedBlock, ExecutionContext context);
+    void NotifyCompleted(IBlock completedBlock, ExecutionContext context);
 
     /// <summary>
     /// Notifies the scheduler that a block is blocked and cannot execute.
@@ -56,18 +62,17 @@ internal interface IScheduler
     /// <param name="blockedBlock">The block that is blocked.</param>
     /// <param name="context">The execution context.</param>
     /// <remarks>
-    /// Blocked blocks should signal their barriers (to unblock waiting downstream)
-    /// and clean up upstream warehouses without executing.
+    /// The scheduler will handle warehouse cleanup and signal downstream barriers.
     /// </remarks>
-    void HandleBlockedBlock(IBlock blockedBlock, ExecutionContext context);
+    void NotifyBlocked(IBlock blockedBlock, ExecutionContext context);
 
     /// <summary>
-    /// Prepares the scheduler for the next shipment cycle.
+    /// Begins the next shipment cycle.
     /// </summary>
     /// <param name="context">The execution context.</param>
     /// <remarks>
-    /// Re-enqueues all active sources that are not blocked.
-    /// Called when a shipment cycle completes but sources still have data.
+    /// Called when the current cycle completes but sources still have data.
+    /// The scheduler will re-enqueue active sources.
     /// </remarks>
-    void PrepareNextShipmentCycle(ExecutionContext context);
+    void BeginNextShipmentCycle(ExecutionContext context);
 }

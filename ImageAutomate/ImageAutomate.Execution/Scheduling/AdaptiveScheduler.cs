@@ -18,20 +18,20 @@ internal sealed class AdaptiveScheduler : IScheduler
 
     #endregion
 
-    public bool IsEmpty => throw new NotImplementedException(NotImplementedMessage);
+    public bool HasPendingWork => throw new NotImplementedException(NotImplementedMessage);
 
-    public bool TryEnqueue(IBlock block, ExecutionContext context)
+    public void Initialize(ExecutionContext context)
         => throw new NotImplementedException(NotImplementedMessage);
 
     public IBlock? TryDequeue(ExecutionContext context)
         => throw new NotImplementedException(NotImplementedMessage);
 
-    public void SignalCompletion(IBlock completedBlock, ExecutionContext context)
+    public void NotifyCompleted(IBlock completedBlock, ExecutionContext context)
         => throw new NotImplementedException(NotImplementedMessage);
 
-    public void HandleBlockedBlock(IBlock blockedBlock, ExecutionContext context)
+    public void NotifyBlocked(IBlock blockedBlock, ExecutionContext context)
         => throw new NotImplementedException(NotImplementedMessage);
 
-    public void PrepareNextShipmentCycle(ExecutionContext context)
+    public void BeginNextShipmentCycle(ExecutionContext context)
         => throw new NotImplementedException(NotImplementedMessage);
 }
