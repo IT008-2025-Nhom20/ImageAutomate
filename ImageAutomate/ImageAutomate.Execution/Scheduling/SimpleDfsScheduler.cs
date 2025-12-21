@@ -41,7 +41,7 @@ internal sealed class SimpleDfsScheduler : IScheduler
         {
             if (block is IShipmentSource && context.InDegree[block] == 0)
             {
-                context.BlockStates[block] = BlockExecutionState.Ready;
+                context.SetBlockState(block, BlockExecutionState.Ready);
                 Enqueue(block, context);
             }
         }
@@ -82,9 +82,9 @@ internal sealed class SimpleDfsScheduler : IScheduler
         {
             foreach (var upstreamBlock in upstreamBlocks)
             {
-                if (context.Warehouses.TryGetValue(upstreamBlock, out var lazyWarehouse))
+                if (context.TryGetWarehouse(upstreamBlock, out var warehouse) && warehouse != null)
                 {
-                    lazyWarehouse.Value.DecrementConsumerCount();
+                    warehouse.DecrementConsumerCount();
                 }
             }
         }
@@ -99,16 +99,13 @@ internal sealed class SimpleDfsScheduler : IScheduler
     /// <inheritdoc />
     public void BeginNextShipmentCycle(ExecutionContext context)
     {
-        lock (context.ActiveSourcesLock)
+        context.ForEachActiveSource(source =>
         {
-            foreach (var source in context.ActiveSources)
+            if (!context.IsBlocked(source))
             {
-                if (!context.IsBlocked(source))
-                {
-                    Enqueue(source, context);
-                }
+                Enqueue(source, context);
             }
-        }
+        });
     }
 
     /// <summary>
@@ -145,18 +142,13 @@ internal sealed class SimpleDfsScheduler : IScheduler
         foreach (var downstreamBlock in downstreamBlocks)
         {
             int inDegree = context.GetActiveInDegree(downstreamBlock);
-            // Get or create barrier (lazy initialization)
-            var lazyBarrier = context.Barriers.GetOrAdd(
-                downstreamBlock,
-                _ => new Lazy<DependencyBarrier>(
-                    () => new DependencyBarrier(downstreamBlock, inDegree)));
-
-            var barrier = lazyBarrier.Value;
+            // Get or create barrier
+            var barrier = context.GetOrCreateBarrier(downstreamBlock, inDegree);
 
             // Signal and check if ready
             if (barrier.Signal())
             {
-                context.BlockStates[downstreamBlock] = BlockExecutionState.Ready;
+                context.SetBlockState(downstreamBlock, BlockExecutionState.Ready);
                 Enqueue(downstreamBlock, context);
             }
         }
@@ -180,9 +172,8 @@ internal sealed class SimpleDfsScheduler : IScheduler
 
         foreach (var predecessor in predecessors)
         {
-            if (context.Warehouses.TryGetValue(predecessor, out var lazyWarehouse))
+            if (context.TryGetWarehouse(predecessor, out var warehouse) && warehouse != null)
             {
-                var warehouse = lazyWarehouse.Value;
                 float warehouseSize = warehouse.TotalSizeMp;
                 int remainingConsumers = warehouse.RemainingConsumers;
 

@@ -57,8 +57,8 @@ public class GraphExecutor : IGraphExecutor
             }
         }
 
-        // Initialize upstream cache after all sources are marked active
-        context.InitializeUpstreamCache();
+        // Initialize active connections after all sources are marked active
+        context.InitializeActiveConnections();
 
         // Let scheduler discover and enqueue source blocks
         scheduler.Initialize(context);
@@ -67,11 +67,11 @@ public class GraphExecutor : IGraphExecutor
         await ExecuteRuntimeLoopAsync(context);
 
         // Phase 4: Error Propagation
-        if (!context.Exceptions.IsEmpty)
+        if (context.HasExceptions)
         {
             throw new AggregateException(
                 "Pipeline execution failed with one or more errors.",
-                context.Exceptions);
+                context.GetExceptions());
         }
     }
 
@@ -139,25 +139,22 @@ public class GraphExecutor : IGraphExecutor
                 }
                 catch (Exception ex)
                 {
-                    context.Exceptions.Add(ex);
+                    context.RecordException(ex);
                 }
             }
             else if (!context.Scheduler.HasPendingWork && context.ActiveBlockCount == 0)
             {
                 // Shipment cycle complete - check if we should start next cycle
-                lock (context.ActiveSourcesLock)
+                if (context.HasActiveSources)
                 {
-                    if (context.ActiveSources.Count > 0)
-                    {
-                        // Sources still have shipments - reset and start next cycle
-                        context.ResetForNextShipment();
-                        context.Scheduler.BeginNextShipmentCycle(context);
-                    }
-                    else
-                    {
-                        // No more active sources - execution complete
-                        break;
-                    }
+                    // Sources still have shipments - reset and start next cycle
+                    context.ResetForNextShipment();
+                    context.Scheduler.BeginNextShipmentCycle(context);
+                }
+                else
+                {
+                    // No more active sources - execution complete
+                    break;
                 }
             }
             else
@@ -182,7 +179,7 @@ public class GraphExecutor : IGraphExecutor
         try
         {
             // Mark as running
-            context.BlockStates[block] = BlockExecutionState.Running;
+            context.SetBlockState(block, BlockExecutionState.Running);
 
             // Gather inputs from upstream warehouses
             var inputs = GatherInputs(block, context);
@@ -202,29 +199,26 @@ public class GraphExecutor : IGraphExecutor
             // Notify scheduler of completion FIRST
             context.Scheduler.NotifyCompleted(block, context);
 
-            lock (context.ActiveSourcesLock)
+            if (context.IsActiveSource(block))
             {
-                if (context.ActiveSources.Contains(block))
+                if (hasMoreShipments)
                 {
-                    if (hasMoreShipments)
-                    {
-                        // Source still has shipments - keep in ActiveSources
-                        // Will be re-enqueued after shipment cycle completes
-                        context.BlockStates[block] = BlockExecutionState.Ready;
-                    }
-                    else
-                    {
-                        // Source exhausted - mark inactive and update cache
-                        context.MarkSourceInactive(block);
-                        context.BlockStates[block] = BlockExecutionState.Completed;
-                        // Natural flow will stop blocks when warehouses are empty
-                    }
+                    // Source still has shipments - keep in ActiveSources
+                    // Will be re-enqueued after shipment cycle completes
+                    context.SetBlockState(block, BlockExecutionState.Ready);
                 }
                 else
                 {
-                    // Non-source block - mark completed
-                    context.BlockStates[block] = BlockExecutionState.Completed;
+                    // Source exhausted - mark inactive and update cache
+                    context.MarkSourceInactive(block);
+                    context.SetBlockState(block, BlockExecutionState.Completed);
+                    // Natural flow will stop blocks when warehouses are empty
                 }
+            }
+            else
+            {
+                // Non-source block - mark completed
+                context.SetBlockState(block, BlockExecutionState.Completed);
             }
 
             // Track progress
@@ -279,10 +273,8 @@ public class GraphExecutor : IGraphExecutor
     {
         var inputs = new Dictionary<Socket, List<IBasicWorkItem>>();
 
-        // Find all incoming connections
-        var incomingConnections = context.Graph.Connections
-            .Where(c => c.Target == block)
-            .ToList();
+        // Get precomputed active incoming connections (O(1) lookup)
+        var incomingConnections = context.GetActiveIncomingConnections(block);
 
         foreach (var connection in incomingConnections)
         {
@@ -290,9 +282,8 @@ public class GraphExecutor : IGraphExecutor
             var targetSocket = connection.TargetSocket;
 
             // Get warehouse for source block
-            if (context.Warehouses.TryGetValue(sourceBlock, out var lazyWarehouse))
+            if (context.TryGetWarehouse(sourceBlock, out var warehouse) && warehouse != null)
             {
-                var warehouse = lazyWarehouse.Value;
                 // defensive cloning is done by warehouse
                 var warehouseOutputs = warehouse.GetInventory();
 
@@ -325,12 +316,9 @@ public class GraphExecutor : IGraphExecutor
         if (outputs == null || outputs.Count == 0)
             return;
 
-        // Create new warehouse for this execution
-        var newWarehouse = new Lazy<Warehouse>(
-            () => new Warehouse(context.OutDegree[block]));
-
-        context.Warehouses[block] = newWarehouse;
-        newWarehouse.Value.Import(outputs);
+        // Get or create warehouse for this block and import outputs
+        var warehouse = context.GetOrCreateWarehouse(block);
+        warehouse.Import(outputs);
     }
 
     /// <summary>
@@ -418,7 +406,7 @@ public class GraphExecutor : IGraphExecutor
         // blocks but retain their Failed state for diagnostics)
         context.MarkFailed(block);
 
-        context.Exceptions.Add(new PipelineExecutionException(
+        context.RecordException(new PipelineExecutionException(
             $"Block '{block.Name}' failed: {exception.Message}", exception));
 
         // Propagate failure to downstream blocks that can no longer execute

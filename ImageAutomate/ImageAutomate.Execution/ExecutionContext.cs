@@ -29,73 +29,87 @@ internal sealed class ExecutionContext
     /// </summary>
     public CancellationToken CancellationToken { get; }
 
-    /// <summary>
-    /// Warehouses indexed by producer block.
-    /// </summary>
-    /// <remarks>
-    /// Warehouses are lazily initialized. Initialization defers to the first access.
-    /// </remarks>
-    public ConcurrentDictionary<IBlock, Lazy<Warehouse>> Warehouses { get; } = new();
-
-    /// <summary>
-    /// Dependency barriers indexed by consumer block.
-    /// </summary>
-    /// <remarks>
-    /// Barriers are lazily initialized. Initialization defers to the first access.
-    /// </remarks>
-    public ConcurrentDictionary<IBlock, Lazy<DependencyBarrier>> Barriers { get; } = new();
+    #region Graph Topology (Immutable after initialization)
 
     /// <summary>
     /// In-degree (number of incoming connections) for each block.
     /// </summary>
-    public Dictionary<IBlock, int> InDegree { get; } = [];
+    internal IReadOnlyDictionary<IBlock, int> InDegree => _inDegree;
+    private readonly Dictionary<IBlock, int> _inDegree = [];
 
     /// <summary>
     /// Out-degree (number of outgoing connections) for each block.
     /// </summary>
-    public Dictionary<IBlock, int> OutDegree { get; } = [];
+    internal IReadOnlyDictionary<IBlock, int> OutDegree => _outDegree;
+    private readonly Dictionary<IBlock, int> _outDegree = [];
 
     /// <summary>
     /// Precomputed downstream blocks for each block (adjacency list).
     /// </summary>
-    public Dictionary<IBlock, HashSet<IBlock>> DownstreamBlocks { get; } = [];
+    internal IReadOnlyDictionary<IBlock, HashSet<IBlock>> DownstreamBlocks => _downstreamBlocks;
+    private readonly Dictionary<IBlock, HashSet<IBlock>> _downstreamBlocks = [];
 
     /// <summary>
     /// Precomputed upstream blocks for each block (reverse adjacency list).
     /// </summary>
-    public Dictionary<IBlock, HashSet<IBlock>> UpstreamBlocks { get; } = [];
+    internal IReadOnlyDictionary<IBlock, HashSet<IBlock>> UpstreamBlocks => _upstreamBlocks;
+    private readonly Dictionary<IBlock, HashSet<IBlock>> _upstreamBlocks = [];
 
     /// <summary>
     /// Precomputed connections grouped by target block and target socket.
     /// Maps: TargetBlock -> TargetSocket -> List of source blocks.
     /// </summary>
-    public Dictionary<IBlock, Dictionary<Socket, List<IBlock>>> SocketSources { get; } = [];
+    internal IReadOnlyDictionary<IBlock, Dictionary<Socket, List<IBlock>>> SocketSources => _socketSources;
+    private readonly Dictionary<IBlock, Dictionary<Socket, List<IBlock>>> _socketSources = [];
+
+    #endregion
+
+    #region Runtime State (Mutable, accessed via methods)
+
+    /// <summary>
+    /// Warehouses indexed by producer block.
+    /// </summary>
+    private readonly ConcurrentDictionary<IBlock, Lazy<Warehouse>> _warehouses = new();
+
+    /// <summary>
+    /// Dependency barriers indexed by consumer block.
+    /// </summary>
+    private readonly ConcurrentDictionary<IBlock, Lazy<DependencyBarrier>> _barriers = new();
+
+    /// <summary>
+    /// Active incoming connections for each block.
+    /// Only contains connections from blocks with active upstream sources.
+    /// </summary>
+    private readonly ConcurrentDictionary<IBlock, IReadOnlyList<Connection>> _activeIncomingConnections = new();
+
+    /// <summary>
+    /// Cached active in-degree for each block.
+    /// </summary>
+    private readonly ConcurrentDictionary<IBlock, int> _activeInDegree = new();
 
     /// <summary>
     /// Current execution state of each block.
     /// </summary>
-    public ConcurrentDictionary<IBlock, BlockExecutionState> BlockStates { get; } = new();
+    private readonly ConcurrentDictionary<IBlock, BlockExecutionState> _blockStates = new();
 
     /// <summary>
     /// Exceptions encountered during execution.
     /// </summary>
-    public ConcurrentBag<Exception> Exceptions { get; } = [];
+    private readonly ConcurrentBag<Exception> _exceptions = [];
 
     /// <summary>
     /// Set of source blocks that can still emit more shipments.
     /// </summary>
-    public HashSet<IBlock> ActiveSources { get; } = [];
+    private readonly HashSet<IBlock> _activeSources = [];
 
     /// <summary>
     /// Lock for ActiveSources access.
     /// </summary>
-    public Lock ActiveSourcesLock { get; } = new();
+    private readonly Lock _activeSourcesLock = new();
 
-    /// <summary>
-    /// Cached lookup table tracking which blocks have active upstream sources.
-    /// Updated incrementally when ActiveSources changes.
-    /// </summary>
-    private readonly ConcurrentDictionary<IBlock, bool> _hasActiveUpstreamCache = new();
+    #endregion
+
+    #region Counters and Progress
 
     /// <summary>
     /// Number of blocks currently executing.
@@ -114,12 +128,33 @@ internal sealed class ExecutionContext
     public DateTime LastProgress
     {
         get => new(Interlocked.Read(ref _lastProgressTicks));
-        set => Interlocked.Exchange(ref _lastProgressTicks, value.Ticks);
+        private set => Interlocked.Exchange(ref _lastProgressTicks, value.Ticks);
     }
+
+    /// <summary>
+    /// Returns true if there are any active sources remaining.
+    /// </summary>
+    public bool HasActiveSources
+    {
+        get
+        {
+            lock (_activeSourcesLock)
+            {
+                return _activeSources.Count > 0;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Returns true if any exceptions were recorded.
+    /// </summary>
+    public bool HasExceptions => !_exceptions.IsEmpty;
 
     private int _activeBlockCount;
     private int _processedShipmentCount;
     private long _lastProgressTicks;
+
+    #endregion
 
     public ExecutionContext(
         PipelineGraph graph,
@@ -147,31 +182,36 @@ internal sealed class ExecutionContext
         // Initialize all blocks with degree 0 and Pending state
         foreach (var block in Graph.Blocks)
         {
-            InDegree[block] = 0;
-            OutDegree[block] = 0;
-            BlockStates[block] = BlockExecutionState.Pending;
-            DownstreamBlocks[block] = [];
-            UpstreamBlocks[block] = [];
-            SocketSources[block] = [];
+            _inDegree[block] = 0;
+            _outDegree[block] = 0;
+            _blockStates[block] = BlockExecutionState.Pending;
+            _downstreamBlocks[block] = [];
+            _upstreamBlocks[block] = [];
+            _socketSources[block] = [];
+            _activeIncomingConnections[block] = Array.Empty<Connection>();
+            _activeInDegree[block] = 0;
         }
 
         // Build adjacency lists and count degrees from connections
         foreach (var connection in Graph.Connections)
         {
-            InDegree[connection.Target]++;
-            OutDegree[connection.Source]++;
+            _inDegree[connection.Target]++;
+            _outDegree[connection.Source]++;
 
             // Add to downstream adjacency
-            DownstreamBlocks[connection.Source].Add(connection.Target);
+            _downstreamBlocks[connection.Source].Add(connection.Target);
 
             // Add to upstream adjacency
-            UpstreamBlocks[connection.Target].Add(connection.Source);
+            _upstreamBlocks[connection.Target].Add(connection.Source);
+
+            // Note: ActiveIncomingConnections will be populated during InitializeActiveConnections
+            // after ActiveSources is set
 
             // Add to socket sources map
-            if (!SocketSources[connection.Target].TryGetValue(connection.TargetSocket, out var sources))
+            if (!_socketSources[connection.Target].TryGetValue(connection.TargetSocket, out var sources))
             {
                 sources = [];
-                SocketSources[connection.Target][connection.TargetSocket] = sources;
+                _socketSources[connection.Target][connection.TargetSocket] = sources;
             }
             sources.Add(connection.Source);
         }
@@ -202,17 +242,104 @@ internal sealed class ExecutionContext
         LastProgress = DateTime.UtcNow;
     }
 
+    #region Warehouse Access
+
     /// <summary>
-    /// Marks a block as blocked and invalidates its cache entry.
+    /// Gets or creates a warehouse for the specified block.
     /// </summary>
-    public void MarkBlocked(IBlock block)
+    public Warehouse GetOrCreateWarehouse(IBlock block)
     {
-        BlockStates[block] = BlockExecutionState.Blocked;
-        InvalidateCacheForBlockedBlock(block);
+        var lazy = _warehouses.GetOrAdd(
+            block,
+            b => new Lazy<Warehouse>(() => new Warehouse(_outDegree[b])));
+        return lazy.Value;
     }
 
     /// <summary>
-    /// Marks a block as failed and invalidates its cache entry.
+    /// Tries to get an existing warehouse for the specified block.
+    /// </summary>
+    public bool TryGetWarehouse(IBlock block, out Warehouse? warehouse)
+    {
+        if (_warehouses.TryGetValue(block, out var lazy))
+        {
+            warehouse = lazy.Value;
+            return true;
+        }
+        warehouse = null;
+        return false;
+    }
+
+    #endregion
+
+    #region Barrier Access
+
+    /// <summary>
+    /// Gets or creates a dependency barrier for the specified block with the given dependency count.
+    /// </summary>
+    public DependencyBarrier GetOrCreateBarrier(IBlock block, int dependencyCount)
+    {
+        var lazy = _barriers.GetOrAdd(
+            block,
+            _ => new Lazy<DependencyBarrier>(() => new DependencyBarrier(block, dependencyCount)));
+        return lazy.Value;
+    }
+
+    #endregion
+
+    #region Block State Access
+
+    /// <summary>
+    /// Gets the current state of a block.
+    /// </summary>
+    public BlockExecutionState GetBlockState(IBlock block)
+    {
+        return _blockStates.TryGetValue(block, out var state)
+            ? state
+            : BlockExecutionState.Pending;
+    }
+
+    /// <summary>
+    /// Sets the state of a block.
+    /// </summary>
+    public void SetBlockState(IBlock block, BlockExecutionState state)
+    {
+        _blockStates[block] = state;
+    }
+
+    #endregion
+
+    #region Exception Handling
+
+    /// <summary>
+    /// Records an exception that occurred during execution.
+    /// </summary>
+    public void RecordException(Exception exception)
+    {
+        _exceptions.Add(exception);
+    }
+
+    /// <summary>
+    /// Gets all recorded exceptions.
+    /// </summary>
+    public IEnumerable<Exception> GetExceptions()
+    {
+        return _exceptions;
+    }
+
+    #endregion
+
+    #region Block State Checks
+
+    /// <summary>
+    /// Marks a block as blocked.
+    /// </summary>
+    public void MarkBlocked(IBlock block)
+    {
+        _blockStates[block] = BlockExecutionState.Blocked;
+    }
+
+    /// <summary>
+    /// Marks a block as failed.
     /// (won't reset, can block downstream) but retain their Failed state.
     /// </summary>
     /// <remarks>
@@ -220,8 +347,7 @@ internal sealed class ExecutionContext
     /// </remarks>
     public void MarkFailed(IBlock block)
     {
-        BlockStates[block] = BlockExecutionState.Failed;
-        InvalidateCacheForBlockedBlock(block);
+        _blockStates[block] = BlockExecutionState.Failed;
     }
 
     /// <summary>
@@ -229,7 +355,7 @@ internal sealed class ExecutionContext
     /// </summary>
     public bool IsFailed(IBlock block)
     {
-        return BlockStates.TryGetValue(block, out var state)
+        return _blockStates.TryGetValue(block, out var state)
             && state == BlockExecutionState.Failed;
     }
 
@@ -241,51 +367,54 @@ internal sealed class ExecutionContext
     /// </remarks>
     public bool IsBlocked(IBlock block)
     {
-        return BlockStates.TryGetValue(block, out var state)
+        return _blockStates.TryGetValue(block, out var state)
             && (state == BlockExecutionState.Blocked || state == BlockExecutionState.Failed);
     }
 
     public bool IsRunning(IBlock block)
     {
-        return BlockStates.TryGetValue(block, out var state)
+        return _blockStates.TryGetValue(block, out var state)
             && state == BlockExecutionState.Running;
     }
 
+    #endregion
+
+    #region Active Connection Access
+
     /// <summary>
-    /// Calculates the active in-degree for a block (number of active incoming connections).
+    /// Gets the active in-degree for a block (number of active incoming connections).
     /// </summary>
     /// <remarks>
-    /// This counts connections, not blocks, to properly handle multiple connections to the same socket.
+    /// This is an O(1) thread-safe lookup using pre-computed ActiveInDegree.
     /// Only counts connections from blocks that have active upstream sources.
     /// </remarks>
     public int GetActiveInDegree(IBlock block)
     {
-        var incomingConnections = Graph.Connections
-            .Where(c => c.Target == block)
-            .ToList();
+        return _activeInDegree.TryGetValue(block, out var degree) ? degree : 0;
+    }
 
-        int activeCount = 0;
-        foreach (var connection in incomingConnections)
-        {
-            var sourceBlock = connection.Source;
-
-            // Check if this upstream block has any active source in its transitive dependencies
-            if (HasActiveUpstreamSource(sourceBlock))
-            {
-                activeCount++;
-            }
-        }
-
-        return activeCount;
+    /// <summary>
+    /// Gets the active incoming connections for a block.
+    /// </summary>
+    /// <remarks>
+    /// Returns only connections from blocks with active upstream sources.
+    /// Thread-safe; list is immutable after retrieval.
+    /// </remarks>
+    public IReadOnlyList<Connection> GetActiveIncomingConnections(IBlock block)
+    {
+        return _activeIncomingConnections.TryGetValue(block, out var connections)
+            ? connections
+            : Array.Empty<Connection>();
     }
 
     /// <summary>
     /// Checks if a block has any active source in its transitive upstream dependencies.
-    /// Uses cached lookup table for O(1) access.
     /// </summary>
     /// <remarks>
-    /// IMPORTANT: Cache is only updated at cycle boundaries, not mid-cycle.
+    /// IMPORTANT: This is updated at cycle boundaries, not mid-cycle.
     /// This ensures stable values during a shipment cycle even as sources exhaust.
+    /// A block has active upstream sources if it has any active incoming connections
+    /// or if it's an active source itself.
     /// </remarks>
     public bool HasActiveUpstreamSource(IBlock block)
     {
@@ -293,70 +422,34 @@ internal sealed class ExecutionContext
         if (IsBlocked(block))
             return false;
 
-        if (_hasActiveUpstreamCache.TryGetValue(block, out var cached))
-            return cached;
-
-        // Fallback for blocks not in cache (should only happen during initialization)
-        var result = ComputeHasActiveUpstreamSource(block);
-        _hasActiveUpstreamCache[block] = result;
-        return result;
-    }
-
-    /// <summary>
-    /// Computes whether a block has active upstream sources using BFS.
-    /// </summary>
-    private bool ComputeHasActiveUpstreamSource(IBlock block)
-    {
-        lock (ActiveSourcesLock)
+        // Check if it's an active source
+        lock (_activeSourcesLock)
         {
-            // Direct check: is this block itself an active source?
-            if (ActiveSources.Contains(block))
+            if (_activeSources.Contains(block))
                 return true;
         }
 
-        // BFS to find active sources upstream
-        var visited = new HashSet<IBlock>();
-        var queue = new Queue<IBlock>();
-        queue.Enqueue(block);
-
-        while (queue.Count > 0)
-        {
-            var current = queue.Dequeue();
-            if (!visited.Add(current))
-                continue;
-
-            var upstreamBlocks = Graph.Connections
-                .Where(c => c.Target == current)
-                .Select(c => c.Source);
-
-            foreach (var upstream in upstreamBlocks)
-            {
-                lock (ActiveSourcesLock)
-                {
-                    if (ActiveSources.Contains(upstream))
-                        return true;
-                }
-                queue.Enqueue(upstream);
-            }
-        }
-
-        return false;
+        // Check if it has any active incoming connections
+        return _activeInDegree.TryGetValue(block, out var degree) && degree > 0;
     }
 
+    #endregion
+
+    #region Source Management
+
     /// <summary>
-    /// Marks a source block as active and updates the downstream cache.
+    /// Marks a source block as active.
     /// Call this when a source begins emitting shipments.
     /// </summary>
+    /// <remarks>
+    /// Active connections are rebuilt at cycle boundaries to ensure consistency.
+    /// </remarks>
     public void MarkSourceActive(IBlock sourceBlock)
     {
-        lock (ActiveSourcesLock)
+        lock (_activeSourcesLock)
         {
-            if (!ActiveSources.Add(sourceBlock))
-                return; // Already active, no update needed
+            _activeSources.Add(sourceBlock);
         }
-
-        // Propagate active status downstream
-        PropagateActiveStatusDownstream(sourceBlock, isActive: true);
     }
 
     /// <summary>
@@ -364,73 +457,81 @@ internal sealed class ExecutionContext
     /// Call this when a source is exhausted.
     /// </summary>
     /// <remarks>
-    /// Cache update is deferred until next shipment cycle boundary.
+    /// Active connection rebuild is deferred until next shipment cycle boundary.
     /// </remarks>
     public void MarkSourceInactive(IBlock sourceBlock)
     {
-        lock (ActiveSourcesLock)
+        lock (_activeSourcesLock)
         {
-            ActiveSources.Remove(sourceBlock);
+            _activeSources.Remove(sourceBlock);
         }
     }
 
     /// <summary>
-    /// Propagates active status downstream from a newly activated source.
+    /// Checks if a block is currently an active source.
     /// </summary>
-    private void PropagateActiveStatusDownstream(IBlock sourceBlock, bool isActive)
+    public bool IsActiveSource(IBlock block)
     {
-        // Mark the source itself
-        _hasActiveUpstreamCache[sourceBlock] = true;
-
-        // BFS to propagate to all downstream blocks
-        var visited = new HashSet<IBlock>();
-        var queue = new Queue<IBlock>();
-        queue.Enqueue(sourceBlock);
-
-        while (queue.Count > 0)
+        lock (_activeSourcesLock)
         {
-            var current = queue.Dequeue();
-            if (!visited.Add(current))
-                continue;
+            return _activeSources.Contains(block);
+        }
+    }
 
-            var downstreamBlocks = Graph.Connections
-                .Where(c => c.Source == current)
-                .Select(c => c.Target);
-
-            foreach (var downstream in downstreamBlocks)
+    /// <summary>
+    /// Executes an action for each active source in a thread-safe manner.
+    /// </summary>
+    public void ForEachActiveSource(Action<IBlock> action)
+    {
+        lock (_activeSourcesLock)
+        {
+            foreach (var source in _activeSources)
             {
-                _hasActiveUpstreamCache[downstream] = true;
-                queue.Enqueue(downstream);
+                action(source);
             }
         }
     }
 
+    #endregion
+
+    #region Cycle Management
 
     /// <summary>
-    /// Removes a block from the upstream cache when it's blocked.
-    /// Blocked blocks will never execute, so they don't need cache entries.
+    /// Initializes active incoming connections and active in-degree for all blocks.
+    /// Should be called after ActiveSources is initially populated or when cycle resets.
     /// </summary>
-    public void InvalidateCacheForBlockedBlock(IBlock block)
+    /// <remarks>
+    /// Builds new connection lists first, then atomically replaces them.
+    /// This ensures thread-safe reads during execution.
+    /// </remarks>
+    public void InitializeActiveConnections()
     {
-        _hasActiveUpstreamCache.TryRemove(block, out _);
-    }
+        // Compute which blocks have active upstream sources
+        var blocksWithActiveUpstream = ComputeBlocksWithActiveUpstream();
 
-    /// <summary>
-    /// Initializes the upstream source cache for all blocks.
-    /// Should be called after ActiveSources is initially populated.
-    /// </summary>
-    public void InitializeUpstreamCache()
-    {
-        _hasActiveUpstreamCache.Clear();
-
+        // Build new connection lists (not yet visible to readers)
+        var newConnections = new Dictionary<IBlock, List<Connection>>();
         foreach (var block in Graph.Blocks)
         {
-            // Skip blocked blocks - they won't execute
-            if (!IsBlocked(block))
+            newConnections[block] = [];
+        }
+
+        // Populate new connection lists based on active sources
+        foreach (var connection in Graph.Connections)
+        {
+            // Only add connection if source has active upstream (or is active source itself)
+            if (blocksWithActiveUpstream.Contains(connection.Source))
             {
-                var hasActive = ComputeHasActiveUpstreamSource(block);
-                _hasActiveUpstreamCache[block] = hasActive;
+                newConnections[connection.Target].Add(connection);
             }
+        }
+
+        // Atomically replace all lists and update degrees
+        foreach (var block in Graph.Blocks)
+        {
+            var connections = newConnections[block];
+            _activeIncomingConnections[block] = connections;
+            _activeInDegree[block] = connections.Count;
         }
     }
 
@@ -440,31 +541,83 @@ internal sealed class ExecutionContext
     public void ResetForNextShipment()
     {
         // Clear warehouses and barriers
-        Warehouses.Clear();
-        Barriers.Clear();
+        _warehouses.Clear();
+        _barriers.Clear();
 
         // Reset all block states to Pending (except blocked and active sources)
         foreach (var block in Graph.Blocks)
         {
             if (!IsBlocked(block))
             {
-                BlockStates[block] = BlockExecutionState.Pending;
+                _blockStates[block] = BlockExecutionState.Pending;
             }
         }
 
         // Re-mark active sources as Ready
-        lock (ActiveSourcesLock)
+        lock (_activeSourcesLock)
         {
-            foreach (var source in ActiveSources)
+            foreach (var source in _activeSources)
             {
                 if (!IsBlocked(source))
                 {
-                    BlockStates[source] = BlockExecutionState.Ready;
+                    _blockStates[source] = BlockExecutionState.Ready;
                 }
             }
         }
 
-        // Rebuild the upstream source cache for the new cycle
-        InitializeUpstreamCache();
+        // Rebuild active connections for the new cycle
+        InitializeActiveConnections();
     }
+
+    #endregion
+
+    #region Private Helpers
+
+    /// <summary>
+    /// Computes the set of blocks that have active upstream sources using BFS.
+    /// Returns a set of all blocks reachable from active sources.
+    /// </summary>
+    private HashSet<IBlock> ComputeBlocksWithActiveUpstream()
+    {
+        var blocksWithActiveUpstream = new HashSet<IBlock>();
+        var queue = new Queue<IBlock>();
+
+        // Start from all active sources
+        lock (_activeSourcesLock)
+        {
+            foreach (var source in _activeSources)
+            {
+                if (!IsBlocked(source))
+                {
+                    blocksWithActiveUpstream.Add(source);
+                    queue.Enqueue(source);
+                }
+            }
+        }
+
+        // BFS to mark all downstream blocks
+        var visited = new HashSet<IBlock>();
+        while (queue.Count > 0)
+        {
+            var current = queue.Dequeue();
+            if (!visited.Add(current))
+                continue;
+
+            if (_downstreamBlocks.TryGetValue(current, out var downstreamSet))
+            {
+                foreach (var downstream in downstreamSet)
+                {
+                    if (!IsBlocked(downstream))
+                    {
+                        blocksWithActiveUpstream.Add(downstream);
+                        queue.Enqueue(downstream);
+                    }
+                }
+            }
+        }
+
+        return blocksWithActiveUpstream;
+    }
+
+    #endregion
 }
