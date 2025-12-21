@@ -446,14 +446,14 @@ The system is **algorithmically lock-free** with the following caveats:
 ```csharp
 public sealed class WorkItem : IDisposable
 {
-    public Image<Rgba32> Image { get; }       // SixLabors.ImageSharp
-    public float SizeMP { get; }              // Width × Height / 1,000,000
-    public IReadOnlyDictionary<string, object> Metadata { get; }
+    public Image Image { get; }       // SixLabors.ImageSharp
+    public float SizeMP { get; }      // Width × Height / 1,000,000
+    public IImmutableDictionary<string, object> Metadata { get; }
 
     public WorkItem Clone() => new WorkItem(
-        Image.Clone(),  // Deep copy of pixel data
+        Image.Clone(x => {}),  // Deep copy of pixel data
         SizeMP,
-        Metadata        // Shallow copy (immutable)
+        Metadata               // Shallow copy (immutable)
     );
 
     public void Dispose() => Image.Dispose(); // Release unmanaged pixel buffer
