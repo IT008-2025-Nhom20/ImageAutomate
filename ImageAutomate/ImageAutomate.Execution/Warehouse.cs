@@ -84,7 +84,8 @@ internal sealed class Warehouse
     /// </returns>
     private Dictionary<Socket, IReadOnlyList<IBasicWorkItem>> GetInventoryCore(IEnumerable<Socket>? sockets = null)
     {
-        if (_inventory == null)
+        var inventory = _inventory;
+        if (inventory == null)
             throw new InvalidOperationException("Warehouse has not been committed yet.");
 
         // Atomically decrement consumer count
@@ -94,8 +95,8 @@ internal sealed class Warehouse
             throw new InvalidOperationException("Consumer count underflow. More consumers than expected.");
 
         var filtered = sockets != null
-            ? _inventory.Where(kvp => sockets.Contains(kvp.Key))
-            : _inventory;
+            ? inventory.Where(kvp => sockets.Contains(kvp.Key))
+            : inventory;
 
         if (remainingConsumers == 0)
         {
