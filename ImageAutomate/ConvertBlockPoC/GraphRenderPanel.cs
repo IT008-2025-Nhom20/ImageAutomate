@@ -177,6 +177,8 @@ public class GraphRenderPanel : Panel
         ComputeLayoutAndRender();
     }
 
+    #region Private method
+
     private void OnMouseDownPan(object? sender, MouseEventArgs e)
     {
         if (e.Button == MouseButtons.Left)
@@ -331,9 +333,11 @@ public class GraphRenderPanel : Panel
     {
         base.OnPaint(e);
 
-        if (_graph == null) return;
+        if (_graph == null)
+            return;
         var graph = _graph.GeomGraph;
-        if (graph.Nodes.Count == 0) return;
+        if (graph.Nodes.Count == 0)
+            return;
 
         Graphics g = e.Graphics;
         g.SmoothingMode = SmoothingMode.AntiAlias;
@@ -345,9 +349,7 @@ public class GraphRenderPanel : Panel
         g.Transform = transform;
 
         foreach (var geomEdge in graph.Edges)
-        {
             NodeRenderer.DrawEdge(g, geomEdge, _socketRadius);
-        }
 
         foreach (var geomNode in graph.Nodes)
         {
@@ -357,4 +359,5 @@ public class GraphRenderPanel : Panel
 
         g.ResetTransform();
     }
+    #endregion
 }

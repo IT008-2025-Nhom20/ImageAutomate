@@ -1,9 +1,23 @@
+﻿using ImageAutomate.Core;
+using SixLabors.ImageSharp.Formats;
+using SixLabors.ImageSharp.Formats.Bmp;
+using SixLabors.ImageSharp.Formats.Gif;
+using SixLabors.ImageSharp.Formats.Jpeg;
+using SixLabors.ImageSharp.Formats.Pbm;
+using SixLabors.ImageSharp.Formats.Png;
+using SixLabors.ImageSharp.Formats.Qoi;
+using SixLabors.ImageSharp.Formats.Tga;
+using SixLabors.ImageSharp.Formats.Tiff;
+using SixLabors.ImageSharp.Formats.Webp;
+using System.Collections.Immutable;
 using System.ComponentModel;
+using System.Security.Cryptography.X509Certificates;
 
-namespace ConvertBlockPoC;
+namespace ImageAutomate.StandardBlocks;
 
 public enum ImageFormat
 {
+    Unknown = 0,
     Bmp,
     Gif,
     Jpeg,
@@ -46,8 +60,14 @@ public enum TiffCompression
 
 public class ConvertBlock : IBlock
 {
+    #region Fields
+    private readonly IReadOnlyList<Socket> _inputs = [new("Convert.In", "Image.Input")];
+    private readonly IReadOnlyList<Socket> _outputs = [new("Convert.Out", "Image.Out")];
+
     private ImageFormat _targetFormat = ImageFormat.Png;
-    private bool _alwaysReEncode = false;
+    private bool _alwaysEncode = false;
+    private bool disposedValue = false;
+
     private JpegEncodingOptions _jpegOptions = new JpegEncodingOptions();
     private PngEncodingOptions _pngOptions = new PngEncodingOptions();
     private BmpEncodingOptions _bmpOptions = new BmpEncodingOptions();
@@ -56,30 +76,11 @@ public class ConvertBlock : IBlock
     private TgaEncodingOptions _tgaOptions = new TgaEncodingOptions();
     private WebPEncodingOptions _webpOptions = new WebPEncodingOptions();
     private QoiEncodingOptions _qoiOptions = new QoiEncodingOptions();
-    private double _width = 200;
-    private double _height = 100;
 
-    public event PropertyChangedEventHandler? PropertyChanged;
+    private int _width = 200;
+    private int _height = 100;
 
-    void Options_OnPropertyChanged(object? sender, PropertyChangedEventArgs e)
-    {
-        if (sender is JpegEncodingOptions)
-            OnPropertyChanged(nameof(JpegOptions));
-        else if (sender is PngEncodingOptions)
-            OnPropertyChanged(nameof(PngOptions));
-        else if (sender is BmpEncodingOptions)
-            OnPropertyChanged(nameof(BmpOptions));
-        else if (sender is GifEncodingOptions)
-            OnPropertyChanged(nameof(GifOptions));
-        else if (sender is TiffEncodingOptions)
-            OnPropertyChanged(nameof(TiffOptions));
-        else if (sender is TgaEncodingOptions)
-            OnPropertyChanged(nameof(TgaOptions));
-        else if (sender is WebPEncodingOptions)
-            OnPropertyChanged(nameof(WebPOptions));
-        else if (sender is QoiEncodingOptions)
-            OnPropertyChanged(nameof(QoiOptions));
-    }
+    #endregion
 
     public ConvertBlock()
     {
@@ -93,15 +94,17 @@ public class ConvertBlock : IBlock
         _qoiOptions.PropertyChanged += Options_OnPropertyChanged;
     }
 
-    [Browsable(false)]
+    #region Basic Properties
+
     public string Name => "Convert";
 
-    [Browsable(false)]
-    public string ConfigurationSummary
+    public string Title => "Convert";
+
+    public string Content
     {
         get
         {
-            var opts = TargetFormat switch
+            var optionSummaries = TargetFormat switch
             {
                 ImageFormat.Jpeg => $"Quality: {JpegOptions.Quality}",
                 ImageFormat.Png => $"Compression: {PngOptions.CompressionLevel}",
@@ -112,21 +115,25 @@ public class ConvertBlock : IBlock
                 ImageFormat.Tga => $"Compression: {TgaOptions.Compress}",
                 ImageFormat.WebP => $"LossLess: {WebPOptions.Lossless}\n" +
                                     $"Quality: {WebPOptions.Quality}",
-                ImageFormat.Qoi =>$"Include Alpha: {QoiOptions.IncludeAlpha}",
+                ImageFormat.Qoi => $"Include Alpha: {QoiOptions.IncludeAlpha}",
                 _ => "Options: Default"
             };
-            return $"Format: {TargetFormat}\nRe-encode: {AlwaysReEncode}\n{opts}";
+            return $"Format: {TargetFormat}\nRe-encode: {AlwaysEncode}\nConfiguration:{optionSummaries}";
         }
     }
 
+    #endregion
+
+    #region Layout
+
     [Category("Layout")]
-    [Description("Width of the block node")]
-    public double Width
+    [Description("Width of the black node")]
+    public int Width
     {
         get => _width;
         set
         {
-            if (Math.Abs(_width - value) > double.Epsilon)
+            if (_width != value)
             {
                 _width = value;
                 OnPropertyChanged(nameof(Width));
@@ -135,19 +142,30 @@ public class ConvertBlock : IBlock
     }
 
     [Category("Layout")]
-    [Description("Height of the block node")]
-    public double Height
+    [Description("Height of the black node")]
+    public int Height
     {
         get => _height;
         set
         {
-            if (Math.Abs(_height - value) > double.Epsilon)
+            if (_height != value)
             {
                 _height = value;
                 OnPropertyChanged(nameof(Height));
             }
         }
     }
+
+    #endregion
+
+    #region Sockets
+
+    public IReadOnlyList<Socket> Inputs => _inputs;
+    public IReadOnlyList<Socket> Outputs => _outputs;
+
+    #endregion
+
+    #region Configuration
 
     [Category("Configuration")]
     [Description("Target image format for conversion")]
@@ -167,26 +185,28 @@ public class ConvertBlock : IBlock
                 OnPropertyChanged(nameof(TgaOptions));
                 OnPropertyChanged(nameof(WebPOptions));
                 OnPropertyChanged(nameof(QoiOptions));
-                OnPropertyChanged(nameof(ConfigurationSummary));
             }
         }
     }
 
     [Category("Configuration")]
     [Description("Force re-encoding even when format matches")]
-    public bool AlwaysReEncode
+    public bool AlwaysEncode
     {
-        get => _alwaysReEncode;
+        get => _alwaysEncode;
         set
         {
-            if (_alwaysReEncode != value)
+            if (_alwaysEncode != value)
             {
-                _alwaysReEncode = value;
-                OnPropertyChanged(nameof(AlwaysReEncode));
-                OnPropertyChanged(nameof(ConfigurationSummary));
+                _alwaysEncode = value;
+                OnPropertyChanged(nameof(AlwaysEncode));
             }
         }
     }
+
+    #endregion
+
+    #region Enconding Options Properties
 
     [Category("Encoding Options")]
     [Description("JPEG encoding parameters")]
@@ -276,19 +296,19 @@ public class ConvertBlock : IBlock
     }
 
     [Category("Encoding Options")]
-    [Description("TGA Options")] 
+    [Description("TGA Options")]
     [TypeConverter(typeof(ExpandableObjectConverter))]
     public TgaEncodingOptions TgaOptions
     {
         get => _tgaOptions;
-        set 
+        set
         {
             if (_tgaOptions != null)
                 _tgaOptions.PropertyChanged -= Options_OnPropertyChanged;
             _tgaOptions = value;
             if (_tgaOptions != null)
                 _tgaOptions.PropertyChanged += Options_OnPropertyChanged;
-            OnPropertyChanged(nameof(TgaOptions)); 
+            OnPropertyChanged(nameof(TgaOptions));
         }
     }
 
@@ -301,10 +321,10 @@ public class ConvertBlock : IBlock
         set
         {
             if (_webpOptions != null)
-                _webpOptions.PropertyChanged  -= Options_OnPropertyChanged;
+                _webpOptions.PropertyChanged -= Options_OnPropertyChanged;
             _webpOptions = value;
             if (_webpOptions != null)
-                _webpOptions.PropertyChanged -= Options_OnPropertyChanged;
+                _webpOptions.PropertyChanged += Options_OnPropertyChanged;
             OnPropertyChanged(nameof(WebPOptions));
         }
     }
@@ -317,66 +337,116 @@ public class ConvertBlock : IBlock
         set
         {
             if (_qoiOptions != null)
-                _qoiOptions .PropertyChanged -= Options_OnPropertyChanged;
+                _qoiOptions.PropertyChanged -= Options_OnPropertyChanged;
             _qoiOptions = value;
             if (_qoiOptions != null)
-                _qoiOptions.PropertyChanged -= Options_OnPropertyChanged;
+                _qoiOptions.PropertyChanged += Options_OnPropertyChanged;
             OnPropertyChanged(nameof(QoiOptions));
         }
     }
-    [Browsable(false)]
-    public bool ShouldSerializeJpegOptions()
-    {
-        return TargetFormat == ImageFormat.Jpeg;
-    }
 
-    [Browsable(false)]
-    public bool ShouldSerializePngOptions()
-    {
-        return TargetFormat == ImageFormat.Png;
-    }
+    #endregion
 
-    [Browsable(false)]
-    public bool ShouldSerializeTiffOptions()
-    {
-        return TargetFormat == ImageFormat.Tiff;
-    }    
-    [Browsable(false)]
-    public bool ShouldSerializeGifOptions()
-    {
-        return TargetFormat == ImageFormat.Gif;
-    }
-    [Browsable(false)]
-    public bool ShouldSerializeBmpOptions()
-    {
-        return TargetFormat == ImageFormat.Bmp;
-    }    
-    [Browsable(false)]
-    public bool ShouldSerializeTgaOptions()
-    {
-        return TargetFormat == ImageFormat.Tga;
-    }
-    [Browsable(false)]
-    public bool ShouldSerializePbmOptions()
-    {
-        return TargetFormat == ImageFormat.Pbm;
-    }
-    [Browsable(false)]
-    public bool ShouldSerializeWebPOptions()
-    {
-        return TargetFormat == ImageFormat.WebP;
-    }
-    
-    [Browsable(false)]
-    public bool ShouldSerializeQoiOptions()
-    {
-        return TargetFormat == ImageFormat.Qoi;
-    }
+    #region Notify Property Changed
+
+    public event PropertyChangedEventHandler? PropertyChanged;
     protected void OnPropertyChanged(string propertyName)
     {
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
     }
+    void Options_OnPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (sender is JpegEncodingOptions)
+            OnPropertyChanged(nameof(JpegOptions));
+        else if (sender is PngEncodingOptions)
+            OnPropertyChanged(nameof(PngOptions));
+        else if (sender is BmpEncodingOptions)
+            OnPropertyChanged(nameof(BmpOptions));
+        else if (sender is GifEncodingOptions)
+            OnPropertyChanged(nameof(GifOptions));
+        else if (sender is TiffEncodingOptions)
+            OnPropertyChanged(nameof(TiffOptions));
+        else if (sender is TgaEncodingOptions)
+            OnPropertyChanged(nameof(TgaOptions));
+        else if (sender is WebPEncodingOptions)
+            OnPropertyChanged(nameof(WebPOptions));
+        else if (sender is QoiEncodingOptions)
+            OnPropertyChanged(nameof(QoiOptions));
+    }
+
+    #endregion
+
+    #region Execute
+
+    public IReadOnlyDictionary<Socket, IReadOnlyList<IBasicWorkItem>> Execute(IDictionary<Socket, IReadOnlyList<IBasicWorkItem>> inputs)
+    {
+        return Execute(
+            inputs.ToDictionary(
+                kvp => kvp.Key.Id,
+                kvp => kvp.Value
+            )
+        );
+    }
+
+
+    public IReadOnlyDictionary<Socket, IReadOnlyList<IBasicWorkItem>> Execute(IDictionary<string, IReadOnlyList<IBasicWorkItem>> inputs)
+    {
+        if (!inputs.TryGetValue(_inputs[0].Id, out var inItems))
+            throw new ArgumentException($"Input items not found for the expected input socket {_inputs[0].Id}.", nameof(inputs));
+
+        var outputItems = new List<IBasicWorkItem>();
+
+        foreach (WorkItem sourceItem in inItems.OfType<WorkItem>())
+        {
+            IImmutableDictionary<string, object> metadata = sourceItem.Metadata;
+            metadata = metadata.SetItem("Format", TargetFormat.ToString());
+            metadata = metadata.SetItem("EncodingOptions", TargetFormat switch
+            {
+                ImageFormat.Jpeg => (object)JpegOptions,
+                ImageFormat.Png => (object)PngOptions,
+                ImageFormat.Bmp => (object)BmpOptions,
+                ImageFormat.Gif => (object)GifOptions,
+                ImageFormat.Tiff => (object)TiffOptions,
+                ImageFormat.Tga => (object)TgaOptions,
+                ImageFormat.WebP => (object)WebPOptions,
+                ImageFormat.Qoi => (object)QoiOptions,
+                ImageFormat.Unknown => throw new NotImplementedException(),
+                ImageFormat.Pbm => throw new NotImplementedException(),
+                _ => null
+            } ?? null!);
+            outputItems.Add(
+                new WorkItem(
+                    sourceItem.Image,
+                    metadata
+                )
+            );
+        }
+
+        return new Dictionary<Socket, IReadOnlyList<IBasicWorkItem>> { { _outputs[0], outputItems } };
+    }
+
+    #endregion
+
+    #region Disposing
+
+    protected virtual void Dispose(bool disposing)
+    {
+        if (!disposedValue)
+        {
+            disposedValue = true;
+        }
+    }
+
+    public void Dispose()
+    {
+        Dispose(true);
+        GC.SuppressFinalize(this);
+    }
+
+    #endregion
 }
+
+#region Encoding Class
 
 [TypeConverter(typeof(ExpandableObjectConverter))]
 public class JpegEncodingOptions : INotifyPropertyChanged
@@ -625,4 +695,26 @@ public class QoiEncodingOptions : INotifyPropertyChanged
     }
 
     public override string ToString() => _includeAlpha ? "Format: RGBA (with Alpha)" : "Format: RGB (No Alpha)";
+}
+
+#endregion
+
+public static class ImageSharpExtensions
+{
+    public static ImageFormat ToSimpleFormat(this IImageFormat format)
+    {
+        return format switch
+        {
+            BmpFormat => ImageFormat.Bmp,
+            GifFormat => ImageFormat.Gif,
+            JpegFormat => ImageFormat.Jpeg,
+            PbmFormat => ImageFormat.Pbm,
+            PngFormat => ImageFormat.Png,
+            TiffFormat => ImageFormat.Tiff,
+            TgaFormat => ImageFormat.Tga,
+            WebpFormat => ImageFormat.WebP,
+            QoiFormat => ImageFormat.Qoi,
+            _ => ImageFormat.Unknown
+        };
+    }
 }
