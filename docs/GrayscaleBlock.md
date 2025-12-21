@@ -16,7 +16,7 @@ Specifies the grayscale conversion mode. Supported values:
 
 ## Operational Behaviour
 ```csharp
-image.Mutate(x => x.Grayscale());
+image.Mutate(x => x.Grayscale(grayscaleMode));
 ```
 
 ## Technical Notes
