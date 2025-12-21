@@ -79,7 +79,7 @@ public class BrightnessBlock : IBlock
     #region Configuration
 
     [Category("Configuration")]
-    [Description("Contrast factor 1.0 = no change, <1.0 = lower bright, >1.0 = higher bright.")]
+    [Description("Brightness factor. 1.0 = no change, <1.0 = darker, >1.0 = brighter.")]   
     public float Bright
     {
         get => _bright;

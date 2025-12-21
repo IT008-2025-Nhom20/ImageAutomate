@@ -4,7 +4,10 @@
 Converts image to grayscale using ImageSharp’s luminance-based grayscale algorithm.
 
 ## Configuration Parameters
-None required.
+### GrayscaleOption
+Specifies the grayscale conversion mode. Supported values:
+- Bt601 (default)
+- Bt709
 
 ## Acceptance Criteria
 - Output contains no chroma information.

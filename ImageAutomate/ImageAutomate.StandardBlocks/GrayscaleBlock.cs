@@ -1,11 +1,6 @@
 ﻿using ImageAutomate.Core;
 using SixLabors.ImageSharp.Processing;
-using System;
-using System.Collections.Generic;
 using System.ComponentModel;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace ImageAutomate.StandardBlocks;
 
@@ -15,12 +10,12 @@ public enum GrayscaleOptions
     Bt709
 }
 
-public class GrayscaleBlock
+public class GrayscaleBlock : IBlock
 {
     #region Fields
 
-    private readonly IReadOnlyList<Socket> _inputs = [new("Brightness.In", "Image.In")];
-    private readonly IReadOnlyList<Socket> _outputs = [new("Brightness.Out", "Image.Out")];
+    private readonly IReadOnlyList<Socket> _inputs = [new("Grayscale.In", "Image.In")];
+    private readonly IReadOnlyList<Socket> _outputs = [new("Grayscale.Out", "Image.Out")];
 
     private bool _disposed;
 
@@ -85,7 +80,7 @@ public class GrayscaleBlock
     #region Configuration
 
     [Category("Configuration")]
-    [Description("Contrast factor 1.0 = no change, <1.0 = lower bright, >1.0 = higher bright.")]
+    [Description("The grayscale conversion mode to use. Bt601 and Bt709 are supported.")]
     public GrayscaleOptions GrayscaleOption
     {
         get => _grayOptions;
