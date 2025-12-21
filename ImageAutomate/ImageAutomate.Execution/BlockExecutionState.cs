@@ -3,10 +3,25 @@ namespace ImageAutomate.Execution;
 /// <summary>
 /// Represents the execution state of a block in the pipeline.
 /// </summary>
+/// <remarks>
+/// State transitions:
+/// - Pending → Ready (when all dependencies satisfied via barrier signal)
+/// - Ready → Running (when dequeued and execution starts)
+/// - Running → Completed (successful execution)
+/// - Running → Failed (execution threw exception)
+/// - Any → Poisoned (transitive propagation from failed upstream blocks)
+/// - Any → Cancelled (user cancellation)
+/// </remarks>
 internal enum BlockExecutionState
 {
     /// <summary>
-    /// Block is ready to execute (all dependencies satisfied).
+    /// Block is pending execution (waiting for dependencies to be satisfied).
+    /// This is the initial state for all blocks.
+    /// </summary>
+    Pending,
+
+    /// <summary>
+    /// Block is ready to execute (all dependencies satisfied, enqueued in scheduler).
     /// </summary>
     Ready,
 
