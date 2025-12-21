@@ -160,13 +160,13 @@ internal sealed class ExecutionContext
         {
             InDegree[connection.Target]++;
             OutDegree[connection.Source]++;
-            
+
             // Add to downstream adjacency
             DownstreamBlocks[connection.Source].Add(connection.Target);
-            
+
             // Add to upstream adjacency
             UpstreamBlocks[connection.Target].Add(connection.Source);
-            
+
             // Add to socket sources map
             if (!SocketSources[connection.Target].TryGetValue(connection.TargetSocket, out var sources))
             {
@@ -229,7 +229,8 @@ internal sealed class ExecutionContext
     /// </summary>
     public bool IsFailed(IBlock block)
     {
-        return BlockStates.TryGetValue(block, out var state) && state == BlockExecutionState.Failed;
+        return BlockStates.TryGetValue(block, out var state)
+            && state == BlockExecutionState.Failed;
     }
 
     /// <summary>
@@ -240,8 +241,14 @@ internal sealed class ExecutionContext
     /// </remarks>
     public bool IsBlocked(IBlock block)
     {
-        return BlockStates.TryGetValue(block, out var state) 
+        return BlockStates.TryGetValue(block, out var state)
             && (state == BlockExecutionState.Blocked || state == BlockExecutionState.Failed);
+    }
+
+    public bool IsRunning(IBlock block)
+    {
+        return BlockStates.TryGetValue(block, out var state)
+            && state == BlockExecutionState.Running;
     }
 
     /// <summary>
@@ -261,7 +268,7 @@ internal sealed class ExecutionContext
         foreach (var connection in incomingConnections)
         {
             var sourceBlock = connection.Source;
-            
+
             // Check if this upstream block has any active source in its transitive dependencies
             if (HasActiveUpstreamSource(sourceBlock))
             {
@@ -276,17 +283,20 @@ internal sealed class ExecutionContext
     /// Checks if a block has any active source in its transitive upstream dependencies.
     /// Uses cached lookup table for O(1) access.
     /// </summary>
+    /// <remarks>
+    /// IMPORTANT: Cache is only updated at cycle boundaries, not mid-cycle.
+    /// This ensures stable values during a shipment cycle even as sources exhaust.
+    /// </remarks>
     public bool HasActiveUpstreamSource(IBlock block)
     {
         // Blocked blocks are considered to have no active sources
         if (IsBlocked(block))
             return false;
 
-        // Use cached value if available
         if (_hasActiveUpstreamCache.TryGetValue(block, out var cached))
             return cached;
 
-        // Fallback: compute and cache (this should rarely happen after initialization)
+        // Fallback for blocks not in cache (should only happen during initialization)
         var result = ComputeHasActiveUpstreamSource(block);
         _hasActiveUpstreamCache[block] = result;
         return result;
@@ -350,22 +360,18 @@ internal sealed class ExecutionContext
     }
 
     /// <summary>
-    /// Marks a source block as inactive and updates the downstream cache.
+    /// Marks a source block as inactive.
     /// Call this when a source is exhausted.
     /// </summary>
+    /// <remarks>
+    /// Cache update is deferred until next shipment cycle boundary.
+    /// </remarks>
     public void MarkSourceInactive(IBlock sourceBlock)
     {
-        bool removed;
         lock (ActiveSourcesLock)
         {
-            removed = ActiveSources.Remove(sourceBlock);
+            ActiveSources.Remove(sourceBlock);
         }
-
-        if (!removed)
-            return; // Was not active, no update needed
-
-        // Recompute downstream blocks that may have been affected
-        PropagateInactiveStatusDownstream(sourceBlock);
     }
 
     /// <summary>
@@ -399,48 +405,6 @@ internal sealed class ExecutionContext
         }
     }
 
-    /// <summary>
-    /// Recomputes active status for blocks downstream of a deactivated source.
-    /// Only recomputes blocks that might be affected (no longer have any active sources).
-    /// </summary>
-    private void PropagateInactiveStatusDownstream(IBlock sourceBlock)
-    {
-        // Find all blocks that were marked as having active sources
-        var affectedBlocks = new HashSet<IBlock>();
-        
-        // BFS to find all downstream blocks
-        var visited = new HashSet<IBlock>();
-        var queue = new Queue<IBlock>();
-        queue.Enqueue(sourceBlock);
-
-        while (queue.Count > 0)
-        {
-            var current = queue.Dequeue();
-            if (!visited.Add(current))
-                continue;
-
-            affectedBlocks.Add(current);
-
-            var downstreamBlocks = Graph.Connections
-                .Where(c => c.Source == current)
-                .Select(c => c.Target);
-
-            foreach (var downstream in downstreamBlocks)
-            {
-                queue.Enqueue(downstream);
-            }
-        }
-
-        // Recompute each affected block (skip blocked blocks)
-        foreach (var block in affectedBlocks)
-        {
-            if (!IsBlocked(block))
-            {
-                var hasActive = ComputeHasActiveUpstreamSource(block);
-                _hasActiveUpstreamCache[block] = hasActive;
-            }
-        }
-    }
 
     /// <summary>
     /// Removes a block from the upstream cache when it's blocked.
@@ -458,7 +422,7 @@ internal sealed class ExecutionContext
     public void InitializeUpstreamCache()
     {
         _hasActiveUpstreamCache.Clear();
-        
+
         foreach (var block in Graph.Blocks)
         {
             // Skip blocked blocks - they won't execute

@@ -83,7 +83,8 @@ public class GraphExecutor : IGraphExecutor
         var watchdogTimer = Stopwatch.StartNew();
         var activeTasks = new List<Task>();
 
-        while (context.Scheduler.HasPendingWork || context.ActiveBlockCount > 0)
+        // Engine should break out when finished
+        while (true)
         {
             // Check cancellation
             if (context.CancellationToken.IsCancellationRequested)
@@ -105,7 +106,8 @@ public class GraphExecutor : IGraphExecutor
             }
 
             // Dispatch blocks while under parallelism limit
-            while (context.ActiveBlockCount < context.Configuration.MaxDegreeOfParallelism)
+            while (context.Scheduler.HasPendingWork
+                && context.ActiveBlockCount < context.Configuration.MaxDegreeOfParallelism)
             {
                 var block = context.Scheduler.TryDequeue(context);
                 if (block == null)
@@ -197,6 +199,10 @@ public class GraphExecutor : IGraphExecutor
             // Check if this is a shipment source that has more shipments
             bool hasMoreShipments = ShouldReEnqueueShipment(block, outputs, context);
 
+            // Notify scheduler of completion FIRST (while source is still in ActiveSources)
+            // This allows barriers to properly see this source when checking dependencies
+            context.Scheduler.NotifyCompleted(block, context);
+
             lock (context.ActiveSourcesLock)
             {
                 if (context.ActiveSources.Contains(block))
@@ -212,9 +218,7 @@ public class GraphExecutor : IGraphExecutor
                         // Source exhausted - mark inactive and update cache
                         context.MarkSourceInactive(block);
                         context.BlockStates[block] = BlockExecutionState.Completed;
-                        
-                        // Blocked downstream blocks that can no longer execute due to missing required sockets
-                        BlockOrphanedBranch(block, context);
+                        // Natural flow will stop blocks when warehouses are empty
                     }
                 }
                 else
@@ -226,9 +230,6 @@ public class GraphExecutor : IGraphExecutor
 
             // Track progress
             context.IncrementProcessedShipments();
-
-            // Notify scheduler of completion (it will signal barriers and enqueue ready blocks)
-            context.Scheduler.NotifyCompleted(block, context);
         }
         catch (Exception ex)
         {
@@ -348,18 +349,21 @@ public class GraphExecutor : IGraphExecutor
     }
 
     /// <summary>
-    /// Blocks downstream blocks that can no longer execute due to exhausted sources.
+    /// Blocks downstream blocks that can no longer execute due to a failed block.
     /// </summary>
     /// <remarks>
-    /// When a source exhausts, downstream blocks that require its sockets but have no
+    /// When a block fails, downstream blocks that require its sockets but have no
     /// alternative active sources for those sockets cannot execute and should be blocked.
+    /// 
+    /// NOTE: This is only called for failures, not for natural source exhaustion.
+    /// Exhausted sources let their final batch flow through naturally.
     /// </remarks>
-    private void BlockOrphanedBranch(IBlock exhaustedSource, ExecutionContext context)
+    private void BlockDownstreamOnFailure(IBlock failedBlock, ExecutionContext context)
     {
         // BFS to find and block all downstream blocks that can't execute
         var visited = new HashSet<IBlock>();
         var queue = new Queue<IBlock>();
-        queue.Enqueue(exhaustedSource);
+        queue.Enqueue(failedBlock);
 
         while (queue.Count > 0)
         {
@@ -418,10 +422,9 @@ public class GraphExecutor : IGraphExecutor
         context.Exceptions.Add(new PipelineExecutionException(
             $"Block '{block.Name}' failed: {exception.Message}", exception));
 
-        // Propagate block to downstream blocks that can no longer execute
-        // Use the same logic as BlockOrphanedBranch - only block blocks that
-        // have no alternative active sources for their required sockets
-        BlockOrphanedBranch(block, context);
+        // Propagate failure to downstream blocks that can no longer execute
+        // Only block blocks that have no alternative active sources for their required sockets
+        BlockDownstreamOnFailure(block, context);
 
         // Notify scheduler (it will signal barriers so blocked blocks can be skipped)
         context.Scheduler.NotifyCompleted(block, context);

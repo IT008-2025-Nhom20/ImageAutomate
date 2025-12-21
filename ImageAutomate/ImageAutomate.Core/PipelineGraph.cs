@@ -96,7 +96,7 @@ public class PipelineGraph
             throw new ArgumentException($"Target socket '{targetSocket.Id}' not found on {target.Title}");
 
         // Remove existing connection to target socket to overwrite it with new connection
-        _connections.RemoveAll(c => c.Target == target && c.TargetSocket == targetSocket);
+        // _connections.RemoveAll(c => c.Target == target && c.TargetSocket == targetSocket);
 
         // Add the connection
         _connections.Add(new Connection(source, sourceSocket, target, targetSocket));

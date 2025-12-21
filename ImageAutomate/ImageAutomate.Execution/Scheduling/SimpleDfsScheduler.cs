@@ -120,6 +120,9 @@ internal sealed class SimpleDfsScheduler : IScheduler
         if (context.IsBlocked(block))
             return;
 
+        if (context.IsRunning(block))
+            return;
+
         lock (_lock)
         {
             // Prevent duplicate enqueueing
@@ -141,11 +144,12 @@ internal sealed class SimpleDfsScheduler : IScheduler
 
         foreach (var downstreamBlock in downstreamBlocks)
         {
+            int inDegree = context.GetActiveInDegree(downstreamBlock);
             // Get or create barrier (lazy initialization)
             var lazyBarrier = context.Barriers.GetOrAdd(
                 downstreamBlock,
                 _ => new Lazy<DependencyBarrier>(
-                    () => new DependencyBarrier(downstreamBlock, context.GetActiveInDegree(downstreamBlock))));
+                    () => new DependencyBarrier(downstreamBlock, inDegree)));
 
             var barrier = lazyBarrier.Value;
 

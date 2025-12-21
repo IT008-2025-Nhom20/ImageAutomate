@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using System.Diagnostics;
 using ImageAutomate.Core;
 
 namespace ImageAutomate.Execution.Tests;
@@ -77,6 +78,8 @@ public abstract class MockBlock : IBlock
             outputs[Outputs[0]] = outputList;
         }
 
+        Debug.WriteLine($"MockBlock '{Name}' executed. Inputs: {inputs.Count}, Outputs: {outputs.Count}");
+
         return outputs;
     }
 
@@ -123,6 +126,8 @@ public class MockSource : MockBlock, IShipmentSource
             _itemsProduced++;
             count++;
         }
+
+        Debug.WriteLine($"MockSource '{Name}' produced {count} items. Total produced: {_itemsProduced}/{TotalItemsToProduce}");
 
         return new Dictionary<Socket, IReadOnlyList<IBasicWorkItem>>
         {
@@ -298,5 +303,26 @@ public class MultiIOBlock : MockBlock
         }
 
         return result;
+    }
+}
+
+public class SpinlockSource : MockBlock, IShipmentSource
+{
+    public int MaxShipmentSize { get; set; } = 5;
+
+    public SpinlockSource(string name) : base(name)
+    {
+        Outputs = new List<Socket> { new Socket("Out", "Output") };
+    }
+
+    protected override IReadOnlyDictionary<Socket, IReadOnlyList<IBasicWorkItem>> ExecuteInternal(IDictionary<Socket, IReadOnlyList<IBasicWorkItem>> inputs)
+    {
+        // Spin indefinitely until cancellation is requested
+        // This simulates a long-running operation that can only be stopped by cancellation
+        while (true)
+        {
+            // Check if we should break (in tests, cancellation will throw)
+            Thread.Sleep(10);
+        }
     }
 }

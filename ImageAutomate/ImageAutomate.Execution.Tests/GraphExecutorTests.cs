@@ -1,7 +1,11 @@
+using System.Diagnostics;
 using ImageAutomate.Core;
 using ImageAutomate.Execution;
 using ImageAutomate.Execution.Exceptions;
-using Xunit;
+using Xunit.v3;
+
+[assembly: CaptureConsole]
+[assembly: CaptureTrace]
 
 namespace ImageAutomate.Execution.Tests;
 
@@ -314,6 +318,11 @@ public class GraphExecutorTests
         _graph.Connect(source2, source2.Outputs[0], merge, merge.Inputs[0]);
         _graph.Connect(merge, merge.Outputs[0], sink, sink.Inputs[0]);
 
+        foreach (var cnn in _graph.Connections)
+        {
+            Debug.WriteLine($"Graph Connection: {cnn.Source.Name}.{cnn.SourceSocket.Id} -> {cnn.Target.Name}.{cnn.TargetSocket.Id}");
+        }
+
         _executor.Execute(_graph);
         Assert.Equal(15, sink.ReceivedItems.Count);
     }
@@ -415,4 +424,244 @@ public class GraphExecutorTests
         var ex = Assert.Throws<AggregateException>(() => _executor.Execute(_graph));
         Assert.Contains(ex.InnerExceptions, e => e.Message.Contains("FailA"));
     }
+
+    #region Shipment and Batching Tests
+
+    [Fact]
+    public async Task FinalBatch_ProcessedWhenSourceExhausts()
+    {
+        // CRITICAL: Tests the bug where final batch was dropped when source exhausted.
+        // Source has 5 items, batchSize is 32 (larger than item count).
+        // Source produces all 5 items in one batch, then exhausts.
+        // All 5 items should reach the sink.
+
+        var source = new MockSource("Source", 5);
+        var blockA = new PassthroughBlock("A");
+        var sink = new MockSink("Sink");
+
+        _graph.AddBlock(source);
+        _graph.AddBlock(blockA);
+        _graph.AddBlock(sink);
+
+        _graph.Connect(source, source.Outputs[0], blockA, blockA.Inputs[0]);
+        _graph.Connect(blockA, blockA.Outputs[0], sink, sink.Inputs[0]);
+
+        // Use configuration with larger batch size than source items
+        var config = new ExecutorConfiguration { MaxShipmentSize = 32 };
+        await _executor.ExecuteAsync(_graph, config, TestContext.Current.CancellationToken);
+
+        // All 5 items must be processed, not dropped
+        Assert.Equal(5, sink.ReceivedItems.Count);
+    }
+
+    [Fact]
+    public async Task MultipleShipmentCycles_AllItemsProcessed()
+    {
+        // Source has 25 items, batchSize is 10.
+        // Should produce 3 cycles: 10 + 10 + 5 = 25 items total.
+
+        var source = new MockSource("Source", 25);
+        var sink = new MockSink("Sink");
+
+        _graph.AddBlock(source);
+        _graph.AddBlock(sink);
+
+        _graph.Connect(source, source.Outputs[0], sink, sink.Inputs[0]);
+
+        var config = new ExecutorConfiguration { MaxShipmentSize = 10 };
+        await _executor.ExecuteAsync(_graph, config, TestContext.Current.CancellationToken);
+
+        Assert.Equal(25, sink.ReceivedItems.Count);
+    }
+
+    [Fact]
+    public async Task TwoSources_DifferentExhaustionTimes()
+    {
+        // Source1: 5 items (exhausts first)
+        // Source2: 15 items (exhausts later)
+        // Both feed into Merger -> Sink
+        // Total: 20 items should reach sink
+
+        var source1 = new MockSource("S1", 5);
+        var source2 = new MockSource("S2", 15);
+        var merger = new PassthroughBlock("Merger");
+        var sink = new MockSink("Sink");
+
+        _graph.AddBlock(source1);
+        _graph.AddBlock(source2);
+        _graph.AddBlock(merger);
+        _graph.AddBlock(sink);
+
+        _graph.Connect(source1, source1.Outputs[0], merger, merger.Inputs[0]);
+        _graph.Connect(source2, source2.Outputs[0], merger, merger.Inputs[0]);
+        _graph.Connect(merger, merger.Outputs[0], sink, sink.Inputs[0]);
+
+        var config = new ExecutorConfiguration { MaxShipmentSize = 10 };
+        await _executor.ExecuteAsync(_graph, config, TestContext.Current.CancellationToken);
+
+        // S1 produces: 5 (exhausts)
+        // S2 produces: 10 + 5 = 15
+        // Total: 20
+        Assert.Equal(20, sink.ReceivedItems.Count);
+    }
+
+    [Fact]
+    public void EmptySource_NoItems()
+    {
+        // Edge case: Source with 0 items should complete without error
+
+        var source = new MockSource("EmptySource", 0);
+        var sink = new MockSink("Sink");
+
+        _graph.AddBlock(source);
+        _graph.AddBlock(sink);
+
+        _graph.Connect(source, source.Outputs[0], sink, sink.Inputs[0]);
+
+        _executor.Execute(_graph);
+
+        Assert.Empty(sink.ReceivedItems);
+    }
+
+    #endregion
+
+    #region Graph Pattern Tests
+
+    [Fact]
+    public void DiamondPattern_ConvergenceAtEnd()
+    {
+        // Classic diamond DAG:
+        //       A
+        //      / \
+        //     B   C
+        //      \ /
+        //       D
+        //       |
+        //     Sink
+
+        var source = new MockSource("A", 10);
+        var blockB = new PassthroughBlock("B");
+        var blockC = new PassthroughBlock("C");
+        var blockD = new MultiInputBlock("D", 2);
+        var sink = new MockSink("Sink");
+
+        _graph.AddBlock(source);
+        _graph.AddBlock(blockB);
+        _graph.AddBlock(blockC);
+        _graph.AddBlock(blockD);
+        _graph.AddBlock(sink);
+
+        _graph.Connect(source, source.Outputs[0], blockB, blockB.Inputs[0]);
+        _graph.Connect(source, source.Outputs[0], blockC, blockC.Inputs[0]);
+        _graph.Connect(blockB, blockB.Outputs[0], blockD, blockD.Inputs[0]);
+        _graph.Connect(blockC, blockC.Outputs[0], blockD, blockD.Inputs[1]);
+        _graph.Connect(blockD, blockD.Outputs[0], sink, sink.Inputs[0]);
+
+        _executor.Execute(_graph);
+
+        // A produces 10 items (broadcast to B and C)
+        // B gets 10, outputs 10
+        // C gets 10, outputs 10
+        // D gets 10 + 10 = 20 inputs, outputs 20
+        Assert.Equal(20, sink.ReceivedItems.Count);
+    }
+
+    [Fact]
+    public void LargeFanOut_ManyParallelBranches()
+    {
+        // Source -> [B1, B2, B3, B4, B5] -> Merger -> Sink
+        // Tests parallel branch handling
+
+        var source = new MockSource("Source", 10);
+        var merger = new MultiInputBlock("Merger", 5);
+        var sink = new MockSink("Sink");
+
+        var branches = new List<PassthroughBlock>();
+        for (int i = 0; i < 5; i++)
+        {
+            branches.Add(new PassthroughBlock($"B{i}"));
+        }
+
+        _graph.AddBlock(source);
+        foreach (var b in branches)
+            _graph.AddBlock(b);
+        _graph.AddBlock(merger);
+        _graph.AddBlock(sink);
+
+        for (int i = 0; i < 5; i++)
+        {
+            _graph.Connect(source, source.Outputs[0], branches[i], branches[i].Inputs[0]);
+            _graph.Connect(branches[i], branches[i].Outputs[0], merger, merger.Inputs[i]);
+        }
+        _graph.Connect(merger, merger.Outputs[0], sink, sink.Inputs[0]);
+
+        _executor.Execute(_graph);
+
+        // Source broadcasts 10 items to each of 5 branches
+        // Each branch produces 10 items
+        // Merger receives 5 * 10 = 50 items
+        Assert.Equal(50, sink.ReceivedItems.Count);
+    }
+
+    [Fact]
+    public void DeepChain_ManySequentialBlocks()
+    {
+        // Source -> B1 -> B2 -> B3 -> B4 -> B5 -> Sink
+        // Tests deep sequential chains
+
+        var source = new MockSource("Source", 10);
+        var sink = new MockSink("Sink");
+
+        _graph.AddBlock(source);
+
+        IBlock previous = source;
+        Socket previousOutput = source.Outputs[0];
+
+        for (int i = 0; i < 5; i++)
+        {
+            var block = new PassthroughBlock($"B{i}");
+            _graph.AddBlock(block);
+            _graph.Connect(previous, previousOutput, block, block.Inputs[0]);
+            previous = block;
+            previousOutput = block.Outputs[0];
+        }
+
+        _graph.AddBlock(sink);
+        _graph.Connect(previous, previousOutput, sink, sink.Inputs[0]);
+
+        _executor.Execute(_graph);
+
+        Assert.Equal(10, sink.ReceivedItems.Count);
+    }
+
+    #endregion
+
+    #region Cancellation Tests
+
+    [Fact]
+    public async Task Cancellation_StopsExecution()
+    {
+        // Use SpinlockSource that only stops when cancelled
+        var source = new SpinlockSource("SpinlockSource");
+        var sink = new MockSink("Sink");
+
+        _graph.AddBlock(source);
+        _graph.AddBlock(sink);
+
+        _graph.Connect(source, source.Outputs[0], sink, sink.Inputs[0]);
+
+        var cts = new CancellationTokenSource();
+        var config = new ExecutorConfiguration();
+
+        // Cancel immediately to ensure cancellation is detected
+        cts.CancelAfter(2000);
+
+        await Assert.ThrowsAsync<PipelineCancelledException>(
+            () => _executor.ExecuteAsync(_graph, config, cts.Token));
+
+        // Should not have processed any items
+        Assert.Empty(sink.ReceivedItems);
+    }
+
+    #endregion
 }
