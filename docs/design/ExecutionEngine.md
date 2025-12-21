@@ -175,17 +175,20 @@ public interface IShipmentSource : IBlock
 
 ## **5\. Resource Management**
 
-### **5.1. Memory Efficiency (DFS Strategy)**
+### **5.1. Memory Efficiency (Greedy Completion Pressure)**
 
 Since Warehouses hold data until *all* consumers have read it, "partial consumption" leads to memory waste.
 
-* **Depth-First Search (DFS) Priority:** The Scheduler prioritizes blocks that help clear upstream Warehouses using a **Completion Pressure Score**:
+* **Greedy Strategy:** The Scheduler always picks the "hungriest" block—the one that will free the most memory right now—using pure **Completion Pressure**:
   
-  $$Priority(B) = \sum_{P \in Predecessors(B)} \frac{WarehouseSize(P)}{RemainingConsumers(P)}$$
+  $$Priority(B) = -\sum_{P \in Predecessors(B)} \frac{WarehouseSize(P)}{RemainingConsumers(P)}$$
   
-  * *Mechanism:* If Block A feeds Block B and Block C, and Block A is finished (Warehouse RefCount=2), the Scheduler assigns higher priority to B and C. Blocks are dequeued by descending priority.  
-  * *Outcome:* Completing B decrements the counter. Completing C decrements to 0, allowing Block A's large output buffer to be eligible for GC.
-  * *Implementation:* Priority is recalculated lazily when a block is dequeued (O(In-Degree) per block).
+  (Negative because PriorityQueue is min-heap; higher pressure = more negative = dequeued first)
+  
+  * *Mechanism:* If Block A feeds Block B and Block C, and Block A finishes (Warehouse RefCount=2), both B and C have equal pressure initially. Once B executes and creates its own Warehouse, the path through B (e.g., B→SaveB) accumulates warehouses and becomes "hungrier" than C.
+  * *Natural DFS:* Blocks deeper in an active path accumulate more warehouse pressure from predecessors, causing the scheduler to greedily follow that path to completion before switching branches.
+  * *Outcome:* Completing SaveB frees both A's and B's warehouses before C executes, minimizing peak memory usage.
+  * *Implementation:* Priority calculated once at enqueue time (O(In-Degree) per block), no runtime recalculation needed.
 
 ### **5.2. Deterministic Disposal**
 
@@ -230,15 +233,21 @@ To prevent OOM, the Engine enforces memory limits:
 
 The Engine supports **two execution modes** (configurable via `ExecutionMode` enum):
 
-### **Mode A: Simple DFS (Default, Production-Ready)**
+### **Mode A: Greedy Completion Pressure (Default, Production-Ready)**
 
-Uses only **Completion Pressure** from Section 5.1 with no live profiling. **Recommended for initial implementation and most workloads.**
+Uses pure **Greedy Completion Pressure** from Section 5.1 with no live profiling or depth calculation. **Recommended for initial implementation and most workloads.**
 
 * **Priority Formula:**
   
-  $$Priority(B) = \sum_{P \in Predecessors(B)} \frac{WarehouseSize(P)}{RemainingConsumers(P)}$$
+  $$Priority(B) = -\sum_{P \in Predecessors(B)} \frac{WarehouseSize(P)}{RemainingConsumers(P)}$$
 
-* **Overhead:** O(In-Degree) per dequeue—negligible for typical graphs.
+* **Key Properties:**
+  - **Simple:** No depth computation, no arbitrary constants (like ×1000 multipliers)
+  - **Greedy:** Always picks the block that frees the most memory right now
+  - **Natural DFS:** Paths with accumulated warehouses become progressively "hungrier"
+  - **Overhead:** O(In-Degree) per enqueue—negligible for typical graphs
+  - **Deterministic:** Priority calculated once at enqueue, no runtime updates
+
 * **No Critical Path:** Avoids Bellman-Ford entirely.
 * **No Profiling:** Skips cost tracking (Section 6.2/6.3 disabled).
 * **Implementation Scope:** Core components only (Sections 1-5, 7-8). Skip Mode B entirely for MVP.
@@ -281,6 +290,8 @@ The Scheduler maintains a **Live Priority Map** updated after each block executi
   $$Priority_{static}(B) = MaxDepth(B) \times 1000$$
   
   where $MaxDepth$ is the longest path from B to any sink node (computed via reverse DFS).
+  
+  **Note:** Mode B uses depth-based priority (unlike Mode A's pure greedy strategy) to provide a stable foundation for adaptive adjustments.
 
 * **Runtime Boost (Dynamic):** Applied when dequeueing from Ready Queue:
   
@@ -290,7 +301,7 @@ The Scheduler maintains a **Live Priority Map** updated after each block executi
   - **Completion Pressure** (from Section 5.1): $\sum_{P \in Predecessors(B)} \frac{WarehouseSize(P)}{RemainingConsumers(P)}$
   - **Critical Path Boost:** $\alpha \times \hat{Cost}(B)$ if B is on the current critical path (α=1.5)
 
-* **Update Frequency:** Priorities recalculated lazily when a block is dequeued (O(In-Degree + 1) cost).
+* **Update Frequency:** Priorities recalculated at dequeue time to reflect current warehouse states (O(In-Degree + 1) cost).
 
 > *Note:* "Lazy" refers to computing priorities **at dequeue time** rather than eagerly updating them after every block completion. This ensures priorities reflect current Warehouse states, not stale cached values. The trade-off is O(In-Degree) cost per dequeue vs. O(Out-Degree) cost per completion.
 
