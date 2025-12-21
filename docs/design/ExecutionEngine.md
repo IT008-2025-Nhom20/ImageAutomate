@@ -254,14 +254,16 @@ Uses pure **Greedy Completion Pressure** from Section 5.1 with no live profiling
 
 ### **Mode B: Adaptive (Experimental, High-Complexity Workloads)**
 
-⚠️ **DEFER UNTIL POST-MVP.** Adds live profiling and critical path analysis. Use when:
+⚠️ **DEFER UNTIL POST-MVP.** Extends Mode A with live profiling and critical path analysis. Use when:
 - Pipelines have >20 blocks
 - Block costs vary by >5× (e.g., heavy denoise vs. simple crop)
 - Willing to accept ~2-5% scheduling overhead for 10-20% throughput gain
 
+**Key Difference from Mode A:** Mode B **extends** Mode A's Greedy Completion Pressure with cost-aware adjustments.
+
 #### **Shipment Boundary Micro-Optimization**
 
-**Challenge:** With shipment-based execution, the pipeline completes a "mini-cycle" after each shipment (e.g., every 64 images). Mode B could recompute priorities/critical paths at these boundaries.
+**Challenge:** With shipment-based execution, the pipeline completes a "mini-cycle" after each shipment (e.g., every 64 images). Mode B recomputes critical paths at these boundaries.
 
 **Options:**
 
@@ -283,27 +285,33 @@ Uses pure **Greedy Completion Pressure** from Section 5.1 with no live profiling
 
 ### **6.1. Dynamic Priority Adjustment** *(Mode B Only)*
 
-The Scheduler maintains a **Live Priority Map** updated after each block execution.
+Mode B **extends** Mode A's Greedy Completion Pressure with runtime cost profiling:
 
-* **Base Priority (Static):** Computed once during initialization via topological sort:
+* **Base Priority:** Same as Mode A (Section 5.1):
   
-  $$Priority_{static}(B) = MaxDepth(B) \times 1000$$
-  
-  where $MaxDepth$ is the longest path from B to any sink node (computed via reverse DFS).
-  
-  **Note:** Mode B uses depth-based priority (unlike Mode A's pure greedy strategy) to provide a stable foundation for adaptive adjustments.
+  $$Priority_{base}(B) = -\sum_{P \in Predecessors(B)} \frac{WarehouseSize(P)}{RemainingConsumers(P)}$$
 
-* **Runtime Boost (Dynamic):** Applied when dequeueing from Ready Queue:
+* **Cost-Weighted Boost (Dynamic):** Applied when dequeueing from Ready Queue:
   
-  $$Priority_{runtime}(B) = Priority_{static}(B) + CompletionPressure(B) + CriticalPathBoost(B)$$
+  $$Priority_{runtime}(B) = Priority_{base}(B) - \alpha \times \hat{Cost}(B) \times AvgInputSize(B)$$
   
   where:
-  - **Completion Pressure** (from Section 5.1): $\sum_{P \in Predecessors(B)} \frac{WarehouseSize(P)}{RemainingConsumers(P)}$
-  - **Critical Path Boost:** $\alpha \times \hat{Cost}(B)$ if B is on the current critical path (α=1.5)
+  - $\hat{Cost}(B)$ = profiled cost per megapixel (Section 6.2)
+  - $AvgInputSize(B)$ = average input WorkItem size in megapixels
+  - $\alpha = 0.1$ (tunable, balances memory pressure vs. throughput)
+  - **Sign Convention:** Negative because expensive blocks should run sooner to prevent downstream starvation. More negative = higher priority (min-heap).
 
-* **Update Frequency:** Priorities recalculated at dequeue time to reflect current warehouse states (O(In-Degree + 1) cost).
+* **Critical Path Multiplier:** If B is on the current critical path (Section 6.3):
+  
+  $$Priority_{runtime}(B) = Priority_{runtime}(B) \times 1.5$$
 
-> *Note:* "Lazy" refers to computing priorities **at dequeue time** rather than eagerly updating them after every block completion. This ensures priorities reflect current Warehouse states, not stale cached values. The trade-off is O(In-Degree) cost per dequeue vs. O(Out-Degree) cost per completion.
+* **Update Frequency:** Priorities recalculated at dequeue time to reflect current Warehouse states and profiled costs (O(In-Degree + 1) cost).
+
+* **Fallback Behavior:** If profiling data is insufficient (< 5 samples for block type), Mode B falls back to pure Mode A priority (cost term omitted).
+
+> **Rationale:** Mode A's greedy approach provides natural DFS behavior through memory pressure alone. Mode B adds cost-awareness to prioritize expensive blocks earlier, preventing late-stage bottlenecks in pipelines with heterogeneous block costs. The multiplicative critical path boost ensures throughput-critical blocks aren't starved by memory-hungry but cheap blocks.
+
+<!-- ...existing code for Section 6.2 (Incremental Cost Profiling)... -->
 
 ### **6.2. Incremental Cost Profiling** *(Mode B Only)*
 
@@ -327,7 +335,9 @@ Since execution is non-deterministic, the Engine maintains a **Rolling Statistic
 
 ### **6.3. Critical Path Identification (Live)** *(Mode B Only)*
 
-The critical path is recomputed **conditionally** to avoid excessive overhead:
+The critical path is recomputed **conditionally** to avoid excessive overhead.
+
+> **Note:** Critical path analysis is exclusive to Mode B. Mode A relies solely on Greedy Completion Pressure without path-based adjustments.
 
 #### **Simple Heuristic (Default):**
 
@@ -342,7 +352,7 @@ $$Weight(A \to B) = -\hat{Cost}(A) \times AvgWorkItemSize(A)$$
 
 Longest path from sources to sinks = critical path. Complexity: O(V + E) per recomputation.
 
-**Priority Boost:** Blocks on the critical path receive multiplicative boost (×1.5) to prevent late-stage bottlenecks.
+**Priority Boost:** Blocks on the critical path receive multiplicative boost (×1.5) applied to their runtime priority (see Section 6.1).
 
 #### **Advanced Strategy (Optional, Experimental):**
 
@@ -509,21 +519,26 @@ System with 8GB RAM → OOM before GC throttling activates
 
 ### **A.3. Clarification: Priority Staleness**
 
-**Issue:** The term "lazy priority recalculation" (Section 6.1) could be misinterpreted as "priorities can be stale at dequeue time."
+**Issue:** The term "lazy priority recalculation" could be misinterpreted as "priorities can be stale at dequeue time."
 
-**Actual Behavior:**
-- Priorities are computed **on-demand during dequeue**, not cached
-- Each `Dequeue()` call:
-  1. Peeks at top K candidates (K=3 default)
-  2. Recalculates `Priority_runtime(B)` for each using current Warehouse states
-  3. Selects highest priority
-  4. Returns that block
+**Actual Behavior (Both Modes):**
 
-**Cost:** O(K × In-Degree) = O(3 × avg 2-3 inputs) = ~6-9 operations per dequeue.
+Priorities are computed **on-demand during dequeue**, not cached:
 
-**Clarification Added to Section 6.1.**
+* **Mode A:** Each `Dequeue()` calculates Completion Pressure from current Warehouse states.
+* **Mode B:** Each `Dequeue()` calculates Completion Pressure + Cost-Weighted Boost + Critical Path Multiplier.
 
-**No architectural change needed**—this is a documentation fix only.
+**Dequeue Process:**
+1. Peek at top K candidates (K=3 default)
+2. Recalculate `Priority(B)` for each using current Warehouse states (and profiled costs in Mode B)
+3. Select highest priority (most negative value)
+4. Return that block
+
+**Cost:** 
+- Mode A: O(K × In-Degree) = ~6-9 operations per dequeue
+- Mode B: O(K × (In-Degree + 1)) = ~9-12 operations per dequeue (adds cost lookup)
+
+**No architectural change needed**—this is a documentation clarification.
 
 ---
 
