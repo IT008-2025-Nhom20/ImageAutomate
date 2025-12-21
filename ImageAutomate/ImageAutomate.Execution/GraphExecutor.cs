@@ -7,10 +7,14 @@ namespace ImageAutomate.Execution;
 /// <summary>
 /// Executes pipeline graphs using a dataflow-driven execution model.
 /// </summary>
-public class GraphExecutor(IGraphValidator validator) : IGraphExecutor
+public class GraphExecutor : IGraphExecutor
 {
-    private readonly IGraphValidator _validator =
-        validator ?? throw new ArgumentNullException(nameof(validator));
+    private readonly IGraphValidator _validator;
+
+    public GraphExecutor(IGraphValidator validator)
+    {
+        _validator = validator ?? throw new ArgumentNullException(nameof(validator));
+    }
 
     /// <summary>
     /// Executes the pipeline graph synchronously using default configuration.
