@@ -122,7 +122,7 @@ public class GraphExecutor : IGraphExecutor
 
                 // Dispatch block execution
                 context.IncrementActiveBlocks();
-                var task = Task.Run(() => ExecuteBlockAsync(block, context), context.CancellationToken);
+                var task = Task.Run(() => ExecuteBlock(block, context), context.CancellationToken);
                 activeTasks.Add(task);
             }
 
@@ -177,7 +177,7 @@ public class GraphExecutor : IGraphExecutor
     /// <summary>
     /// Executes a single block and handles result propagation.
     /// </summary>
-    private async Task ExecuteBlockAsync(IBlock block, ExecutionContext context)
+    private void ExecuteBlock(IBlock block, ExecutionContext context)
     {
         try
         {
@@ -187,8 +187,8 @@ public class GraphExecutor : IGraphExecutor
             // Gather inputs from upstream warehouses
             var inputs = GatherInputs(block, context);
 
-            // Execute the block
-            var outputs = await Task.Run(() => block.Execute(inputs), context.CancellationToken);
+            // Execute the block (already on thread pool thread from outer Task.Run)
+            var outputs = block.Execute(inputs);
 
             // Commit outputs to warehouse
             ExportOutputs(block, outputs, context);
@@ -199,8 +199,7 @@ public class GraphExecutor : IGraphExecutor
             // Check if this is a shipment source that has more shipments
             bool hasMoreShipments = ShouldReEnqueueShipment(block, outputs, context);
 
-            // Notify scheduler of completion FIRST (while source is still in ActiveSources)
-            // This allows barriers to properly see this source when checking dependencies
+            // Notify scheduler of completion FIRST
             context.Scheduler.NotifyCompleted(block, context);
 
             lock (context.ActiveSourcesLock)
@@ -249,7 +248,7 @@ public class GraphExecutor : IGraphExecutor
     /// 1. It implements IShipmentSource
     /// 2. It has no incoming connections (is a source block)
     /// 3. Its output count equals MaxShipmentSize (indicating more may be available)
-    /// 
+    ///
     /// When output count &lt; MaxShipmentSize, the source is exhausted.
     /// </remarks>
     private bool ShouldReEnqueueShipment(
@@ -267,7 +266,7 @@ public class GraphExecutor : IGraphExecutor
 
         // Check if output count indicates more shipments available
         int totalOutputCount = outputs.Values.Sum(list => list.Count);
-        
+
         // If output count equals max shipment size, assume more shipments exist
         // If output count < max shipment size, source is exhausted
         return totalOutputCount >= shipmentSource.MaxShipmentSize;
@@ -329,7 +328,7 @@ public class GraphExecutor : IGraphExecutor
         // Create new warehouse for this execution
         var newWarehouse = new Lazy<Warehouse>(
             () => new Warehouse(context.OutDegree[block]));
-        
+
         context.Warehouses[block] = newWarehouse;
         newWarehouse.Value.Import(outputs);
     }
@@ -354,7 +353,7 @@ public class GraphExecutor : IGraphExecutor
     /// <remarks>
     /// When a block fails, downstream blocks that require its sockets but have no
     /// alternative active sources for those sockets cannot execute and should be blocked.
-    /// 
+    ///
     /// NOTE: This is only called for failures, not for natural source exhaustion.
     /// Exhausted sources let their final batch flow through naturally.
     /// </remarks>
@@ -390,7 +389,7 @@ public class GraphExecutor : IGraphExecutor
                 foreach (var (socket, sources) in socketSourcesMap)
                 {
                     // Check if this socket has at least one active upstream source
-                    bool socketHasActiveSource = sources.Any(source => 
+                    bool socketHasActiveSource = sources.Any(source =>
                         !context.IsBlocked(source) && context.HasActiveUpstreamSource(source));
 
                     if (!socketHasActiveSource)
@@ -418,7 +417,7 @@ public class GraphExecutor : IGraphExecutor
         // Mark as failed (failed blocks are "poisonous" - they behave like blocked
         // blocks but retain their Failed state for diagnostics)
         context.MarkFailed(block);
-        
+
         context.Exceptions.Add(new PipelineExecutionException(
             $"Block '{block.Name}' failed: {exception.Message}", exception));
 
