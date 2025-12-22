@@ -713,6 +713,7 @@ flowchart LR
 ### B.3. Execution Diagram
 
 ```mermaid
+%% { init: {"flowchart": {"defaultRenderer": "elk"}} }%%
 sequenceDiagram
     autonumber
     participant Engine
@@ -720,76 +721,80 @@ sequenceDiagram
     
     box Upstream
     participant BlockA as Block A (Source)
-    participant WhA as Warehouse A<br/>(Consumers: 2)
+    participant WhA as Warehouse A
     end
     
-    box Parallel Branches
-    participant BlockB as Block B<br/>(Needs A)
-    participant BlockC as Block C<br/>(Needs A)
-    participant BarrB as Barrier B
-    participant BarrC as Barrier C
+    box Parallel Chain B
+    participant BlockB as Block B
+    participant WhB as Warehouse B
+    end
+
+    box Parallel Chain C
+    participant BlockC as Block C
+    participant WhC as Warehouse C
     end
     
     box Downstream
-    participant BlockD as Block D<br/>(Sink)
-    participant BarrD as Barrier D<br/>(Count: 2)
+    participant BarrD as Barrier D
+    participant BlockD as Block D (Sink)
     end
 
-    note over Engine: <b>PHASE 1: INITIALIZATION</b>
+    note over Engine: PHASE 1: INITIALIZATION
     Engine->>ThreadPool: Schedule Source (A)
     activate BlockA
-    BlockA->>WhA: 1. Generate Image & Commit
+    BlockA->>WhA: Commit Result
     deactivate BlockA
+    BlockA->>Engine: Notify Complete
     
-    note over WhA: <b>State:</b> Data Present, ConsCounter=2
+    Engine->>Engine: Enqueue B & C
     
-    BlockA->>Engine: Signal Completion
+    note over Engine: PHASE 2: PARALLEL EXECUTION
     
-    par Signal Downstream
-        Engine->>BarrB: Decr Counter (1 -> 0)
-        BarrB->>Engine: <b>Signal Ready!</b>
-        and
-        Engine->>BarrC: Decr Counter (1 -> 0)
-        BarrC->>Engine: <b>Signal Ready!</b>
+    par Chain B
+        Engine->>ThreadPool: Dispatch B
+        activate BlockB
+        
+        note right of BlockB: 1. Gather
+        BlockB->>WhA: Fetch Input (Clone)
+        
+        note right of BlockB: 2. Execute
+        BlockB->>BlockB: Process
+        
+        note right of BlockB: 3. Push
+        BlockB->>WhB: Commit Result
+        deactivate BlockB
+        
+        note left of Engine: 4. Signal
+        BlockB->>Engine: Notify Complete
+        Engine->>BarrD: Signal (Decr 2->1)
+    and Chain C
+        Engine->>ThreadPool: Dispatch C
+        activate BlockC
+        
+        note right of BlockC: 1. Gather
+        BlockC->>WhA: Fetch Input (Move)
+        note right of WhA: Ref Cleared
+        
+        note right of BlockC: 2. Execute
+        BlockC->>BlockC: Process
+        
+        note right of BlockC: 3. Push
+        BlockC->>WhC: Commit Result
+        deactivate BlockC
+        
+        note right of Engine: 4. Signal
+        BlockC->>Engine: Notify Complete
+        Engine->>BarrD: Signal (Decr 1->0)
     end
     
-    Engine->>Engine: Enqueue B & C to ReadyQueue
+    BarrD-->>Engine: Barrier Open (Ready)
     
-    note over Engine: <b>PHASE 2: EXECUTION (Branching)</b>
-    
-    %% Scheduler picks B first (Arbitrary or DFS priority)
-    Engine->>ThreadPool: Dispatch Block B
-    activate BlockB
-    BlockB->>WhA: 2. Request Data
-    
-    note right of WhA: <b>JIT Logic:</b><br/>Decrement(2 -> 1)<br/>Result > 0 implies waiting consumers.
-    WhA-->>BlockB: <b>Return CLONE of Image</b>
-    
-    BlockB->>BlockB: Process (Grayscale)
-    BlockB-->>BarrD: 3. Signal D (Decr 2 -> 1)
-    deactivate BlockB
-    note right of BarrD: Count is 1. Not Ready.
-    
-    %% Scheduler picks C
-    Engine->>ThreadPool: Dispatch Block C
-    activate BlockC
-    BlockC->>WhA: 4. Request Data
-    
-    note right of WhA: <b>JIT Logic:</b><br/>Decrement(1 -> 0)<br/>Result == 0 implies Last Consumer.
-    WhA-->>BlockC: <b>Return ORIGINAL Image (Move)</b>
-    note over WhA: Internal Reference Cleared (GC eligible)
-    
-    BlockC->>BlockC: Process (Resize)
-    BlockC-->>BarrD: 5. Signal D (Decr 1 -> 0)
-    deactivate BlockC
-    
-    BarrD-->>Engine: <b>Signal Ready!</b>
-    
-    note over Engine: <b>PHASE 3: MERGE</b>
-    Engine->>ThreadPool: Dispatch Block D
+    note over Engine: PHASE 3: MERGE
+    Engine->>ThreadPool: Dispatch D
     activate BlockD
-    BlockD->>BlockD: Consume inputs from WhB & WhC
-    BlockD->>BlockD: Dispose Inputs
+    BlockD->>WhB: Fetch Input
+    BlockD->>WhC: Fetch Input
+    BlockD->>BlockD: Execute
     deactivate BlockD
 ```
 
