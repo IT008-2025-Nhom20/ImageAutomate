@@ -28,9 +28,9 @@ public class PluginInfo
     internal PluginLoadContext LoadContext { get; }
 
     /// <summary>
-    /// Gets or sets the number of instances created from this plugin that are still in use.
+    /// Gets the number of instances created from this plugin that are still in use.
     /// </summary>
-    internal int ActiveInstanceCount { get; set; }
+    public int ActiveInstanceCount { get; internal set; }
 
     /// <summary>
     /// Gets the timestamp when the plugin was loaded.

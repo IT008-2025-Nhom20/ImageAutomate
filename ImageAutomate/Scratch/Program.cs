@@ -1,55 +1,13 @@
-using System.Reflection;
-using System.Runtime.Loader;
 using ImageAutomate.Core;
 
 namespace Scratch;
 
-// Context to load plugins, allowing unloading
-class PluginLoadContext : AssemblyLoadContext
-{
-    private AssemblyDependencyResolver _resolver;
-
-    public PluginLoadContext(string pluginPath) : base(isCollectible: true)
-    {
-        _resolver = new AssemblyDependencyResolver(pluginPath);
-    }
-
-    protected override Assembly? Load(AssemblyName assemblyName)
-    {
-        // For shared dependencies (ImageAutomate.Core), we must use the default context's version
-        // so that types (like IBlock) are identical.
-        if (assemblyName.Name == "ImageAutomate.Core")
-        {
-            return null; // Fallback to default load context
-        }
-
-        string? assemblyPath = _resolver.ResolveAssemblyToPath(assemblyName);
-        if (assemblyPath != null)
-        {
-            return LoadFromAssemblyPath(assemblyPath);
-        }
-
-        return null;
-    }
-
-    protected override IntPtr LoadUnmanagedDll(string unmanagedDllName)
-    {
-        string? libraryPath = _resolver.ResolveUnmanagedDllToPath(unmanagedDllName);
-        if (libraryPath != null)
-        {
-            return LoadUnmanagedDllFromPath(libraryPath);
-        }
-
-        return IntPtr.Zero;
-    }
-}
-
 class Program
 {
-    // Registry of loaded plugins: Plugin Name -> Context
-    static Dictionary<string, PluginLoadContext> _loadedPlugins = new();
+    // Use the new PluginLoader from ImageAutomate.Core
+    static PluginLoader _pluginLoader = new();
 
-    // Registry of constructed instances: Instance Name -> (IBlock Instance, Type Name)
+    // Registry of constructed instances: Instance Name -> IBlock Instance
     static Dictionary<string, IBlock> _instances = new();
 
     // Store discovered plugin paths: Name -> FullPath
@@ -194,7 +152,8 @@ class Program
             Console.WriteLine("PLUGINS | LOADED");
             foreach (var plugin in _discoveredPlugins)
             {
-                string loaded = _loadedPlugins.ContainsKey(plugin) ? "Yes" : "No";
+                var loadedPlugin = _pluginLoader.GetPlugin(plugin);
+                string loaded = loadedPlugin != null ? "Yes" : "No";
                 Console.WriteLine($"{plugin} | {loaded}");
             }
         }
@@ -207,7 +166,7 @@ class Program
             pluginName = Path.GetFileNameWithoutExtension(pluginName);
         }
 
-        if (_loadedPlugins.ContainsKey(pluginName))
+        if (_pluginLoader.GetPlugin(pluginName) != null)
         {
             Console.WriteLine($"Loaded: {pluginName}"); // Already loaded
             return;
@@ -222,9 +181,7 @@ class Program
         string path = _discoveredPaths[pluginName];
         try
         {
-            var loadContext = new PluginLoadContext(path);
-            var assembly = loadContext.LoadFromAssemblyPath(path);
-            _loadedPlugins[pluginName] = loadContext;
+            var pluginInfo = _pluginLoader.LoadPlugin(path, pluginName);
             Console.WriteLine($"Loaded: {pluginName}");
         }
         catch (Exception ex)
@@ -240,15 +197,14 @@ class Program
             pluginName = Path.GetFileNameWithoutExtension(pluginName);
         }
 
-        if (_loadedPlugins.TryGetValue(pluginName, out var context))
+        try
         {
-            context.Unload();
-            _loadedPlugins.Remove(pluginName);
+            bool unloaded = _pluginLoader.UnloadPlugin(pluginName);
             Console.WriteLine($"Unloaded: {pluginName}");
         }
-        else
+        catch (PluginException ex)
         {
-            Console.WriteLine($"Unloaded: {pluginName}");
+            Console.WriteLine($"Error: {ex.Message}");
         }
     }
 
@@ -267,27 +223,26 @@ class Program
 
         // Search for type in loaded plugins
         Type? foundType = null;
+        string? foundPluginName = null;
         bool typeExistsButNotBlock = false;
 
-        foreach (var context in _loadedPlugins.Values)
+        foreach (var plugin in _pluginLoader.LoadedPlugins)
         {
-            foreach (var assembly in context.Assemblies)
+            var types = plugin.GetExportedTypes();
+            var type = types.FirstOrDefault(t => t.Name == typeName);
+            if (type != null)
             {
-                var type = assembly.GetTypes().FirstOrDefault(t => t.Name == typeName);
-                if (type != null)
+                if (typeof(IBlock).IsAssignableFrom(type))
                 {
-                    if (typeof(IBlock).IsAssignableFrom(type))
-                    {
-                        foundType = type;
-                        break;
-                    }
-                    else
-                    {
-                        typeExistsButNotBlock = true;
-                    }
+                    foundType = type;
+                    foundPluginName = plugin.Name;
+                    break;
+                }
+                else
+                {
+                    typeExistsButNotBlock = true;
                 }
             }
-            if (foundType != null) break;
         }
 
         if (foundType == null)
@@ -309,6 +264,11 @@ class Program
             if (instance != null)
             {
                 _instances[instanceName] = instance;
+                // Register the instance with the plugin loader for tracking
+                if (foundPluginName != null)
+                {
+                    _pluginLoader.RegisterInstance(instance, foundPluginName);
+                }
             }
             else
             {
@@ -389,6 +349,7 @@ class Program
         if (_instances.TryGetValue(name, out var instance))
         {
             instance.Dispose();
+            _pluginLoader.UnregisterInstance(instance);
             _instances.Remove(name);
         }
     }
