@@ -11,8 +11,8 @@
 7. [Fault Tolerance & Error Handling](#7-fault-tolerance--error-handling)
 8. [Implementation Notes](#8-implementation-notes)
 9. [References](#9-references)
-10. [Appendix A: Future Enhancements & Known Limitations](#appendix-a-future-enhancements--known-limitations)
-11. [Appendix B: Diagrams](#appendix-b-diagrams)
+10. [Appendix A: Future Enhancements & Known Limitations](#a-appendix-future-enhancements--known-limitations)
+11. [Appendix B: Diagrams](#b-appendix-diagrams)
 
 ## **1\. Architectural Style**
 
