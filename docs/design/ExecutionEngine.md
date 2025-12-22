@@ -669,8 +669,14 @@ flowchart LR
         Lifecycle[("<b>Lifecycle Manager</b><br/>Graph Validation & Instantiation")]
         Scheduler[("<b>Scheduler</b><br/>DFS Optimization Strategy")]
         ErrorHandler[("<b>Error Propagator</b><br/>Blocking & Cancellation")]
+        Context[("<b>ExecutionContext</b><br/>Execution session internal states")]
 
         Lifecycle --> Scheduler
+    end
+
+    subgraph Execution ["Worker Environment"]
+        Thread[".NET ThreadPool Worker"]
+        WorkItem["<b>WorkItem</b><br/>Image&lt;TPixel&gt; + Metadata"]
     end
 
     subgraph Storage ["The Warehouse (Producer-Centric)"]
@@ -679,10 +685,11 @@ flowchart LR
         ConsCounter[("<b>Consumer Counter</b><br/>Atomic Int32 (Out-Degree)")]
         JITLogic{"<b>JIT Logic</b><br/>(Interlocked.Decrement)"}
 
-        Buffer --- ConsCounter
-        ConsCounter --> JITLogic
-        JITLogic -- "Remaining > 0" --> Clone["<b>Defensive Clone</b><br/>(Deep Copy)"]
-        JITLogic -- "Remaining == 0" --> Move["<b>Reference Handover</b><br/>(Ownership Transfer)"]
+        Buffer
+        JITLogic --> ConsCounter
+        ConsCounter -- "Remaining > 0" --> Clone["<b>Defensive Clone</b><br/>(Deep Copy)"]
+        ConsCounter -- "Remaining == 0" --> Move["<b>Reference Handover</b><br/>(Ownership Transfer)"]
+
     end
 
     subgraph Synchronization ["The Barrier (Consumer-Centric)"]
@@ -692,11 +699,6 @@ flowchart LR
 
         DepCounter -- "Reach 0" --> EnqFlag
         EnqFlag -- "CompareExchange(0,1)" --> Signal["Signal Ready"]
-    end
-
-    subgraph Execution ["Worker Environment"]
-        Thread[".NET ThreadPool Worker"]
-        WorkItem["<b>WorkItem</b><br/>Image&lt;TPixel&gt; + Metadata"]
     end
 
     %% Interactions
