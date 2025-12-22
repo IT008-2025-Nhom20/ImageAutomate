@@ -798,7 +798,7 @@ sequenceDiagram
 ```mermaid
 flowchart TD
     subgraph Cycle_Management [Shipment Cycle Loop]
-        Start((Start)) --> InitSource[Init IShipmentSource<br/>(Cursor = 0)]
+        Start((Start)) --> InitSource["Init IShipmentSource<br/>(Cursor = 0)"]
         InitSource --> ExecSource[Execute Source Block]
         
         ExecSource --> CheckYield{Output Count >=<br/>MaxShipmentSize?}
