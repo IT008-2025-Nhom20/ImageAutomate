@@ -1,5 +1,19 @@
 # **Image Processing Pipeline: Execution Engine Architecture**
 
+## **Table of Contents**
+
+1. [Architectural Style](#1-architectural-style)
+2. [Structural Components](#2-structural-components)
+3. [Interaction Patterns](#3-interaction-patterns)
+4. [Execution Lifecycle](#4-execution-lifecycle)
+5. [Resource Management](#5-resource-management)
+6. [Optimization Strategy: Runtime Adaptation](#6-optimization-strategy-runtime-adaptation)
+7. [Fault Tolerance & Error Handling](#7-fault-tolerance--error-handling)
+8. [Implementation Notes](#8-implementation-notes)
+9. [References](#9-references)
+10. [Appendix A: Future Enhancements & Known Limitations](#a-appendix-future-enhancements--known-limitations)
+11. [Appendix B: Diagrams](#b-appendix-diagrams)
+
 ## **1\. Architectural Style**
 
 The Execution Engine implements a **Pipes and Filters** architecture governed by a **Dataflow** model.
@@ -19,7 +33,7 @@ The "Warehouse" is a storage component attached to the **Output Face** of a Prod
 * **Responsibility:**  
   1. **Storage:** Holds the `IDictionary<Socket, IReadOnlyList<WorkItem>>` produced by the block (immutable after commit).
   2. **Inventory Tracking:** Maintains a **Consumer Counter** (`int32` atomically decremented) initialized to the Output Socket's **Out-Degree** (number of downstream links).
-  3. **Distribution:** Serves data to consumers upon request, implementing JIT Cloning logic.
+  3. **Distribution:** Serves data to consumers upon request, implementing JIT Cloning logic (see Section 3.2).
 * **Thread Safety:**
   - Counter updates use `Interlocked.Decrement`.
   - Data reads for *cloning* (intermediate consumers) are lock-free.
@@ -182,7 +196,7 @@ public interface IShipmentSource : IBlock
 
 The Engine runs an asynchronous loop that orchestrates execution:
 
-1. **Watchdog:** Monitors progress to detect deadlocks (default 30s timeout).
+1. **Watchdog:** Monitors progress to detect deadlocks (see Section 3.1).
 2. **Dispatch:** While concurrency limits allow:
    * **Dequeue:** Asks the Scheduler for the next "Ready" block.
    * **Execute:** Spawns a `Task` on the ThreadPool to execute the block.
@@ -255,11 +269,7 @@ The Engine supports **two execution modes** (configurable via `ExecutionMode` en
 
 ### **Mode A: Greedy Completion Pressure (Default, Production-Ready)**
 
-Uses pure **Greedy Completion Pressure** from Section 5.1 with no live profiling or depth calculation. **Recommended for initial implementation and most workloads.**
-
-* **Priority Formula:**
-  
-  $$Priority(B) = -\sum_{P \in Predecessors(B)} \frac{WarehouseSize(P)}{RemainingConsumers(P)}$$
+Uses pure **Greedy Completion Pressure** (see Section 5.1 for formula) with no live profiling or depth calculation. **Recommended for initial implementation and most workloads.**
 
 * **Key Properties:**
   - **Simple:** No depth computation, no arbitrary constants (like ×1000 multipliers)
@@ -315,6 +325,8 @@ Mode B **extends** Mode A's Greedy Completion Pressure with runtime cost profili
   
   $$Priority_{runtime}(B) = Priority_{base}(B) - \alpha \times \hat{Cost}(B) \times AvgInputSize(B)$$
   
+  (Where $Priority_{base}(B)$ is defined in Section 5.1)
+
   where:
   - $\hat{Cost}(B)$ = profiled cost per megapixel (Section 6.2)
   - $AvgInputSize(B)$ = average input WorkItem size in megapixels
