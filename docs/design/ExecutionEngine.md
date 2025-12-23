@@ -13,6 +13,7 @@
 9. [References](#9-references)
 10. [Appendix A: Future Enhancements & Known Limitations](#a-appendix-future-enhancements--known-limitations)
 11. [Appendix B: Diagrams](#b-appendix-diagrams)
+12. [Appendix C: Lexicon](#c-appendix-lexicon)
 
 ## **1\. Architectural Style**
 
@@ -438,8 +439,15 @@ The Engine monitors system conditions and adjusts parallelism:
 
 ### **7.1. Exception Propagation**
 
-* **Block Failure:** If a block throws an exception, the Engine:
-    1. Marks all transitive downstream blocks as "Blocked" (skipped execution).
+* **Block Failure:** If a block throws an exception:
+    1. **Downstream Blocking:** Initiates a liveness check to mark affected downstream blocks as "Blocked".
+        * **Premises:**
+            * **Persistence:** A failed block remains failed throughout the execution session (persists across shipment cycles).
+            * **Blocking Nature:** A failed block is treated as a blocking upstream.
+            * **Strict Inputs:** Execution requires all input sockets to be alive.
+            * **Socket Liveness:** An input socket is alive if it has at least one incoming connection from a non-blocking upstream.
+        * **Decision Logic:** When a block fails, the Engine verifies the liveness of immediate downstream blocks. A downstream block is blocked if any of its sockets lose their last valid connection (i.e., removing the failed upstream connection leaves the socket with no connections from non-blocking upstreams).
+        * **Propagation:** Since blocked blocks act as blocking upstreams, this check propagates recursively (BFS) to ensure all transitively affected blocks are identified.
     2. **Warehouse Counter Cleanup:** For each blocked block, atomically decrements its upstream Warehouse counters (as if it consumed the data). This ensures Warehouses are released even when consumers don't run.
     3. Collects the exception into an `AggregateException`.
     4. Allows independent pipeline branches to continue (partial failure tolerance).
@@ -627,6 +635,51 @@ Priorities are computed **on-demand during dequeue**, not cached:
 **Proposed Enhancement:** Integrate OpenTelemetry .NET instrumentation to produce distributed traces:
     - **Spans:** One per block execution, tagged with `BlockID`, `ThreadID`, and `ExecutionMode`
     - **Visualization:** Export traces to Jaeger/Zipkin to visualize critical paths and "waterfall" execution diagrams
+
+---
+
+### **A.7. Static Analysis: Strict Paths & Threatened Blocks**
+
+The static analyzer performs offline graph analysis to identify structural sensitivity patterns before execution.
+
+**Definitions:**
+
+* **Strict Block:** A block with **In-Degree = 1** (exactly one incoming connection from a single upstream block). The block has no "backup" connection—if its sole upstream fails, the strict block becomes blocked.
+
+* **Strict Path:** The **transitive closure** of upstream dependencies originating from a strict block. Formally, for strict block `B`, the strict path is the set `{ P | P →* B }`, where `→*` denotes the reflexive transitive closure of the "depends on" relation.
+
+* **Threatened Block:** A block **not** on any strict path that may become blocked if one of its upstream dependencies fails. A block is threatened if there exists at least one upstream block `U` such that:
+    1. `U` is not on a strict path leading to the block
+    2. Removing `U` from the graph leaves the block with no viable input path from any source
+
+**Example:**
+
+```
+Source → [Resize] → [Enhance] → [Save]
+                └──→ [Crop] ────────┘
+```
+
+* **Strict Block:** `Enhance` (In-Degree = 1, depends solely on `Resize`)
+* **Strict Path:** `{ Source, Resize, Enhance }`
+* **Threatened Block:** `Save`—if `Crop` fails, `Save` still has input via `Enhance`. If `Resize` fails, both `Enhance` and `Save` become blocked.
+
+**Analysis Output:**
+
+The analyzer emits a report containing:
+1. **Strict Path Enumeration:** List of all strict paths, indexed by strict block ID
+2. **Threatened Block Registry:** Blocks vulnerable to specific upstream failures, with dependency mapping
+3. **Criticality Score:** `ThreatenedCount / TotalBlockCount`—higher values indicate reduced fault tolerance
+
+**Interpretation:**
+
+Strict paths and threatened blocks are **structural properties**, not defects. They represent:
+* **Sensitivity:** Single points of failure in the computation topology
+* **Trade-off:** Linear chains (all strict) minimize memory overhead (Section 5.1) at the cost of fault isolation
+* **Design Guidance:** For mission-critical pipelines, introduce redundant branches to eliminate strict paths
+
+**Integration with Execution:**
+
+When a block fails during runtime (Section 7.1), the Engine uses precomputed strict paths to efficiently determine the transitive closure of blocked downstream blocks—O(1) lookup per strict block instead of BFS traversal.
 
 ## B. Appendix: Diagrams
 
@@ -830,3 +883,207 @@ flowchart TD
         CheckSources -- No --> Finish((End))
     end
 ```
+
+---
+
+## **C. Appendix: Lexicon**
+
+This section standardizes terminology across the Execution Engine specification, adopting federated consensus concepts to describe graph liveness, safety, and state transitions.
+
+### **C.1. Core Concepts**
+
+#### Block[^C.1]
+
+A stateless processing unit implementing `IBlock`. Transforms input `WorkItem`s into output `WorkItem`s. Distinct from "block" in blockchain—here, a filter in the Pipes and Filters architecture.
+
+[^C.1]: Stateless processing unit implementing `IBlock`. Transforms input `WorkItem`s into output `WorkItem`s.
+
+#### Socket[^C.2]
+
+Named input or output port on a block. Sockets define the typed interface for data flow between blocks.
+
+[^C.2]: Named input or output port on a block. Defines the typed interface for data flow.
+
+#### Link[^C.3]
+
+Directed connection from an output socket to an input socket. Establishes producer-consumer relationship.
+
+[^C.3]: Directed connection between sockets. Establishes producer-consumer relationship.
+
+#### Subgraph[^C.4]
+
+A logical subset of blocks within the execution graph, identified by shared properties (e.g., "all blocks downstream of Source A"). Not a formal graph cut—used for analysis and visualization.
+
+[^C.4]: Logical subset of blocks for analysis (e.g., "strict path subgraph"). Not a formal graph cut.
+
+#### Graph[^C.5]
+
+The complete directed acyclic graph (DAG) comprising all blocks and links. Validated for acyclicity before execution.
+
+[^C.5]: Complete DAG of blocks and links. Validated for acyclicity before execution.
+
+#### Pipeline[^C.6]
+
+Synonym for the execution graph in the context of a processing session.
+
+[^C.6]: Synonym for the execution graph during a processing session.
+
+### **C.2. Block States**
+
+#### Ready[^C.7]
+
+A block whose all dependency barriers are satisfied (counter = 0). Eligible for dispatch.
+
+[^C.7]: Block with all dependency barriers satisfied. Eligible for dispatch.
+
+#### Pending[^C.8]
+
+A block that has been dispatched but not yet completed. In-flight execution.
+
+[^C.8]: Dispatched block awaiting completion. In-flight execution.
+
+#### Blocked[^C.9]
+
+A block that cannot execute due to upstream failure or dependency on a blocked upstream. Transitive property—blocking propagates downstream. A blocked block is treated as a failed upstream for all its dependents.
+
+[^C.9]: Block unable to execute due to upstream failure. Transitive—propagates downstream.
+
+#### Failed[^C.10]
+
+A block that threw an exception during execution. Marks downstream blocks as blocked.
+
+[^C.10]: Block that threw an exception. Marks downstream as blocked.
+
+#### Completed[^C.11]
+
+A block that finished execution successfully. Output committed to warehouse.
+
+[^C.11]: Block that finished successfully. Output committed to warehouse.
+
+### **C.3. System Properties**
+
+#### Liveness[^C.12]
+
+Property that the system continues to make progress—blocks transition from Ready → Completed. Watchdog detects liveness violations (deadlock). A live system guarantees that valid inputs eventually produce outputs.
+
+[^C.12]: Property that system continues making progress. Blocks complete; watchdog detects violations.
+
+#### Safety[^C.13]
+
+Property that no `WorkItem` is lost or corrupted during execution. Enforced via defensive cloning and warehouse cleanup. A safe system never produces incorrect outputs.
+
+[^C.13]: Property that no `WorkItem` is lost or corrupted. Enforced via cloning and cleanup.
+
+#### Finality[^C.14]
+
+Property that a completed block's output is immutable and will not be rolled back. Warehouse buffers are immutable after commit.
+
+[^C.14]: Completed block output is immutable and never rolled back.
+
+### **C.4. Dependency & Fault Concepts**
+
+#### Strict Block[^C.15]
+
+A block with In-Degree = 1 (exactly one incoming connection). No backup connection—if its sole upstream fails, the strict block becomes blocked.
+
+[^C.15]: Block with In-Degree = 1. Single point of failure if upstream fails.
+
+#### Strict Path[^C.16]
+
+The transitive closure of upstream dependencies originating from a strict block. Formally, for strict block `B`, the strict path is `{ P | P →* B }`.
+
+[^C.16]: Transitive closure of upstream dependencies from a strict block.
+
+#### Threatened[^C.17]
+
+A block that may become blocked if a specific upstream dependency fails, despite having multiple incoming connections. Precomputed by static analyzer.
+
+[^C.17]: Block that may become blocked if specific upstream fails. Precomputed by analyzer.
+
+#### Quorum[^C.18]
+
+The set of upstream blocks that must complete to unblock a downstream strict block. For non-strict blocks, any one upstream suffices (existential quorum).
+
+[^C.18]: Set of blocks that must complete to unblock a strict downstream.
+
+#### V-Blocking[^C.19]
+
+A set of upstream blocks whose failure prevents a downstream block from executing. For a strict block, its sole upstream is v-blocking. For non-strict blocks, v-blocking occurs when all incoming connections fail.
+
+[^C.19]: Set of upstream blocks whose failure prevents downstream execution.
+
+### **C.5. Execution Components**
+
+#### Warehouse[^C.20]
+
+Producer-centric output buffer. Holds produced `WorkItem`s until all consumers have consumed them. Not to be confused with "data warehouse" in analytics.
+
+[^C.20]: Producer-centric output buffer holding `WorkItem`s until all consumers consume.
+
+#### Barrier[^C.21]
+
+Consumer-centric synchronization primitive. Atomic counter tracking remaining upstream dependencies. Distinct from "memory barrier" in CPU architectures.
+
+[^C.21]: Consumer-centric synchronization primitive with atomic dependency counter.
+
+#### Engine[^C.22]
+
+Central orchestrator. Manages lifecycle, scheduling, error handling, and resource enforcement.
+
+[^C.22]: Central orchestrator managing lifecycle, scheduling, error handling, resources.
+
+#### Scheduler[^C.23]
+
+Policy component determining block dispatch order. Implements Greedy Completion Pressure (Mode A) or Adaptive (Mode B) strategies.
+
+[^C.23]: Policy component determining dispatch order via Completion Pressure or Adaptive strategies.
+
+#### Shipment[^C.24]
+
+Batch of `WorkItem`s produced by a source in a single execution cycle. Enables memory-controlled processing.
+
+[^C.24]: Batch of `WorkItem`s from a source in one cycle. Enables memory-controlled processing.
+
+#### WorkItem[^C.25]
+
+Immutable wrapper containing `Image<TPixel>`, size metadata, and auxiliary data. Disposable.
+
+[^C.25]: Immutable wrapper of `Image<TPixel>` with metadata. Disposable.
+
+### **C.6. Memory & Performance**
+
+#### Completion Pressure[^C.26]
+
+Scheduling priority metric based on warehouse memory pressure. Formula: $-\sum (WarehouseSize / RemainingConsumers)$. Higher pressure = higher dispatch priority.
+
+[^C.26]: Scheduling priority based on warehouse memory. $-\sum (Size / RemainingConsumers)$.
+
+#### Fan-In / In-Degree[^C.27]
+
+Number of incoming links to a block. Determines barrier counter initialization.
+
+[^C.27]: Number of incoming links. Determines barrier counter initialization.
+
+#### Fan-Out / Out-Degree[^C.28]
+
+Number of outgoing links from a block. Determines warehouse counter initialization.
+
+[^C.28]: Number of outgoing links. Determines warehouse counter initialization.
+
+#### Critical Path[^C.29]
+
+The longest (most expensive) path from any source to any sink. Used in Mode B for priority boosting.
+
+[^C.29]: Longest path from source to sink. Used in Mode B for priority boosting.
+
+#### Backpressure[^C.30]
+
+Flow control mechanism limiting production when downstream capacity is exhausted. Implemented via soft/hard memory limits.
+
+[^C.30]: Flow control limiting production when downstream exhausted. Via soft/hard memory limits.
+
+#### Deadlock[^C.31]
+
+Liveness violation where no blocks are ready but execution is incomplete. Detected by watchdog timer.
+
+[^C.31]: Liveness violation—no blocks ready but execution incomplete. Detected by watchdog.
