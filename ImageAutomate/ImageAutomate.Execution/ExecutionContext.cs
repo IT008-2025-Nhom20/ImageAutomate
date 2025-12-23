@@ -377,6 +377,12 @@ internal sealed class ExecutionContext
             && state == BlockExecutionState.Running;
     }
 
+    public bool IsPending(IBlock block)
+    {
+        return _blockStates.TryGetValue(block, out var state)
+            && state == BlockExecutionState.Pending;
+    }
+
     #endregion
 
     #region Active Connection Access
@@ -547,6 +553,8 @@ internal sealed class ExecutionContext
         // Reset all block states to Pending (except blocked and active sources)
         foreach (var block in Graph.Blocks)
         {
+            if (IsRunning(block))
+                throw new InvalidOperationException("Cannot reset execution context while blocks are still running.");
             if (!IsBlocked(block))
             {
                 _blockStates[block] = BlockExecutionState.Pending;
