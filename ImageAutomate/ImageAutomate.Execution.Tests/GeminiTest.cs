@@ -121,7 +121,7 @@ public class GeminiTest
             // 2. CRITICAL FIX: Clone the item.
             // The engine will dispose 'item' (the input) immediately after this method returns.
             // If we return 'item' directly, the downstream Sink receives a disposed object.
-            return (IBasicWorkItem)((ICloneable)item).Clone();
+            return (IBasicWorkItem)item.Clone();
         });
 
         var slowBranch = new CallbackBlock("Slow", (item) =>

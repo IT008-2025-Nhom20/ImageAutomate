@@ -148,8 +148,12 @@ internal sealed class SimpleDfsScheduler : IScheduler
             // Signal and check if ready
             if (barrier.Signal())
             {
-                context.SetBlockState(downstreamBlock, BlockExecutionState.Ready);
-                Enqueue(downstreamBlock, context);
+                // Only mark as ready and enqueue if not blocked
+                if (context.IsPending(downstreamBlock))
+                {
+                    context.SetBlockState(downstreamBlock, BlockExecutionState.Ready);
+                    Enqueue(downstreamBlock, context);
+                }
             }
         }
     }
