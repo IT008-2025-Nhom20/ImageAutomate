@@ -1,0 +1,44 @@
+Mode: Run 200 times
+
+--- Stress Test Report (Runs: 200) ---
+
+Container: ImageAutomate.Execution.Tests.GLMTest
+Test Case                                                                        | Pass   | Fail   | Fail %  
+--------------------------------------------------------------------------------------------------------------
+ImageAutomate.Execution.Tests.GLMTest.SourceExhaustion_ShouldNotBlockRemainin..  | 200    | 0      | 0.0%
+ImageAutomate.Execution.Tests.GLMTest.RedundantPaths_FailureInOnePath_ShouldN..  | 200    | 0      | 0.0%
+ImageAutomate.Execution.Tests.GLMTest.PartialFailure_ShouldNotBlockAlternativ..  | 200    | 0      | 0.0%
+ImageAutomate.Execution.Tests.GLMTest.MultipleFailurePoints_SelectiveBlocking..  | 200    | 0      | 0.0%
+ImageAutomate.Execution.Tests.GLMTest.MultiCycleExecution_LateSourceExhaustio..  | 200    | 0      | 0.0%
+ImageAutomate.Execution.Tests.GLMTest.DeepChainWithMidFailure_ShouldNotBlockU..  | 200    | 0      | 0.0%
+ImageAutomate.Execution.Tests.GLMTest.ComplexDiamondPattern_PartialFailure_Sh..  | 200    | 0      | 0.0%
+
+Container: ImageAutomate.Execution.Tests.GeminiTest
+Test Case                                                                        | Pass   | Fail   | Fail %  
+--------------------------------------------------------------------------------------------------------------
+ImageAutomate.Execution.Tests.GeminiTest.SelectiveFlow_Switch_Behavior           | 200    | 0      | 0.0%
+ImageAutomate.Execution.Tests.GeminiTest.Deterministic_Partial_Failure           | 200    | 0      | 0.0%
+ImageAutomate.Execution.Tests.GeminiTest.DataIsolation_Modifications_Are_Loca..  | 200    | 0      | 0.0%
+
+Container: ImageAutomate.Execution.Tests.GraphExecutorTests
+Test Case                                                                        | Pass   | Fail   | Fail %  
+--------------------------------------------------------------------------------------------------------------
+ImageAutomate.Execution.Tests.GraphExecutorTests.TwoSources_DifferentExhausti..  | 200    | 0      | 0.0%
+ImageAutomate.Execution.Tests.GraphExecutorTests.MultipleShipmentCycles_AllIt..  | 200    | 0      | 0.0%
+ImageAutomate.Execution.Tests.GraphExecutorTests.MultiIO_ComplexRouting          | 200    | 0      | 0.0%
+ImageAutomate.Execution.Tests.GraphExecutorTests.LargeFanOut_ManyParallelBran..  | 200    | 0      | 0.0%
+ImageAutomate.Execution.Tests.GraphExecutorTests.FinalBatch_ProcessedWhenSour..  | 200    | 0      | 0.0%
+ImageAutomate.Execution.Tests.GraphExecutorTests.FailedBlock_AtSource            | 200    | 0      | 0.0%
+ImageAutomate.Execution.Tests.GraphExecutorTests.FailedBlock_AtSink              | 200    | 0      | 0.0%
+ImageAutomate.Execution.Tests.GraphExecutorTests.FailedBlock_AtChokePoint        | 200    | 0      | 0.0%
+ImageAutomate.Execution.Tests.GraphExecutorTests.ExhaustedSource_WithBackupLi..  | 200    | 0      | 0.0%
+ImageAutomate.Execution.Tests.GraphExecutorTests.ExhaustedSource_NoBackupLink    | 200    | 0      | 0.0%
+ImageAutomate.Execution.Tests.GraphExecutorTests.EmptySource_NoItems             | 200    | 0      | 0.0%
+ImageAutomate.Execution.Tests.GraphExecutorTests.DiamondPattern_ConvergenceAt..  | 200    | 0      | 0.0%
+ImageAutomate.Execution.Tests.GraphExecutorTests.DependencySatisfaction_Norma..  | 200    | 0      | 0.0%
+ImageAutomate.Execution.Tests.GraphExecutorTests.DependencySatisfaction_Cross..  | 200    | 0      | 0.0%
+ImageAutomate.Execution.Tests.GraphExecutorTests.DependencySatisfaction_Backl..  | 200    | 0      | 0.0%
+ImageAutomate.Execution.Tests.GraphExecutorTests.DeepChain_ManySequentialBloc..  | 200    | 0      | 0.0%
+ImageAutomate.Execution.Tests.GraphExecutorTests.ChokePoint_PartialFailure_Wi..  | 200    | 0      | 0.0%
+ImageAutomate.Execution.Tests.GraphExecutorTests.Cancellation_StopsExecution     | 200    | 0      | 0.0%
+ImageAutomate.Execution.Tests.GraphExecutorTests.BlockedBlock_DownstreamOfFai..  | 200    | 0      | 0.0%
