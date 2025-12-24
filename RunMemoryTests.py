@@ -28,7 +28,7 @@ def cleanup():
     if os.path.exists(TRX_FILE):
         try:
             os.remove(TRX_FILE)
-        except:
+        except OSError:
             pass
 
 def monitor_memory(pid, interval=0.1):
