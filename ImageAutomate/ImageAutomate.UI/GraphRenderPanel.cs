@@ -127,18 +127,10 @@ public class GraphRenderPanel : Panel
     private Cursor _connectCursor = Cursors.Cross;
     #endregion
 
-    private const int ClickDragThreshold = 5; // pixels
-
     public GraphRenderPanel()
     {
         DoubleBuffered = true;
         BackColor = Color.White;
-
-        Resize += OnResize;
-        MouseDown += OnMouseDown;
-        MouseMove += OnMouseMove;
-        MouseUp += OnMouseUp;
-        MouseWheel += OnMouseWheel;
     }
 
     #region Public API
@@ -308,260 +300,6 @@ public class GraphRenderPanel : Panel
 
     #region Implicit Event Handlers
 
-    private void OnResize(object? sender, EventArgs e)
-    {
-        Invalidate();
-    }
-
-    private void OnMouseDown(object? sender, MouseEventArgs e)
-    {
-        if (Graph == null)
-            return;
-        
-        PointF worldPosition = ScreenToWorld(e.Location);
-        _lastMousePos = e.Location;
-        _mouseDownLocation = e.Location;
-
-        if (e.Button == MouseButtons.Right)
-        {
-            _isPanning = true;
-            Cursor = _panCursor;
-        }
-        else if (e.Button == MouseButtons.Left)
-        {
-            // 1. Check Socket Hit (Connecting)
-            var socketHit = HitTestSocket(worldPosition);
-            if (socketHit != null)
-            {
-                _isConnecting = true;
-                _dragStartSocket = socketHit;
-                _currentMouseWorldPos = worldPosition;
-                Cursor = _connectCursor;
-                Invalidate();
-                return;
-            }
-
-            // 2. Check Node Hit (Selection / Dragging)
-            var hitNode = Workspace?.HitTestNode(worldPosition.X, worldPosition.Y);
-            if (hitNode != null && Workspace?.ViewState != null)
-            {
-                Graph.BringToTop(hitNode);
-                Graph.SelectedItem = hitNode;
-                var blockPos = Workspace.ViewState.GetBlockPositionOrDefault(hitNode);
-
-                _isDraggingNode = true;
-                _draggedNode = hitNode;
-                _dragStartNodePos = new PointF((float)blockPos.X, (float)blockPos.Y);
-                Cursor = _dragCursor;
-                Invalidate();
-                return;
-            }
-
-            // 3. Check Edge Hit (Selection)
-            var hitEdge = HitTestEdge(worldPosition);
-            if (hitEdge != null)
-            {
-                Graph.SelectedItem = hitEdge;
-                Invalidate();
-                return;
-            }
-
-            // 4. Hit Background (Deselect)
-            Graph.SelectedItem = null;
-            Invalidate();
-        }
-    }
-
-    private void OnMouseUp(object? sender, MouseEventArgs e)
-    {
-        if (_isPanning && e.Button == MouseButtons.Right)
-        {
-            _isPanning = false;
-            Cursor = Cursors.Default;
-        }
-
-        if (_isDraggingNode && e.Button == MouseButtons.Left)
-        {
-            _isDraggingNode = false;
-            _draggedNode = null;
-            Cursor = Cursors.Default;
-        }
-
-        if (_isConnecting && e.Button == MouseButtons.Left)
-        {
-            // End Connection Drag
-            PointF worldPos = ScreenToWorld(e.Location);
-            var socketHit = HitTestSocket(worldPos);
-
-            if (socketHit != null && _dragStartSocket != null)
-            {
-                // Validate Connection
-                bool valid = true;
-
-                if (socketHit.Block == _dragStartSocket.Block)
-                    valid = false;
-
-                if (socketHit.IsInput == _dragStartSocket.IsInput)
-                    valid = false;
-                    
-                if (Graph == null)
-                    valid = false;
-
-                if (valid)
-                {
-                    IBlock source, target;
-                    Socket sourceSocket, targetSocket;
-
-                    if (_dragStartSocket.IsInput)
-                    {
-                        target = _dragStartSocket.Block;
-                        targetSocket = _dragStartSocket.Socket;
-                        source = socketHit.Block;
-                        sourceSocket = socketHit.Socket;
-                    }
-                    else
-                    {
-                        source = _dragStartSocket.Block;
-                        sourceSocket = _dragStartSocket.Socket;
-                        target = socketHit.Block;
-                        targetSocket = socketHit.Socket;
-                    }
-
-                    // Prevent duplicate edges
-                    bool exists = Graph!.Edges.Any(edge =>
-                        edge.Source == source && edge.SourceSocket == sourceSocket &&
-                        edge.Target == target && edge.TargetSocket == targetSocket);
-
-                    if (!exists)
-                    {
-                        Graph.AddEdge(source, sourceSocket, target, targetSocket);
-                    }
-                }
-            }
-
-            _isConnecting = false;
-            _dragStartSocket = null;
-            Cursor = Cursors.Default;
-            Invalidate();
-        }
-    }
-
-    private void OnMouseMove(object? sender, MouseEventArgs e)
-    {
-        float dx = e.X - _lastMousePos.X;
-        float dy = e.Y - _lastMousePos.Y;
-
-        PointF worldPosition = ScreenToWorld(e.Location);
-
-        // Hover Feedback Logic
-        // If not dragging, check if over edge to change cursor
-        if (!_isPanning && !_isDraggingNode && !_isConnecting)
-        {
-            var hitEdge = HitTestEdge(worldPosition);
-            Cursor = hitEdge != null ? Cursors.Hand : Cursors.Default;
-        }
-
-        if (_isPanning)
-        {
-            _panOffset.X += dx;
-            _panOffset.Y += dy;
-            Invalidate();
-        }
-        else if (_isDraggingNode && _draggedNode != null)
-        {
-            float worldDx = dx / _renderScale;
-            float worldDy = dy / _renderScale;
-
-            Workspace?
-                .ViewState
-                .SetBlockPosition(_draggedNode, new Position(
-                    _dragStartNodePos.X + worldDx,
-                    _dragStartNodePos.Y + worldDy));
-
-            Invalidate();
-        }
-        else if (_isConnecting)
-        {
-            _currentMouseWorldPos = worldPosition;
-            Invalidate();
-        }
-
-        _lastMousePos = e.Location;
-    }
-
-    private void OnMouseWheel(object? sender, MouseEventArgs e)
-    {
-        // TODO: Move this out as configurable property
-        const float zoomFactor = 1.1f;
-        float oldScale = _renderScale;
-
-        if (e.Delta > 0)
-            _renderScale *= zoomFactor;
-        else
-            _renderScale /= zoomFactor;
-
-        _renderScale = Math.Max(0.1f, Math.Min(_renderScale, 5.0f));
-
-        float mouseX = e.X;
-        float mouseY = e.Y;
-
-        float worldX = (mouseX - _panOffset.X) / oldScale;
-        float worldY = (mouseY - _panOffset.Y) / oldScale;
-
-        _panOffset.X = mouseX - (worldX * _renderScale);
-        _panOffset.Y = mouseY - (worldY * _renderScale);
-
-        Invalidate();
-    }
-
-    private void OnPaint_m(PaintEventArgs e)
-    {
-        if (Graph == null)
-            return;
-
-        var viewState = Workspace?.ViewState;
-        if (viewState == null)
-            return;
-
-        Graphics g = e.Graphics;
-        g.SmoothingMode = SmoothingMode.AntiAlias;
-        g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
-
-        using Matrix transform = new();
-        transform.Translate(_panOffset.X, _panOffset.Y);
-        transform.Scale(_renderScale, _renderScale);
-        g.Transform = transform;
-
-        // Draw Connections
-        foreach (var edge in Graph.Edges)
-        {
-            var sourcePos = viewState.GetBlockPositionOrDefault(edge.Source);
-            var sourceSize = viewState.GetBlockSizeOrDefault(edge.Source);
-            var targetPos = viewState.GetBlockPositionOrDefault(edge.Target);
-            var targetSize = viewState.GetBlockSizeOrDefault(edge.Target);
-            bool isSelected = Graph.SelectedItem is Connection conn
-                && edge == conn;
-            NodeRenderer.Instance.DrawEdge(g, sourcePos, sourceSize, targetPos, targetSize, isSelected, _socketRadius);
-        }
-
-        // Draw Pending Connection Drag
-        if (_isConnecting && _dragStartSocket != null)
-        {
-            NodeRenderer.Instance.DrawDragEdge(g, _dragStartSocket.Position, _currentMouseWorldPos);
-        }
-
-        // Draw Nodes
-        foreach (var block in Graph.Nodes)
-        {
-            var blockPos = viewState.GetBlockPositionOrDefault(block);
-            var blockSize = viewState.GetBlockSizeOrDefault(block);
-            bool isSelected = block == Graph.SelectedItem;
-            NodeRenderer.Instance.DrawNode(g, block, blockPos, blockSize, isSelected, _selectedBlockOutlineColor, _socketRadius);
-        }
-
-        g.ResetTransform();
-    }
-
     #endregion
 
     #region Private Methods
@@ -701,6 +439,274 @@ public class GraphRenderPanel : Panel
         _panOffset.Y = screenCY - blockCY * _renderScale;
 
         Invalidate();
+    }
+    #endregion
+
+    #region Handler Overrides
+    
+    protected override void OnResize(EventArgs e)
+    {
+        base.OnResize(e);
+        Invalidate();
+    }
+
+    protected override void OnMouseDown(MouseEventArgs e)
+    {
+        if (Graph == null)
+            return;
+        
+        PointF worldPosition = ScreenToWorld(e.Location);
+        _lastMousePos = e.Location;
+        _mouseDownLocation = e.Location;
+
+        if (e.Button == MouseButtons.Right)
+        {
+            _isPanning = true;
+            Cursor = _panCursor;
+        }
+        else if (e.Button == MouseButtons.Left)
+        {
+            // 1. Check Socket Hit (Connecting)
+            var socketHit = HitTestSocket(worldPosition);
+            if (socketHit != null)
+            {
+                _isConnecting = true;
+                _dragStartSocket = socketHit;
+                _currentMouseWorldPos = worldPosition;
+                Cursor = _connectCursor;
+                Invalidate();
+                return;
+            }
+
+            // 2. Check Node Hit (Selection / Dragging)
+            var hitNode = Workspace?.HitTestNode(worldPosition.X, worldPosition.Y);
+            if (hitNode != null && Workspace?.ViewState != null)
+            {
+                Graph.BringToTop(hitNode);
+                Graph.SelectedItem = hitNode;
+                var blockPos = Workspace.ViewState.GetBlockPositionOrDefault(hitNode);
+
+                _isDraggingNode = true;
+                _draggedNode = hitNode;
+                _dragStartNodePos = new PointF((float)blockPos.X, (float)blockPos.Y);
+                Cursor = _dragCursor;
+                Invalidate();
+                return;
+            }
+
+            // 3. Check Edge Hit (Selection)
+            var hitEdge = HitTestEdge(worldPosition);
+            if (hitEdge != null)
+            {
+                Graph.SelectedItem = hitEdge;
+                Invalidate();
+                return;
+            }
+
+            // 4. Hit Background (Deselect)
+            Graph.SelectedItem = null;
+            Invalidate();
+        }
+
+        base.OnMouseDown(e);
+    }
+
+    protected override void OnMouseUp(MouseEventArgs e)
+    {
+        if (_isPanning && e.Button == MouseButtons.Right)
+        {
+            _isPanning = false;
+            Cursor = Cursors.Default;
+        }
+
+        if (_isDraggingNode && e.Button == MouseButtons.Left)
+        {
+            _isDraggingNode = false;
+            _draggedNode = null;
+            Cursor = Cursors.Default;
+        }
+
+        if (_isConnecting && e.Button == MouseButtons.Left)
+        {
+            // End Connection Drag
+            PointF worldPos = ScreenToWorld(e.Location);
+            var socketHit = HitTestSocket(worldPos);
+
+            if (socketHit != null && _dragStartSocket != null)
+            {
+                // Validate Connection
+                bool valid = true;
+
+                if (socketHit.Block == _dragStartSocket.Block)
+                    valid = false;
+
+                if (socketHit.IsInput == _dragStartSocket.IsInput)
+                    valid = false;
+
+                if (Graph == null)
+                    valid = false;
+
+                if (valid)
+                {
+                    IBlock source, target;
+                    Socket sourceSocket, targetSocket;
+
+                    if (_dragStartSocket.IsInput)
+                    {
+                        target = _dragStartSocket.Block;
+                        targetSocket = _dragStartSocket.Socket;
+                        source = socketHit.Block;
+                        sourceSocket = socketHit.Socket;
+                    }
+                    else
+                    {
+                        source = _dragStartSocket.Block;
+                        sourceSocket = _dragStartSocket.Socket;
+                        target = socketHit.Block;
+                        targetSocket = socketHit.Socket;
+                    }
+
+                    // Prevent duplicate edges
+                    bool exists = Graph!.Edges.Any(edge =>
+                        edge.Source == source && edge.SourceSocket == sourceSocket &&
+                        edge.Target == target && edge.TargetSocket == targetSocket);
+
+                    if (!exists)
+                    {
+                        Graph.AddEdge(source, sourceSocket, target, targetSocket);
+                    }
+                }
+            }
+
+            _isConnecting = false;
+            _dragStartSocket = null;
+            Cursor = Cursors.Default;
+            Invalidate();
+        }
+        
+        base.OnMouseUp(e);
+    }
+
+    protected override void OnMouseMove(MouseEventArgs e)
+    {
+        float dx = e.X - _lastMousePos.X;
+        float dy = e.Y - _lastMousePos.Y;
+
+        PointF worldPosition = ScreenToWorld(e.Location);
+
+        // Hover Feedback Logic
+        // If not dragging, check if over edge to change cursor
+        if (!_isPanning && !_isDraggingNode && !_isConnecting)
+        {
+            var hitEdge = HitTestEdge(worldPosition);
+            Cursor = hitEdge != null ? Cursors.Hand : Cursors.Default;
+        }
+
+        if (_isPanning)
+        {
+            _panOffset.X += dx;
+            _panOffset.Y += dy;
+            Invalidate();
+        }
+        else if (_isDraggingNode && _draggedNode != null)
+        {
+            float worldDx = dx / _renderScale;
+            float worldDy = dy / _renderScale;
+
+            Workspace?
+                .ViewState
+                .SetBlockPosition(_draggedNode, new Position(
+                    _dragStartNodePos.X + worldDx,
+                    _dragStartNodePos.Y + worldDy));
+
+            Invalidate();
+        }
+        else if (_isConnecting)
+        {
+            _currentMouseWorldPos = worldPosition;
+            Invalidate();
+        }
+
+        _lastMousePos = e.Location;
+
+        base.OnMouseMove(e);
+    }
+
+    protected override void OnMouseWheel(MouseEventArgs e)
+    {
+        // TODO: Move this out as configurable property
+        const float zoomFactor = 1.1f;
+        float oldScale = _renderScale;
+
+        if (e.Delta > 0)
+            _renderScale *= zoomFactor;
+        else
+            _renderScale /= zoomFactor;
+
+        _renderScale = Math.Max(0.1f, Math.Min(_renderScale, 5.0f));
+
+        float mouseX = e.X;
+        float mouseY = e.Y;
+
+        float worldX = (mouseX - _panOffset.X) / oldScale;
+        float worldY = (mouseY - _panOffset.Y) / oldScale;
+
+        _panOffset.X = mouseX - (worldX * _renderScale);
+        _panOffset.Y = mouseY - (worldY * _renderScale);
+
+        Invalidate();
+
+        base.OnMouseWheel(e);
+    }
+
+    protected override void OnPaint(PaintEventArgs e)
+    {
+        if (Graph == null)
+            return;
+
+        var viewState = Workspace?.ViewState;
+        if (viewState == null)
+            return;
+
+        Graphics g = e.Graphics;
+        g.SmoothingMode = SmoothingMode.AntiAlias;
+        g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
+
+        using Matrix transform = new();
+        transform.Translate(_panOffset.X, _panOffset.Y);
+        transform.Scale(_renderScale, _renderScale);
+        g.Transform = transform;
+
+        // Draw Connections
+        foreach (var edge in Graph.Edges)
+        {
+            var sourcePos = viewState.GetBlockPositionOrDefault(edge.Source);
+            var sourceSize = viewState.GetBlockSizeOrDefault(edge.Source);
+            var targetPos = viewState.GetBlockPositionOrDefault(edge.Target);
+            var targetSize = viewState.GetBlockSizeOrDefault(edge.Target);
+            bool isSelected = Graph.SelectedItem is Connection conn
+                && edge == conn;
+            NodeRenderer.Instance.DrawEdge(g, sourcePos, sourceSize, targetPos, targetSize, isSelected, _socketRadius);
+        }
+
+        // Draw Pending Connection Drag
+        if (_isConnecting && _dragStartSocket != null)
+        {
+            NodeRenderer.Instance.DrawDragEdge(g, _dragStartSocket.Position, _currentMouseWorldPos);
+        }
+
+        // Draw Nodes
+        foreach (var block in Graph.Nodes)
+        {
+            var blockPos = viewState.GetBlockPositionOrDefault(block);
+            var blockSize = viewState.GetBlockSizeOrDefault(block);
+            bool isSelected = block == Graph.SelectedItem;
+            NodeRenderer.Instance.DrawNode(g, block, blockPos, blockSize, isSelected, _selectedBlockOutlineColor, _socketRadius);
+        }
+
+        g.ResetTransform();
+
+        base.OnPaint(e);
     }
     #endregion
 }
