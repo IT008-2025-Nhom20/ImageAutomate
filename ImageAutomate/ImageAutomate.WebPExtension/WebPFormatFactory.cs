@@ -25,6 +25,8 @@ public static class WebPFormatFactory
             FileFormat = options.Lossless 
                 ? WebpFileFormatType.Lossless 
                 : WebpFileFormatType.Lossy,
+            // NearLossless is only enabled in lossless mode with quality < 100
+            // It allows some quality loss for better compression in lossless mode
             NearLossless = options.Lossless && options.NearLossless < 100,
             NearLosslessQuality = options.NearLossless,
             UseAlphaCompression = options.UseAlphaCompression

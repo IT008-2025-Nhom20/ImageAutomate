@@ -2,6 +2,10 @@
 // This file provides a simulated format registry for the Core namespace.
 // It allows the WebP extension to reference Core types without modifying the actual Core project.
 // This is a workaround to avoid circular dependencies and make the extension self-contained.
+//
+// IMPORTANT: This file illegally declares namespace `ImageAutomate.Core` as requested by the user.
+// When Core implements the actual registry, this file should be removed and the extension
+// should reference the real implementation from Core.
 
 using SixLabors.ImageSharp.Formats;
 

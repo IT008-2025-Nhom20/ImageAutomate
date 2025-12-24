@@ -9,7 +9,7 @@ namespace ImageAutomate.WebPExtension;
 /// </summary>
 public static class WebPFormatRegistration
 {
-    private static bool _isRegistered = false;
+    private static volatile bool _isRegistered = false;
     private static readonly object _lock = new object();
 
     /// <summary>
