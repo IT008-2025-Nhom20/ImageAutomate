@@ -38,6 +38,7 @@ using ImageAutomate.StandardBlocks;
 var workspace = new Workspace
 {
     Name = "My Image Processing Project",
+    IncludeSchemaReference = true,  // Include $schema for IntelliSense (default: true)
     Graph = new PipelineGraph()
 };
 
@@ -71,10 +72,11 @@ Workspace loadedWorkspace = Workspace.LoadFromFile("my-project.json");
 
 ## JSON Structure
 
-The serialized JSON has the following structure:
+The serialized JSON has the following structure (with optional `$schema` for IntelliSense):
 
 ```json
 {
+  "$schema": "https://raw.githubusercontent.com/IT007-2025-Nhom20/ImageAutomate/main/docs/workspace-schema.json",
   "version": "1.0",
   "name": "My Image Processing Project",
   "graph": {
@@ -138,6 +140,27 @@ The serialized JSON has the following structure:
   }
 }
 ```
+
+## IntelliSense Support
+
+The workspace format includes a JSON Schema for IntelliSense and validation support in modern editors.
+
+### Enabling IntelliSense
+
+The `$schema` property is automatically included when saving workspaces (can be disabled by setting `IncludeSchemaReference = false`). This enables:
+
+- **Auto-completion**: Suggestions for property names and values
+- **Validation**: Real-time error checking for invalid structures
+- **Documentation**: Hover tooltips showing property descriptions
+- **Type checking**: Ensures correct data types for all fields
+
+### Using the Schema
+
+The schema is available at:
+- **Online**: `https://raw.githubusercontent.com/IT007-2025-Nhom20/ImageAutomate/main/docs/workspace-schema.json`
+- **Local**: `docs/workspace-schema.json`
+
+For more details, see [SCHEMA_GUIDE.md](SCHEMA_GUIDE.md).
 
 ## Features
 

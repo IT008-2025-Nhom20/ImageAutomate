@@ -41,6 +41,11 @@ public class Workspace
     public Dictionary<string, object?> Metadata { get; set; } = new();
 
     /// <summary>
+    /// Gets or sets whether to include the $schema property in saved files for IntelliSense support.
+    /// </summary>
+    public bool IncludeSchemaReference { get; set; } = true;
+
+    /// <summary>
     /// Serializes the workspace to JSON string.
     /// </summary>
     public string ToJson()
@@ -51,6 +56,11 @@ public class Workspace
             Name = Name,
             Metadata = Metadata
         };
+
+        if (IncludeSchemaReference)
+        {
+            dto.Schema = "https://raw.githubusercontent.com/IT007-2025-Nhom20/ImageAutomate/main/docs/workspace-schema.json";
+        }
 
         if (Graph != null)
         {

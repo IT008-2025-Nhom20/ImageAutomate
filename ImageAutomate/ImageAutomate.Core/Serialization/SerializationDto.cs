@@ -128,6 +128,9 @@ public class PositionDto
 /// </summary>
 public class WorkspaceDto
 {
+    [JsonPropertyName("$schema")]
+    public string? Schema { get; set; }
+
     [JsonPropertyName("version")]
     public string Version { get; set; } = "1.0";
 

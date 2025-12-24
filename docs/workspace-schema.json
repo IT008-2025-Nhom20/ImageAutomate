@@ -1,0 +1,209 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/IT007-2025-Nhom20/ImageAutomate/schemas/workspace.json",
+  "title": "ImageAutomate Workspace",
+  "description": "Schema for ImageAutomate workspace files containing pipeline graphs and UI state",
+  "type": "object",
+  "required": ["version", "name"],
+  "properties": {
+    "version": {
+      "type": "string",
+      "description": "Schema version",
+      "pattern": "^\\d+\\.\\d+$",
+      "default": "1.0"
+    },
+    "name": {
+      "type": "string",
+      "description": "Name of the workspace/project",
+      "minLength": 1
+    },
+    "graph": {
+      "$ref": "#/definitions/PipelineGraph"
+    },
+    "viewState": {
+      "$ref": "#/definitions/ViewState"
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Custom metadata key-value pairs",
+      "additionalProperties": true
+    }
+  },
+  "definitions": {
+    "PipelineGraph": {
+      "type": "object",
+      "description": "The pipeline graph containing blocks and connections",
+      "properties": {
+        "blocks": {
+          "type": "array",
+          "description": "Array of blocks in the pipeline",
+          "items": {
+            "$ref": "#/definitions/Block"
+          }
+        },
+        "connections": {
+          "type": "array",
+          "description": "Array of connections between blocks",
+          "items": {
+            "$ref": "#/definitions/Connection"
+          }
+        },
+        "centerBlockIndex": {
+          "type": ["integer", "null"],
+          "description": "Index of the center/focused block in the graph",
+          "minimum": 0
+        }
+      },
+      "required": ["blocks", "connections"]
+    },
+    "Block": {
+      "type": "object",
+      "description": "A processing block in the pipeline",
+      "required": ["blockType", "assemblyQualifiedName", "width", "height", "inputs", "outputs"],
+      "properties": {
+        "blockType": {
+          "type": "string",
+          "description": "Type name of the block (e.g., LoadBlock, BrightnessBlock)",
+          "enum": [
+            "LoadBlock",
+            "SaveBlock",
+            "BrightnessBlock",
+            "ContrastBlock",
+            "SaturationBlock",
+            "HueBlock",
+            "ResizeBlock",
+            "CropBlock",
+            "FlipBlock",
+            "GrayscaleBlock",
+            "PixelateBlock",
+            "GaussianBlurBlock",
+            "SharpenBlock",
+            "VignetteBlock",
+            "ConvertBlock"
+          ]
+        },
+        "assemblyQualifiedName": {
+          "type": "string",
+          "description": "Fully qualified assembly name for deserialization"
+        },
+        "width": {
+          "type": "integer",
+          "description": "Visual width of the block in the UI",
+          "minimum": 50
+        },
+        "height": {
+          "type": "integer",
+          "description": "Visual height of the block in the UI",
+          "minimum": 50
+        },
+        "properties": {
+          "type": "object",
+          "description": "Block-specific configuration properties",
+          "additionalProperties": true
+        },
+        "inputs": {
+          "type": "array",
+          "description": "Input sockets of the block",
+          "items": {
+            "$ref": "#/definitions/Socket"
+          }
+        },
+        "outputs": {
+          "type": "array",
+          "description": "Output sockets of the block",
+          "items": {
+            "$ref": "#/definitions/Socket"
+          }
+        }
+      }
+    },
+    "Socket": {
+      "type": "object",
+      "description": "A connection point on a block",
+      "required": ["id", "name"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the socket",
+          "minLength": 1
+        },
+        "name": {
+          "type": "string",
+          "description": "Display name of the socket",
+          "minLength": 1
+        }
+      }
+    },
+    "Connection": {
+      "type": "object",
+      "description": "A connection between two blocks",
+      "required": ["sourceBlockIndex", "sourceSocketId", "targetBlockIndex", "targetSocketId"],
+      "properties": {
+        "sourceBlockIndex": {
+          "type": "integer",
+          "description": "Index of the source block in the blocks array",
+          "minimum": 0
+        },
+        "sourceSocketId": {
+          "type": "string",
+          "description": "ID of the output socket on the source block"
+        },
+        "targetBlockIndex": {
+          "type": "integer",
+          "description": "Index of the target block in the blocks array",
+          "minimum": 0
+        },
+        "targetSocketId": {
+          "type": "string",
+          "description": "ID of the input socket on the target block"
+        }
+      }
+    },
+    "ViewState": {
+      "type": "object",
+      "description": "UI state information for the workspace",
+      "properties": {
+        "blockPositions": {
+          "type": "object",
+          "description": "Positions of blocks in the canvas (key is block index)",
+          "additionalProperties": {
+            "$ref": "#/definitions/Position"
+          }
+        },
+        "zoom": {
+          "type": "number",
+          "description": "Zoom level of the canvas",
+          "minimum": 0.1,
+          "maximum": 10.0,
+          "default": 1.0
+        },
+        "panX": {
+          "type": "number",
+          "description": "Horizontal pan offset",
+          "default": 0.0
+        },
+        "panY": {
+          "type": "number",
+          "description": "Vertical pan offset",
+          "default": 0.0
+        }
+      },
+      "required": ["zoom", "panX", "panY"]
+    },
+    "Position": {
+      "type": "object",
+      "description": "2D position coordinates",
+      "required": ["x", "y"],
+      "properties": {
+        "x": {
+          "type": "number",
+          "description": "X coordinate"
+        },
+        "y": {
+          "type": "number",
+          "description": "Y coordinate"
+        }
+      }
+    }
+  }
+}
