@@ -48,11 +48,9 @@
             // graphRenderPanel1
             // 
             graphRenderPanel1.BackColor = Color.White;
-            graphRenderPanel1.ColumnSpacing = 250D;
             graphRenderPanel1.Dock = DockStyle.Fill;
             graphRenderPanel1.Location = new Point(0, 0);
             graphRenderPanel1.Name = "graphRenderPanel1";
-            graphRenderPanel1.NodeSpacing = 30D;
             graphRenderPanel1.RenderScale = 0.75F;
             graphRenderPanel1.SelectedBlockOutlineColor = Color.Red;
             graphRenderPanel1.Size = new Size(530, 450);

@@ -20,6 +20,8 @@ public class Workspace
         WriteIndented = true,
     };
 
+    private PipelineGraph? _graph;
+
     /// <summary>
     /// Gets or sets the workspace name.
     /// </summary>
@@ -28,7 +30,26 @@ public class Workspace
     /// <summary>
     /// Gets or sets the pipeline graph.
     /// </summary>
-    public PipelineGraph? Graph { get; set; }
+    public PipelineGraph? Graph
+    {
+        get => _graph;
+        set
+        {
+            // Unsubscribe from old graph
+            if (_graph != null)
+            {
+                _graph.OnNodeRemoved -= OnGraphNodeRemoved;
+            }
+
+            _graph = value;
+
+            // Subscribe to new graph
+            if (_graph != null)
+            {
+                _graph.OnNodeRemoved += OnGraphNodeRemoved;
+            }
+        }
+    }
 
     /// <summary>
     /// Gets or sets the view state.
@@ -46,6 +67,38 @@ public class Workspace
     public bool IncludeSchemaReference { get; set; } = true;
 
     /// <summary>
+    /// Handles automatic cleanup of ViewState when a block is removed from the graph.
+    /// </summary>
+    private void OnGraphNodeRemoved(IBlock block)
+    {
+        ViewState.RemoveBlock(block);
+    }
+
+    /// <summary>
+    /// Finds the top-most block at the given world coordinates.
+    /// </summary>
+    public IBlock? HitTestNode(double x, double y)
+    {
+        if (Graph == null)
+            return null;
+
+        // Iterate in reverse order (Top to Bottom)
+        for (int i = Graph.Nodes.Count - 1; i >= 0; i--)
+        {
+            var block = Graph.Nodes[i];
+            var blockPos = ViewState.GetBlockPositionOrDefault(block);
+            var blockSize = ViewState.GetBlockSizeOrDefault(block);
+
+            if (x >= blockPos.X && x <= blockPos.X + blockSize.Width &&
+                y >= blockPos.Y && y <= blockPos.Y + blockSize.Height)
+            {
+                return block;
+            }
+        }
+        return null;
+    }
+
+    /// <summary>
     /// Serializes the workspace to JSON string.
     /// </summary>
     public string ToJson()
@@ -59,13 +112,14 @@ public class Workspace
 
         if (IncludeSchemaReference)
         {
-            dto.Schema = "https://raw.githubusercontent.com/IT007-2025-Nhom20/ImageAutomate/main/docs/workspace-schema.json";
+            dto.Schema = "https://raw.githubusercontent.com/IT007-2025-Nhom20/ImageAutomate/project-restructure/docs/workspace-schema.json";
         }
 
         if (Graph != null)
         {
-            dto.Graph = Graph.ToDto();
-            dto.ViewState = ViewState.ToDto(Graph.Blocks);
+            // Pass ViewState to embed layout in each block
+            dto.Graph = Graph.ToDto(ViewState);
+            dto.ViewState = ViewState.ToDto();
         }
 
         return JsonSerializer.Serialize(dto, _serializerOptions);
@@ -76,10 +130,9 @@ public class Workspace
     /// </summary>
     public static Workspace FromJson(string json)
     {
-        var dto = JsonSerializer.Deserialize<WorkspaceDto>(json, _serializerOptions);
-        if (dto == null)
-            throw new InvalidOperationException("Failed to deserialize workspace from JSON.");
-
+        var dto = JsonSerializer.Deserialize<WorkspaceDto>(json, _serializerOptions)
+            ?? throw new InvalidOperationException("Failed to deserialize workspace from JSON.");
+        
         var workspace = new Workspace
         {
             Name = dto.Name,
@@ -88,12 +141,14 @@ public class Workspace
 
         if (dto.Graph != null)
         {
-            workspace.Graph = PipelineGraph.FromDto(dto.Graph);
-
-            if (dto.ViewState != null && workspace.Graph != null)
+            // Create ViewState first, then pass to FromDto to extract layout from blocks
+            if (dto.ViewState != null)
             {
-                workspace.ViewState = ViewState.FromDto(dto.ViewState, workspace.Graph.Blocks);
+                workspace.ViewState = ViewState.FromDto(dto.ViewState);
             }
+            
+            // Pass ViewState to extract embedded layout from blocks
+            workspace.Graph = PipelineGraph.FromDto(dto.Graph, workspace.ViewState);
         }
 
         return workspace;

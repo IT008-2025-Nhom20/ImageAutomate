@@ -13,9 +13,6 @@ public class GaussianBlurBlock : IBlock
 
     private bool _disposed;
 
-    private int _nodeWidth = 220;
-    private int _nodeHeight = 110;
-
     private float _sigma = 1.0f;
     private int? _radius = null;
 
@@ -28,40 +25,6 @@ public class GaussianBlurBlock : IBlock
     public string Title => "Gaussian Blur";
 
     public string Content => $"Sigma: {Sigma}\nRadius: {Radius}";
-
-    #endregion
-
-    #region Layout
-
-    [Category("Layout")]
-    [Description("Width of the block node")]
-    public int Width
-    {
-        get => _nodeWidth;
-        set
-        {
-            if (_nodeWidth != value)
-            {
-                _nodeWidth = value;
-                OnPropertyChanged(nameof(Width));
-            }
-        }
-    }
-
-    [Category("Layout")]
-    [Description("Height of the block node")]
-    public int Height
-    {
-        get => _nodeHeight;
-        set
-        {
-            if (_nodeHeight != value)
-            {
-                _nodeHeight = value;
-                OnPropertyChanged(nameof(Height));
-            }
-        }
-    }
 
     #endregion
 

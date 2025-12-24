@@ -36,8 +36,8 @@ public class GraphExecutorTests
         _graph.AddBlock(blockB);
         _graph.AddBlock(sink);
 
-        _graph.Connect(source, source.Outputs[0], blockB, blockB.Inputs[0]);
-        _graph.Connect(blockB, blockB.Outputs[0], sink, sink.Inputs[0]);
+        _graph.AddEdge(source, source.Outputs[0], blockB, blockB.Inputs[0]);
+        _graph.AddEdge(blockB, blockB.Outputs[0], sink, sink.Inputs[0]);
 
         _executor.Execute(_graph);
 
@@ -64,20 +64,20 @@ public class GraphExecutorTests
         _graph.AddBlock(save);
 
         // Load -> A
-        _graph.Connect(load, load.Outputs[0], blockA, blockA.Inputs[0]);
+        _graph.AddEdge(load, load.Outputs[0], blockA, blockA.Inputs[0]);
         // Load -> B
-        _graph.Connect(load, load.Outputs[0], blockB, blockB.Inputs[0]);
+        _graph.AddEdge(load, load.Outputs[0], blockB, blockB.Inputs[0]);
         // Load -> C (Input 0)
-        _graph.Connect(load, load.Outputs[0], blockC, blockC.Inputs[0]);
+        _graph.AddEdge(load, load.Outputs[0], blockC, blockC.Inputs[0]);
 
         // B -> C (Input 1)
-        _graph.Connect(blockB, blockB.Outputs[0], blockC, blockC.Inputs[1]);
+        _graph.AddEdge(blockB, blockB.Outputs[0], blockC, blockC.Inputs[1]);
 
         // A -> C (Input 2)
-        _graph.Connect(blockA, blockA.Outputs[0], blockC, blockC.Inputs[2]);
+        _graph.AddEdge(blockA, blockA.Outputs[0], blockC, blockC.Inputs[2]);
 
         // C -> Save
-        _graph.Connect(blockC, blockC.Outputs[0], save, save.Inputs[0]);
+        _graph.AddEdge(blockC, blockC.Outputs[0], save, save.Inputs[0]);
 
         _executor.Execute(_graph);
 
@@ -125,19 +125,19 @@ public class GraphExecutorTests
         _graph.AddBlock(save);
 
         // Load -> A (Input 0)
-        _graph.Connect(load, load.Outputs[0], blockA, blockA.Inputs[0]);
+        _graph.AddEdge(load, load.Outputs[0], blockA, blockA.Inputs[0]);
 
         // Load -> B
-        _graph.Connect(load, load.Outputs[0], blockB, blockB.Inputs[0]);
+        _graph.AddEdge(load, load.Outputs[0], blockB, blockB.Inputs[0]);
 
         // B -> C
-        _graph.Connect(blockB, blockB.Outputs[0], blockC, blockC.Inputs[0]);
+        _graph.AddEdge(blockB, blockB.Outputs[0], blockC, blockC.Inputs[0]);
 
         // C -> A (Input 1)
-        _graph.Connect(blockC, blockC.Outputs[0], blockA, blockA.Inputs[1]);
+        _graph.AddEdge(blockC, blockC.Outputs[0], blockA, blockA.Inputs[1]);
 
         // A -> Save
-        _graph.Connect(blockA, blockA.Outputs[0], save, save.Inputs[0]);
+        _graph.AddEdge(blockA, blockA.Outputs[0], save, save.Inputs[0]);
 
         _executor.Execute(_graph);
 
@@ -174,8 +174,8 @@ public class GraphExecutorTests
         _graph.AddBlock(failBlock);
         _graph.AddBlock(sink);
 
-        _graph.Connect(source, source.Outputs[0], failBlock, failBlock.Inputs[0]);
-        _graph.Connect(failBlock, failBlock.Outputs[0], sink, sink.Inputs[0]);
+        _graph.AddEdge(source, source.Outputs[0], failBlock, failBlock.Inputs[0]);
+        _graph.AddEdge(failBlock, failBlock.Outputs[0], sink, sink.Inputs[0]);
 
         // Expectation: Execution throws AggregateException containing the failure
         var ex = Assert.Throws<AggregateException>(() => _executor.Execute(_graph));
@@ -197,7 +197,7 @@ public class GraphExecutorTests
         _graph.AddBlock(source);
         _graph.AddBlock(failSink);
 
-        _graph.Connect(source, source.Outputs[0], failSink, failSink.Inputs[0]);
+        _graph.AddEdge(source, source.Outputs[0], failSink, failSink.Inputs[0]);
 
         var ex = Assert.Throws<AggregateException>(() => _executor.Execute(_graph));
         Assert.Contains(ex.InnerExceptions, e => e.Message.Contains("FailSink"));
@@ -229,15 +229,15 @@ public class GraphExecutorTests
         _graph.AddBlock(blockB);
         _graph.AddBlock(sink);
 
-        _graph.Connect(source1, source1.Outputs[0], blockA, blockA.Inputs[0]);
-        _graph.Connect(source2, source2.Outputs[0], blockC, blockC.Inputs[0]);
+        _graph.AddEdge(source1, source1.Outputs[0], blockA, blockA.Inputs[0]);
+        _graph.AddEdge(source2, source2.Outputs[0], blockC, blockC.Inputs[0]);
 
         // Merge A and C into Choke
-        _graph.Connect(blockA, blockA.Outputs[0], choke, choke.Inputs[0]);
-        _graph.Connect(blockC, blockC.Outputs[0], choke, choke.Inputs[0]);
+        _graph.AddEdge(blockA, blockA.Outputs[0], choke, choke.Inputs[0]);
+        _graph.AddEdge(blockC, blockC.Outputs[0], choke, choke.Inputs[0]);
 
-        _graph.Connect(choke, choke.Outputs[0], blockB, blockB.Inputs[0]);
-        _graph.Connect(blockB, blockB.Outputs[0], sink, sink.Inputs[0]);
+        _graph.AddEdge(choke, choke.Outputs[0], blockB, blockB.Inputs[0]);
+        _graph.AddEdge(blockB, blockB.Outputs[0], sink, sink.Inputs[0]);
 
         var ex = Assert.Throws<AggregateException>(() => _executor.Execute(_graph));
         Assert.Contains(ex.InnerExceptions, e => e.Message.Contains("Choke"));
@@ -262,9 +262,9 @@ public class GraphExecutorTests
         _graph.AddBlock(downstream);
         _graph.AddBlock(sink);
 
-        _graph.Connect(source, source.Outputs[0], fail, fail.Inputs[0]);
-        _graph.Connect(fail, fail.Outputs[0], downstream, downstream.Inputs[0]);
-        _graph.Connect(downstream, downstream.Outputs[0], sink, sink.Inputs[0]);
+        _graph.AddEdge(source, source.Outputs[0], fail, fail.Inputs[0]);
+        _graph.AddEdge(fail, fail.Outputs[0], downstream, downstream.Inputs[0]);
+        _graph.AddEdge(downstream, downstream.Outputs[0], sink, sink.Inputs[0]);
 
         var ex = Assert.Throws<AggregateException>(() => _executor.Execute(_graph));
         // Verify downstream never ran?
@@ -288,8 +288,8 @@ public class GraphExecutorTests
         _graph.AddBlock(merge);
         _graph.AddBlock(sink);
 
-        _graph.Connect(source1, source1.Outputs[0], merge, merge.Inputs[0]);
-        _graph.Connect(merge, merge.Outputs[0], sink, sink.Inputs[0]);
+        _graph.AddEdge(source1, source1.Outputs[0], merge, merge.Inputs[0]);
+        _graph.AddEdge(merge, merge.Outputs[0], sink, sink.Inputs[0]);
 
         _executor.Execute(_graph);
         Assert.Equal(5, sink.ReceivedItems.Count);
@@ -314,11 +314,11 @@ public class GraphExecutorTests
         _graph.AddBlock(merge);
         _graph.AddBlock(sink);
 
-        _graph.Connect(source1, source1.Outputs[0], merge, merge.Inputs[0]);
-        _graph.Connect(source2, source2.Outputs[0], merge, merge.Inputs[0]);
-        _graph.Connect(merge, merge.Outputs[0], sink, sink.Inputs[0]);
+        _graph.AddEdge(source1, source1.Outputs[0], merge, merge.Inputs[0]);
+        _graph.AddEdge(source2, source2.Outputs[0], merge, merge.Inputs[0]);
+        _graph.AddEdge(merge, merge.Outputs[0], sink, sink.Inputs[0]);
 
-        foreach (var cnn in _graph.Connections)
+        foreach (var cnn in _graph.Edges)
         {
             Debug.WriteLine($"Graph Connection: {cnn.Source.Name}.{cnn.SourceSocket.Id} -> {cnn.Target.Name}.{cnn.TargetSocket.Id}");
         }
@@ -349,18 +349,18 @@ public class GraphExecutorTests
         _graph.AddBlock(sink);
 
         // Source -> Splitter
-        _graph.Connect(source, source.Outputs[0], splitter, splitter.Inputs[0]);
+        _graph.AddEdge(source, source.Outputs[0], splitter, splitter.Inputs[0]);
 
         // Splitter Out0 -> A -> Merger In0
-        _graph.Connect(splitter, splitter.Outputs[0], blockA, blockA.Inputs[0]);
-        _graph.Connect(blockA, blockA.Outputs[0], merger, merger.Inputs[0]);
+        _graph.AddEdge(splitter, splitter.Outputs[0], blockA, blockA.Inputs[0]);
+        _graph.AddEdge(blockA, blockA.Outputs[0], merger, merger.Inputs[0]);
 
         // Splitter Out1 -> B -> Merger In1
-        _graph.Connect(splitter, splitter.Outputs[1], blockB, blockB.Inputs[0]);
-        _graph.Connect(blockB, blockB.Outputs[0], merger, merger.Inputs[1]);
+        _graph.AddEdge(splitter, splitter.Outputs[1], blockB, blockB.Inputs[0]);
+        _graph.AddEdge(blockB, blockB.Outputs[0], merger, merger.Inputs[1]);
 
         // Merger -> Sink
-        _graph.Connect(merger, merger.Outputs[0], sink, sink.Inputs[0]);
+        _graph.AddEdge(merger, merger.Outputs[0], sink, sink.Inputs[0]);
 
         _executor.Execute(_graph);
 
@@ -406,14 +406,14 @@ public class GraphExecutorTests
         _graph.AddBlock(sink);
 
         // Branch 1 (Fails)
-        _graph.Connect(source1, source1.Outputs[0], failA, failA.Inputs[0]);
-        _graph.Connect(failA, failA.Outputs[0], merger, merger.Inputs[0]);
+        _graph.AddEdge(source1, source1.Outputs[0], failA, failA.Inputs[0]);
+        _graph.AddEdge(failA, failA.Outputs[0], merger, merger.Inputs[0]);
 
         // Branch 2 (OK)
-        _graph.Connect(source2, source2.Outputs[0], passB, passB.Inputs[0]);
-        _graph.Connect(passB, passB.Outputs[0], merger, merger.Inputs[0]);
+        _graph.AddEdge(source2, source2.Outputs[0], passB, passB.Inputs[0]);
+        _graph.AddEdge(passB, passB.Outputs[0], merger, merger.Inputs[0]);
 
-        _graph.Connect(merger, merger.Outputs[0], sink, sink.Inputs[0]);
+        _graph.AddEdge(merger, merger.Outputs[0], sink, sink.Inputs[0]);
 
         // Current engine behavior: Throw exception on failure.
         // But maybe we want to verify partial success?
@@ -443,8 +443,8 @@ public class GraphExecutorTests
         _graph.AddBlock(blockA);
         _graph.AddBlock(sink);
 
-        _graph.Connect(source, source.Outputs[0], blockA, blockA.Inputs[0]);
-        _graph.Connect(blockA, blockA.Outputs[0], sink, sink.Inputs[0]);
+        _graph.AddEdge(source, source.Outputs[0], blockA, blockA.Inputs[0]);
+        _graph.AddEdge(blockA, blockA.Outputs[0], sink, sink.Inputs[0]);
 
         // Use configuration with larger batch size than source items
         var config = new ExecutorConfiguration { MaxShipmentSize = 32 };
@@ -466,7 +466,7 @@ public class GraphExecutorTests
         _graph.AddBlock(source);
         _graph.AddBlock(sink);
 
-        _graph.Connect(source, source.Outputs[0], sink, sink.Inputs[0]);
+        _graph.AddEdge(source, source.Outputs[0], sink, sink.Inputs[0]);
 
         var config = new ExecutorConfiguration { MaxShipmentSize = 10 };
         await _executor.ExecuteAsync(_graph, config, TestContext.Current.CancellationToken);
@@ -492,9 +492,9 @@ public class GraphExecutorTests
         _graph.AddBlock(merger);
         _graph.AddBlock(sink);
 
-        _graph.Connect(source1, source1.Outputs[0], merger, merger.Inputs[0]);
-        _graph.Connect(source2, source2.Outputs[0], merger, merger.Inputs[0]);
-        _graph.Connect(merger, merger.Outputs[0], sink, sink.Inputs[0]);
+        _graph.AddEdge(source1, source1.Outputs[0], merger, merger.Inputs[0]);
+        _graph.AddEdge(source2, source2.Outputs[0], merger, merger.Inputs[0]);
+        _graph.AddEdge(merger, merger.Outputs[0], sink, sink.Inputs[0]);
 
         var config = new ExecutorConfiguration { MaxShipmentSize = 10 };
         await _executor.ExecuteAsync(_graph, config, TestContext.Current.CancellationToken);
@@ -516,7 +516,7 @@ public class GraphExecutorTests
         _graph.AddBlock(source);
         _graph.AddBlock(sink);
 
-        _graph.Connect(source, source.Outputs[0], sink, sink.Inputs[0]);
+        _graph.AddEdge(source, source.Outputs[0], sink, sink.Inputs[0]);
 
         _executor.Execute(_graph);
 
@@ -551,11 +551,11 @@ public class GraphExecutorTests
         _graph.AddBlock(blockD);
         _graph.AddBlock(sink);
 
-        _graph.Connect(source, source.Outputs[0], blockB, blockB.Inputs[0]);
-        _graph.Connect(source, source.Outputs[0], blockC, blockC.Inputs[0]);
-        _graph.Connect(blockB, blockB.Outputs[0], blockD, blockD.Inputs[0]);
-        _graph.Connect(blockC, blockC.Outputs[0], blockD, blockD.Inputs[1]);
-        _graph.Connect(blockD, blockD.Outputs[0], sink, sink.Inputs[0]);
+        _graph.AddEdge(source, source.Outputs[0], blockB, blockB.Inputs[0]);
+        _graph.AddEdge(source, source.Outputs[0], blockC, blockC.Inputs[0]);
+        _graph.AddEdge(blockB, blockB.Outputs[0], blockD, blockD.Inputs[0]);
+        _graph.AddEdge(blockC, blockC.Outputs[0], blockD, blockD.Inputs[1]);
+        _graph.AddEdge(blockD, blockD.Outputs[0], sink, sink.Inputs[0]);
 
         _executor.Execute(_graph);
 
@@ -590,10 +590,10 @@ public class GraphExecutorTests
 
         for (int i = 0; i < 5; i++)
         {
-            _graph.Connect(source, source.Outputs[0], branches[i], branches[i].Inputs[0]);
-            _graph.Connect(branches[i], branches[i].Outputs[0], merger, merger.Inputs[i]);
+            _graph.AddEdge(source, source.Outputs[0], branches[i], branches[i].Inputs[0]);
+            _graph.AddEdge(branches[i], branches[i].Outputs[0], merger, merger.Inputs[i]);
         }
-        _graph.Connect(merger, merger.Outputs[0], sink, sink.Inputs[0]);
+        _graph.AddEdge(merger, merger.Outputs[0], sink, sink.Inputs[0]);
 
         _executor.Execute(_graph);
 
@@ -621,13 +621,13 @@ public class GraphExecutorTests
         {
             var block = new PassthroughBlock($"B{i}");
             _graph.AddBlock(block);
-            _graph.Connect(previous, previousOutput, block, block.Inputs[0]);
+            _graph.AddEdge(previous, previousOutput, block, block.Inputs[0]);
             previous = block;
             previousOutput = block.Outputs[0];
         }
 
         _graph.AddBlock(sink);
-        _graph.Connect(previous, previousOutput, sink, sink.Inputs[0]);
+        _graph.AddEdge(previous, previousOutput, sink, sink.Inputs[0]);
 
         _executor.Execute(_graph);
 
@@ -649,7 +649,7 @@ public class GraphExecutorTests
         _graph.AddBlock(source);
         _graph.AddBlock(sink);
 
-        _graph.Connect(source, source.Outputs[0], sink, sink.Inputs[0]);
+        _graph.AddEdge(source, source.Outputs[0], sink, sink.Inputs[0]);
 
         var config = new ExecutorConfiguration();
 

@@ -59,7 +59,7 @@
     "Block": {
       "type": "object",
       "description": "A processing block in the pipeline",
-      "required": ["blockType", "assemblyQualifiedName", "width", "height", "inputs", "outputs"],
+      "required": ["blockType", "assemblyQualifiedName", "inputs", "outputs"],
       "properties": {
         "blockType": {
           "type": "string",
@@ -86,15 +86,9 @@
           "type": "string",
           "description": "Fully qualified assembly name for deserialization"
         },
-        "width": {
-          "type": "integer",
-          "description": "Visual width of the block in the UI",
-          "minimum": 50
-        },
-        "height": {
-          "type": "integer",
-          "description": "Visual height of the block in the UI",
-          "minimum": 50
+        "layout": {
+          "$ref": "#/definitions/BlockLayout",
+          "description": "Visual layout of the block in the UI (position and size)"
         },
         "properties": {
           "type": "object",
@@ -161,15 +155,8 @@
     },
     "ViewState": {
       "type": "object",
-      "description": "UI state information for the workspace",
+      "description": "Global UI state information for the workspace (block-specific layout is embedded in each block)",
       "properties": {
-        "blockPositions": {
-          "type": "object",
-          "description": "Positions of blocks in the canvas (key is block index)",
-          "additionalProperties": {
-            "$ref": "#/definitions/Position"
-          }
-        },
         "zoom": {
           "type": "number",
           "description": "Zoom level of the canvas",
@@ -190,18 +177,30 @@
       },
       "required": ["zoom", "panX", "panY"]
     },
-    "Position": {
+    "BlockLayout": {
       "type": "object",
-      "description": "2D position coordinates",
-      "required": ["x", "y"],
+      "description": "Visual layout of a block (position and size)",
+      "required": ["x", "y", "width", "height"],
       "properties": {
         "x": {
           "type": "number",
-          "description": "X coordinate"
+          "description": "X coordinate of the block"
         },
         "y": {
           "type": "number",
-          "description": "Y coordinate"
+          "description": "Y coordinate of the block"
+        },
+        "width": {
+          "type": "integer",
+          "description": "Visual width of the block",
+          "minimum": 50,
+          "default": 200
+        },
+        "height": {
+          "type": "integer",
+          "description": "Visual height of the block",
+          "minimum": 50,
+          "default": 100
         }
       }
     }

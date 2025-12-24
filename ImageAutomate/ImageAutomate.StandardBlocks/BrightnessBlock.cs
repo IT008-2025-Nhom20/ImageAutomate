@@ -18,9 +18,6 @@ public class BrightnessBlock : IBlock
 
     private bool _disposed;
 
-    private int _nodeWidth = 200;
-    private int _nodeHeight = 100;
-
     private float _bright = 1.0f;
 
     #endregion
@@ -32,40 +29,6 @@ public class BrightnessBlock : IBlock
     public string Title => "Brightness";
 
     public string Content => $"Brightness: {Bright}";
-
-    #endregion
-
-    #region Layout
-
-    [Category("Layout")]
-    [Description("Width of the block node")]
-    public int Width
-    {
-        get => _nodeWidth;
-        set
-        {
-            if (_nodeWidth != value)
-            {
-                _nodeWidth = value;
-                OnPropertyChanged(nameof(Width));
-            }
-        }
-    }
-
-    [Category("Layout")]
-    [Description("Height of the block node")]
-    public int Height
-    {
-        get => _nodeHeight;
-        set
-        {
-            if (_nodeHeight != value)
-            {
-                _nodeHeight = value;
-                OnPropertyChanged(nameof(Height));
-            }
-        }
-    }
 
     #endregion
 

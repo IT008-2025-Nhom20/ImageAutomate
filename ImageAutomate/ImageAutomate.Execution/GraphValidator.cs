@@ -16,10 +16,10 @@ namespace ImageAutomate.Execution
         {
             var adjacencyList = new Dictionary<IBlock, List<IBlock>>();
 
-            foreach (var block in graph.Blocks)
+            foreach (var block in graph.Nodes)
                 adjacencyList[block] = [];
 
-            foreach (var connection in graph.Connections)
+            foreach (var connection in graph.Edges)
                 adjacencyList[connection.Source].Add(connection.Target);
 
             return adjacencyList;
@@ -28,7 +28,7 @@ namespace ImageAutomate.Execution
         private bool IsGraphDAG(PipelineGraph graph)
         {
             var adjacencyList = BuildAdjacencyList(graph);
-            var inDegree = graph.Blocks.ToDictionary(block => block, _ => 0);
+            var inDegree = graph.Nodes.ToDictionary(block => block, _ => 0);
 
             foreach (var source in adjacencyList.Keys)
             {
@@ -59,26 +59,26 @@ namespace ImageAutomate.Execution
                 }
             }
 
-            return count == graph.Blocks.Count;
+            return count == graph.Nodes.Count;
         }
 
         private bool HasExactlyOneShipmentSource(PipelineGraph graph)
         {
-            return graph.Blocks.OfType<IShipmentSource>().Take(2).Count() == 1;
+            return graph.Nodes.OfType<IShipmentSource>().Take(2).Count() == 1;
         }
 
         private bool HasAtLeastOneShipmentSink(PipelineGraph graph)
         {
-            return graph.Blocks.OfType<IShipmentSink>().Any();
+            return graph.Nodes.OfType<IShipmentSink>().Any();
         }
 
         private bool AllInputSocketsConnected(PipelineGraph graph)
         {
-            var connectedTargets = graph.Connections
+            var connectedTargets = graph.Edges
                 .Select(c => c.TargetSocket)
                 .ToHashSet();
 
-            foreach (var block in graph.Blocks)
+            foreach (var block in graph.Nodes)
             {
                 foreach (var inputSocket in block.Inputs)
                 {

@@ -34,9 +34,9 @@ public class GeminiTest
         _graph.AddBlock(reader);
 
         // Connect Source -> Modifier
-        _graph.Connect(source, source.Outputs[0], modifier, modifier.Inputs[0]);
+        _graph.AddEdge(source, source.Outputs[0], modifier, modifier.Inputs[0]);
         // Connect Source -> Reader (Parallel branch)
-        _graph.Connect(source, source.Outputs[0], reader, reader.Inputs[0]);
+        _graph.AddEdge(source, source.Outputs[0], reader, reader.Inputs[0]);
 
         _executor.Execute(_graph);
 
@@ -70,18 +70,18 @@ public class GeminiTest
         _graph.AddBlock(sink);
 
         // Source -> Switch
-        _graph.Connect(source, source.Outputs[0], switchBlock, switchBlock.Inputs[0]);
+        _graph.AddEdge(source, source.Outputs[0], switchBlock, switchBlock.Inputs[0]);
 
         // Branch 0 (Active)
-        _graph.Connect(switchBlock, switchBlock.Outputs[0], pass0, pass0.Inputs[0]);
-        _graph.Connect(pass0, pass0.Outputs[0], merger, merger.Inputs[0]);
+        _graph.AddEdge(switchBlock, switchBlock.Outputs[0], pass0, pass0.Inputs[0]);
+        _graph.AddEdge(pass0, pass0.Outputs[0], merger, merger.Inputs[0]);
 
         // Branch 1 (Silent/Empty)
-        _graph.Connect(switchBlock, switchBlock.Outputs[1], pass1, pass1.Inputs[0]);
-        _graph.Connect(pass1, pass1.Outputs[0], merger, merger.Inputs[1]);
+        _graph.AddEdge(switchBlock, switchBlock.Outputs[1], pass1, pass1.Inputs[0]);
+        _graph.AddEdge(pass1, pass1.Outputs[0], merger, merger.Inputs[1]);
 
         // Merger -> Sink
-        _graph.Connect(merger, merger.Outputs[0], sink, sink.Inputs[0]);
+        _graph.AddEdge(merger, merger.Outputs[0], sink, sink.Inputs[0]);
 
         _executor.Execute(_graph);
 
@@ -140,14 +140,14 @@ public class GeminiTest
         _graph.AddBlock(slowBranch);
         _graph.AddBlock(sink);
 
-        _graph.Connect(source, source.Outputs[0], split, split.Inputs[0]);
+        _graph.AddEdge(source, source.Outputs[0], split, split.Inputs[0]);
         
         // Fast Branch
-        _graph.Connect(split, split.Outputs[0], fastBranch, fastBranch.Inputs[0]);
-        _graph.Connect(fastBranch, fastBranch.Outputs[0], sink, sink.Inputs[0]);
+        _graph.AddEdge(split, split.Outputs[0], fastBranch, fastBranch.Inputs[0]);
+        _graph.AddEdge(fastBranch, fastBranch.Outputs[0], sink, sink.Inputs[0]);
 
         // Slow Branch
-        _graph.Connect(split, split.Outputs[1], slowBranch, slowBranch.Inputs[0]);
+        _graph.AddEdge(split, split.Outputs[1], slowBranch, slowBranch.Inputs[0]);
 
         // Execute expecting failure
         var ex = Assert.Throws<AggregateException>(() => _executor.Execute(_graph));

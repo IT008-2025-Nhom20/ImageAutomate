@@ -84,8 +84,12 @@ The serialized JSON has the following structure (with optional `$schema` for Int
             {
                 "blockType": "LoadBlock",
                 "assemblyQualifiedName": "ImageAutomate.StandardBlocks.LoadBlock, ...",
-                "width": 200,
-                "height": 100,
+                "layout": {
+                    "x": 100,
+                    "y": 100,
+                    "width": 200,
+                    "height": 100
+                },
                 "properties": {
                     "SourcePath": "/images",
                     "AutoOrient": true
@@ -98,14 +102,18 @@ The serialized JSON has the following structure (with optional `$schema` for Int
             {
                 "blockType": "ConvertBlock",
                 "assemblyQualifiedName": "ImageAutomate.StandardBlocks.ConvertBlock, ...",
-                "width": 200,
-                "height": 100,
+                "layout": {
+                    "x": 400,
+                    "y": 100,
+                    "width": 200,
+                    "height": 100
+                },
                 "properties": {
-                "TargetFormat": "Jpeg",
-                "AlwaysEncode": false,
-                "JpegOptions": {
-                    "Quality": 90
-                }
+                    "TargetFormat": "Jpeg",
+                    "AlwaysEncode": false,
+                    "JpegOptions": {
+                        "Quality": 90
+                    }
                 },
                 "inputs": [
                     { "id": "Convert.In", "name": "Image.Input" }
@@ -126,10 +134,6 @@ The serialized JSON has the following structure (with optional `$schema` for Int
         "centerBlockIndex": null
     },
     "viewState": {
-        "blockPositions": {
-            "0": { "x": 100, "y": 100 },
-            "1": { "x": 400, "y": 100 }
-        },
         "zoom": 1.5,
         "panX": 0.0,
         "panY": 0.0

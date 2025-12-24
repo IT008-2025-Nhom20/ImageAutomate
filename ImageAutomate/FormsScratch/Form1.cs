@@ -10,12 +10,11 @@ namespace FormsScratch
         public Form1()
         {
             InitializeComponent();
-            pipelineGraph.GraphChanged += OnGraphChanged;
         }
 
         private void OnGraphChanged(object? sender, EventArgs e)
         {
-            propertyGrid1.SelectedObject = pipelineGraph.Center;
+            propertyGrid1.SelectedObject = pipelineGraph.SelectedItem;
             graphRenderPanel1.Invalidate();
         }
 
@@ -31,32 +30,28 @@ namespace FormsScratch
             pipelineGraph.AddBlock(convertBlock);
             pipelineGraph.AddBlock(saveBlockA);
             pipelineGraph.AddBlock(saveBlockB);
-            pipelineGraph.Connect(loadBlock, loadBlock.Outputs[0], resizeBlock, resizeBlock.Inputs[0]);
-            pipelineGraph.Connect(loadBlock, loadBlock.Outputs[0], convertBlock, convertBlock.Inputs[0]);
-            pipelineGraph.Connect(resizeBlock, resizeBlock.Outputs[0], saveBlockA, saveBlockA.Inputs[0]);
-            pipelineGraph.Connect(convertBlock, convertBlock.Outputs[0], saveBlockB, saveBlockB.Inputs[0]);
+            pipelineGraph.AddEdge(loadBlock, loadBlock.Outputs[0], resizeBlock, resizeBlock.Inputs[0]);
+            pipelineGraph.AddEdge(loadBlock, loadBlock.Outputs[0], convertBlock, convertBlock.Inputs[0]);
+            pipelineGraph.AddEdge(resizeBlock, resizeBlock.Outputs[0], saveBlockA, saveBlockA.Inputs[0]);
+            pipelineGraph.AddEdge(convertBlock, convertBlock.Outputs[0], saveBlockB, saveBlockB.Inputs[0]);
 
-            pipelineGraph.Center = loadBlock;
+            pipelineGraph.SelectedItem = loadBlock;
 
-            graphRenderPanel1.Graph = pipelineGraph;
             propertyGrid1.SelectedObject = loadBlock;
         }
 
         private void button1_Click(object sender, EventArgs e)
         {
-            graphRenderPanel1.CenterCameraOnGraph();
         }
 
         private void button2_Click(object sender, EventArgs e)
         {
             graphRenderPanel1.RenderScale = Math.Clamp(graphRenderPanel1.RenderScale + 0.1f, 0.1f, 5f);
-            graphRenderPanel1.CenterCameraOnGraph();
         }
 
         private void button3_Click(object sender, EventArgs e)
         {
             graphRenderPanel1.RenderScale = Math.Clamp(graphRenderPanel1.RenderScale - 0.1f, 0.1f, 5f);
-            graphRenderPanel1.CenterCameraOnGraph();
         }
     }
 }

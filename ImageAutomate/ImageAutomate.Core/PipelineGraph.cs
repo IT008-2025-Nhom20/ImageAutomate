@@ -31,97 +31,114 @@ public class PipelineGraph
         IncludeFields = true,
         WriteIndented = true,
     };
+
     #region Private Fields
-    private IBlock? _center;
-    private readonly List<IBlock> _blocks = [];
-    private readonly List<Connection> _connections = [];
+    private readonly List<IBlock> _nodes = []; // nodes maintain layer hierarchy
+    private readonly List<Connection> _edges = [];
     #endregion
+    private IBlock? SelectedBlock
+    {
+        get => SelectedItem as IBlock;
+        set => SelectedItem = value;
+    }
 
     #region Properties
-    public IBlock? Center
-    {
-        get => _center;
-        set
-        {
-            if (value != null && !_blocks.Contains(value))
-                throw new InvalidOperationException("Center block must be part of the graph.");
-            _center = value;
-            GraphChanged?.Invoke(this, EventArgs.Empty);
-        }
-    }
-    public IReadOnlyList<IBlock> Blocks => _blocks;
-    public IReadOnlyList<Connection> Connections => _connections;
+    public object? SelectedItem { get; set; }
+    public IReadOnlyList<IBlock> Nodes => _nodes;
+    public IReadOnlyList<Connection> Edges => _edges;
     /// <summary>
     /// Occurs when the graph structure changes (nodes/edges added or removed).
     /// </summary>
-    public event EventHandler? GraphChanged;
+    public event Action<IBlock>? OnNodeRemoved;
     #endregion
 
     #region Public API
+
+    /// <summary>
+    /// Adds a block to the graph.
+    /// </summary>
     public void AddBlock(IBlock block)
     {
-        if (!_blocks.Contains(block))
+        if (!_nodes.Contains(block))
         {
-            _blocks.Add(block);
-            GraphChanged?.Invoke(this, EventArgs.Empty);
+            _nodes.Add(block);
         }
     }
 
     /// <summary>
     /// Removes a block and all its associated connections from the graph.
     /// </summary>
-    public void RemoveBlock(IBlock block)
+    public void RemoveNode(IBlock block)
     {
-        if (_blocks.Remove(block))
+        if (_nodes.Contains(block))
         {
-            // Remove all connections touching this block
-            _connections.RemoveAll(c => c.Source == block || c.Target == block);
+            // Remove edges connected to this block
+            _edges.RemoveAll(e => e.Source == block || e.Target == block);
 
-            if (Center == block)
-                Center = null;
-            GraphChanged?.Invoke(this, EventArgs.Empty);
+            _nodes.Remove(block);
+
+            if (SelectedItem == block) SelectedItem = null;
+            // Also need to check if SelectedItem was an edge connected to this block
+            if (SelectedItem is Connection edge && (edge.Source == block || edge.Target == block))
+            {
+                SelectedItem = null;
+            }
+
+            OnNodeRemoved?.Invoke(block);
         }
     }
 
     /// <summary>
     /// Connects two blocks via specific sockets.
     /// </summary>
-    public void Connect(IBlock source, Socket sourceSocket, IBlock target, Socket targetSocket)
+    public void AddEdge(IBlock source, Socket sourceSocket, IBlock target, Socket targetSocket)
     {
-        if (!Blocks.Contains(source))
+        if (!Nodes.Contains(source))
             throw new ArgumentException($"Source block '{source.Title}' not found in graph");
-        if (!Blocks.Contains(target))
+        if (!Nodes.Contains(target))
             throw new ArgumentException($"Target block '{target.Title}' not found in graph");
         if (source.Outputs.All(s => s != sourceSocket))
             throw new ArgumentException($"Source socket '{sourceSocket.Id}' not found on {source.Title}");
         if (target.Inputs.All(s => s != targetSocket))
             throw new ArgumentException($"Target socket '{targetSocket.Id}' not found on {target.Title}");
 
-        _connections.Add(new Connection(source, sourceSocket, target, targetSocket));
-
-        GraphChanged?.Invoke(this, EventArgs.Empty);
+        _edges.Add(new Connection(source, sourceSocket, target, targetSocket));
     }
 
     /// <summary>
-    /// Connects two blocks via Socket IDs.
+    /// Connects two blocks via socket IDs.
     /// </summary>
-    public void Connect(IBlock source, string sourceSocketId, IBlock target, string targetSocketId)
+    /// <exception cref="ArgumentException">when socket ID not found on their respective block</exception>
+    public void AddEdge(IBlock source, string sourceSocketId, IBlock target, string targetSocketId)
     {
         var srcSocket = source.Outputs.FirstOrDefault(s => s.Id == sourceSocketId)
             ?? throw new ArgumentException($"Socket ID '{sourceSocketId}' not found on source '{source.Title}'");
         var tgtSocket = target.Inputs.FirstOrDefault(s => s.Id == targetSocketId)
             ?? throw new ArgumentException($"Socket ID '{targetSocketId}' not found on target '{target.Title}'");
 
-        Connect(source, srcSocket, target, tgtSocket);
+        AddEdge(source, srcSocket, target, tgtSocket);
     }
 
     /// <summary>
     /// Removes the specified connection.
     /// </summary>
-    public void Disconnect(Connection connection)
+    public void RemoveEdge(Connection edge)
     {
-        if (_connections.Remove(connection))
-            GraphChanged?.Invoke(this, EventArgs.Empty);
+        if (_edges.Contains(edge))
+        {
+            _edges.Remove(edge);
+            if (SelectedItem is Connection conn && conn == edge)
+                SelectedItem = null;
+        }
+    }
+
+    /// <summary>
+    /// Moves the specified block to the top layer (end of the list).
+    /// </summary>
+    public void BringToTop(IBlock block)
+    {
+        if (_nodes.Remove(block))
+            _nodes.Add(block);
     }
 
     /// <summary>
@@ -129,10 +146,9 @@ public class PipelineGraph
     /// </summary>
     public void Clear()
     {
-        _connections.Clear();
-        _blocks.Clear();
-        Center = null;
-        GraphChanged?.Invoke(this, EventArgs.Empty);
+        _edges.Clear();
+        _nodes.Clear();
+        SelectedItem = null;
     }
     #endregion
 
@@ -158,23 +174,26 @@ public class PipelineGraph
     }
 
     /// <summary>
-    /// Converts the PipelineGraph to a DTO for serialization.
+    /// Converts the PipelineGraph to a DTO for serialization, embedding layout from ViewState.
     /// </summary>
-    internal PipelineGraphDto ToDto()
+    /// <param name="viewState">Optional ViewState to embed layout information in each block.</param>
+    internal PipelineGraphDto ToDto(ViewState? viewState = null)
     {
         var dto = new PipelineGraphDto();
 
-        // Serialize blocks
-        foreach (var block in _blocks)
+        // Serialize blocks with embedded layout
+        foreach (var block in _nodes)
         {
-            dto.Blocks.Add(BlockSerializer.Serialize(block));
+            Position? position = viewState?.GetBlockPosition(block);
+            Size? size = viewState?.GetBlockSize(block);
+            dto.Blocks.Add(BlockSerializer.Serialize(block, position, size));
         }
 
         // Serialize connections (using block indices)
-        foreach (var connection in _connections)
+        foreach (var connection in _edges)
         {
-            var sourceIndex = _blocks.IndexOf(connection.Source);
-            var targetIndex = _blocks.IndexOf(connection.Target);
+            var sourceIndex = _nodes.IndexOf(connection.Source);
+            var targetIndex = _nodes.IndexOf(connection.Target);
 
             if (sourceIndex < 0 || targetIndex < 0)
                 continue;
@@ -189,28 +208,39 @@ public class PipelineGraph
         }
 
         // Serialize center block
-        if (_center != null)
+        if (SelectedBlock != null)
         {
-            dto.CenterBlockIndex = _blocks.IndexOf(_center);
+            dto.CenterBlockIndex = _nodes.IndexOf(SelectedBlock);
         }
 
         return dto;
     }
 
     /// <summary>
-    /// Creates a PipelineGraph from a DTO.
+    /// Creates a PipelineGraph from a DTO, extracting embedded layout into a ViewState.
     /// </summary>
-    internal static PipelineGraph FromDto(PipelineGraphDto dto)
+    /// <param name="dto">The DTO to deserialize.</param>
+    /// <param name="viewState">The ViewState to populate with layout information.</param>
+    internal static PipelineGraph FromDto(PipelineGraphDto dto, ViewState? viewState = null)
     {
         var graph = new PipelineGraph();
 
-        // Deserialize blocks
+        // Deserialize blocks with layout extraction
         var blocks = new List<IBlock>();
         foreach (var blockDto in dto.Blocks)
         {
-            var block = BlockSerializer.Deserialize(blockDto);
-            blocks.Add(block);
-            graph.AddBlock(block);
+            var result = BlockSerializer.DeserializeWithLayout(blockDto);
+            blocks.Add(result.Block);
+            graph.AddBlock(result.Block);
+            
+            // Extract layout into ViewState if provided
+            if (viewState != null)
+            {
+                if (result.Position != null)
+                    viewState.SetBlockPosition(result.Block, result.Position);
+                if (result.Size != null)
+                    viewState.SetBlockSize(result.Block, result.Size);
+            }
         }
 
         // Deserialize connections
@@ -229,7 +259,7 @@ public class PipelineGraph
 
             if (sourceSocket != null && targetSocket != null)
             {
-                graph.Connect(sourceBlock, sourceSocket, targetBlock, targetSocket);
+                graph.AddEdge(sourceBlock, sourceSocket, targetBlock, targetSocket);
             }
         }
 
@@ -238,7 +268,7 @@ public class PipelineGraph
             dto.CenterBlockIndex.Value >= 0 &&
             dto.CenterBlockIndex.Value < blocks.Count)
         {
-            graph.Center = blocks[dto.CenterBlockIndex.Value];
+            graph.SelectedItem = blocks[dto.CenterBlockIndex.Value];
         }
 
         return graph;

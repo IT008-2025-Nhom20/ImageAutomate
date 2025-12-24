@@ -77,9 +77,6 @@ public class ConvertBlock : IBlock
     private WebPEncodingOptions _webpOptions = new WebPEncodingOptions();
     private QoiEncodingOptions _qoiOptions = new QoiEncodingOptions();
 
-    private int _width = 200;
-    private int _height = 100;
-
     #endregion
 
     public ConvertBlock()
@@ -119,40 +116,6 @@ public class ConvertBlock : IBlock
                 _ => "Options: Default"
             };
             return $"Format: {TargetFormat}\nRe-encode: {AlwaysEncode}\n{optionSummaries}";
-        }
-    }
-
-    #endregion
-
-    #region Layout
-
-    [Category("Layout")]
-    [Description("Width of the black node")]
-    public int Width
-    {
-        get => _width;
-        set
-        {
-            if (_width != value)
-            {
-                _width = value;
-                OnPropertyChanged(nameof(Width));
-            }
-        }
-    }
-
-    [Category("Layout")]
-    [Description("Height of the black node")]
-    public int Height
-    {
-        get => _height;
-        set
-        {
-            if (_height != value)
-            {
-                _height = value;
-                OnPropertyChanged(nameof(Height));
-            }
         }
     }
 

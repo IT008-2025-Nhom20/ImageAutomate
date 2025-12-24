@@ -53,15 +53,15 @@ public class GLMTest
         _graph.AddBlock(sink);
 
         // Branch 1 (will fail): Source1 -> FailingBlock -> Merger
-        _graph.Connect(source1, source1.Outputs[0], failingBlock, failingBlock.Inputs[0]);
-        _graph.Connect(failingBlock, failingBlock.Outputs[0], merger, merger.Inputs[0]);
+        _graph.AddEdge(source1, source1.Outputs[0], failingBlock, failingBlock.Inputs[0]);
+        _graph.AddEdge(failingBlock, failingBlock.Outputs[0], merger, merger.Inputs[0]);
 
         // Branch 2 (should succeed): Source2 -> PassBlock -> Merger
-        _graph.Connect(source2, source2.Outputs[0], passBlock, passBlock.Inputs[0]);
-        _graph.Connect(passBlock, passBlock.Outputs[0], merger, merger.Inputs[1]);
+        _graph.AddEdge(source2, source2.Outputs[0], passBlock, passBlock.Inputs[0]);
+        _graph.AddEdge(passBlock, passBlock.Outputs[0], merger, merger.Inputs[1]);
 
         // Merger -> Sink
-        _graph.Connect(merger, merger.Outputs[0], sink, sink.Inputs[0]);
+        _graph.AddEdge(merger, merger.Outputs[0], sink, sink.Inputs[0]);
 
         // Execute - should fail due to failing block
         var ex = Assert.Throws<AggregateException>(() => _executor.Execute(_graph));
@@ -92,9 +92,9 @@ public class GLMTest
         _graph.AddBlock(sink);
 
         // Both sources feed into the same merger input
-        _graph.Connect(source1, source1.Outputs[0], merger, merger.Inputs[0]);
-        _graph.Connect(source2, source2.Outputs[0], merger, merger.Inputs[0]);
-        _graph.Connect(merger, merger.Outputs[0], sink, sink.Inputs[0]);
+        _graph.AddEdge(source1, source1.Outputs[0], merger, merger.Inputs[0]);
+        _graph.AddEdge(source2, source2.Outputs[0], merger, merger.Inputs[0]);
+        _graph.AddEdge(merger, merger.Outputs[0], sink, sink.Inputs[0]);
 
         _executor.Execute(_graph);
 
@@ -127,18 +127,18 @@ public class GLMTest
         _graph.AddBlock(sink);
 
         // Source -> Split (broadcasts to both branches)
-        _graph.Connect(source, source.Outputs[0], split, split.Inputs[0]);
+        _graph.AddEdge(source, source.Outputs[0], split, split.Inputs[0]);
 
         // Branch 1 (fails): Split -> FailingBranch -> Merge
-        _graph.Connect(split, split.Outputs[0], failingBranch, failingBranch.Inputs[0]);
-        _graph.Connect(failingBranch, failingBranch.Outputs[0], merge, merge.Inputs[0]);
+        _graph.AddEdge(split, split.Outputs[0], failingBranch, failingBranch.Inputs[0]);
+        _graph.AddEdge(failingBranch, failingBranch.Outputs[0], merge, merge.Inputs[0]);
 
         // Branch 2 (works): Split -> WorkingBranch -> Merge
-        _graph.Connect(split, split.Outputs[1], workingBranch, workingBranch.Inputs[0]);
-        _graph.Connect(workingBranch, workingBranch.Outputs[0], merge, merge.Inputs[1]);
+        _graph.AddEdge(split, split.Outputs[1], workingBranch, workingBranch.Inputs[0]);
+        _graph.AddEdge(workingBranch, workingBranch.Outputs[0], merge, merge.Inputs[1]);
 
         // Merge -> Sink
-        _graph.Connect(merge, merge.Outputs[0], sink, sink.Inputs[0]);
+        _graph.AddEdge(merge, merge.Outputs[0], sink, sink.Inputs[0]);
 
         // Execute - should fail due to failing branch
         var ex = Assert.Throws<AggregateException>(() => _executor.Execute(_graph));
@@ -169,9 +169,9 @@ public class GLMTest
         _graph.AddBlock(sink);
 
         // Both sources feed merger
-        _graph.Connect(source1, source1.Outputs[0], merger, merger.Inputs[0]);
-        _graph.Connect(source2, source2.Outputs[0], merger, merger.Inputs[0]);
-        _graph.Connect(merger, merger.Outputs[0], sink, sink.Inputs[0]);
+        _graph.AddEdge(source1, source1.Outputs[0], merger, merger.Inputs[0]);
+        _graph.AddEdge(source2, source2.Outputs[0], merger, merger.Inputs[0]);
+        _graph.AddEdge(merger, merger.Outputs[0], sink, sink.Inputs[0]);
 
         // Use small batch size to force multiple cycles
         var config = new ExecutorConfiguration { MaxShipmentSize = 5 };
@@ -217,22 +217,22 @@ public class GLMTest
         _graph.AddBlock(sink);
 
         // Source connections
-        _graph.Connect(source1, source1.Outputs[0], block1, block1.Inputs[0]);
-        _graph.Connect(source2, source2.Outputs[0], block2, block2.Inputs[0]);
-        _graph.Connect(source3, source3.Outputs[0], block3, block3.Inputs[0]);
+        _graph.AddEdge(source1, source1.Outputs[0], block1, block1.Inputs[0]);
+        _graph.AddEdge(source2, source2.Outputs[0], block2, block2.Inputs[0]);
+        _graph.AddEdge(source3, source3.Outputs[0], block3, block3.Inputs[0]);
 
         // First level merges
-        _graph.Connect(block1, block1.Outputs[0], merge1, merge1.Inputs[0]); // Will fail
-        _graph.Connect(block2, block2.Outputs[0], merge1, merge1.Inputs[1]); // Should work
-        _graph.Connect(block2, block2.Outputs[0], merge2, merge2.Inputs[0]); // Should work
-        _graph.Connect(block3, block3.Outputs[0], merge2, merge2.Inputs[1]); // Should work
+        _graph.AddEdge(block1, block1.Outputs[0], merge1, merge1.Inputs[0]); // Will fail
+        _graph.AddEdge(block2, block2.Outputs[0], merge1, merge1.Inputs[1]); // Should work
+        _graph.AddEdge(block2, block2.Outputs[0], merge2, merge2.Inputs[0]); // Should work
+        _graph.AddEdge(block3, block3.Outputs[0], merge2, merge2.Inputs[1]); // Should work
 
         // Final merge
-        _graph.Connect(merge1, merge1.Outputs[0], finalMerge, finalMerge.Inputs[0]);
-        _graph.Connect(merge2, merge2.Outputs[0], finalMerge, finalMerge.Inputs[1]);
+        _graph.AddEdge(merge1, merge1.Outputs[0], finalMerge, finalMerge.Inputs[0]);
+        _graph.AddEdge(merge2, merge2.Outputs[0], finalMerge, finalMerge.Inputs[1]);
 
         // Final sink
-        _graph.Connect(finalMerge, finalMerge.Outputs[0], sink, sink.Inputs[0]);
+        _graph.AddEdge(finalMerge, finalMerge.Outputs[0], sink, sink.Inputs[0]);
 
         // Execute - should fail due to block1
         var ex = Assert.Throws<AggregateException>(() => _executor.Execute(_graph));
@@ -273,13 +273,13 @@ public class GLMTest
         _graph.AddBlock(sink);
 
         // Redundant paths to redundantMerge
-        _graph.Connect(source1, source1.Outputs[0], failingBlock, failingBlock.Inputs[0]);
-        _graph.Connect(failingBlock, failingBlock.Outputs[0], redundantMerge, redundantMerge.Inputs[0]);
+        _graph.AddEdge(source1, source1.Outputs[0], failingBlock, failingBlock.Inputs[0]);
+        _graph.AddEdge(failingBlock, failingBlock.Outputs[0], redundantMerge, redundantMerge.Inputs[0]);
 
-        _graph.Connect(source2, source2.Outputs[0], workingBlock, workingBlock.Inputs[0]);
-        _graph.Connect(workingBlock, workingBlock.Outputs[0], redundantMerge, redundantMerge.Inputs[1]);
+        _graph.AddEdge(source2, source2.Outputs[0], workingBlock, workingBlock.Inputs[0]);
+        _graph.AddEdge(workingBlock, workingBlock.Outputs[0], redundantMerge, redundantMerge.Inputs[1]);
 
-        _graph.Connect(redundantMerge, redundantMerge.Outputs[0], sink, sink.Inputs[0]);
+        _graph.AddEdge(redundantMerge, redundantMerge.Outputs[0], sink, sink.Inputs[0]);
 
         // Execute - should fail due to failingBlock
         var ex = Assert.Throws<AggregateException>(() => _executor.Execute(_graph));
@@ -326,20 +326,20 @@ public class GLMTest
         _graph.AddBlock(sink);
 
         // Chain 1 (will fail at Chain1_2)
-        _graph.Connect(sourceA, sourceA.Outputs[0], chain1_1, chain1_1.Inputs[0]);
-        _graph.Connect(chain1_1, chain1_1.Outputs[0], chain1_2, chain1_2.Inputs[0]);
-        _graph.Connect(chain1_2, chain1_2.Outputs[0], chain1_3, chain1_3.Inputs[0]);
+        _graph.AddEdge(sourceA, sourceA.Outputs[0], chain1_1, chain1_1.Inputs[0]);
+        _graph.AddEdge(chain1_1, chain1_1.Outputs[0], chain1_2, chain1_2.Inputs[0]);
+        _graph.AddEdge(chain1_2, chain1_2.Outputs[0], chain1_3, chain1_3.Inputs[0]);
 
         // Chain 2 (should work completely)
-        _graph.Connect(sourceB, sourceB.Outputs[0], chain2_1, chain2_1.Inputs[0]);
-        _graph.Connect(chain2_1, chain2_1.Outputs[0], chain2_2, chain2_2.Inputs[0]);
-        _graph.Connect(chain2_2, chain2_2.Outputs[0], chain2_3, chain2_3.Inputs[0]);
+        _graph.AddEdge(sourceB, sourceB.Outputs[0], chain2_1, chain2_1.Inputs[0]);
+        _graph.AddEdge(chain2_1, chain2_1.Outputs[0], chain2_2, chain2_2.Inputs[0]);
+        _graph.AddEdge(chain2_2, chain2_2.Outputs[0], chain2_3, chain2_3.Inputs[0]);
 
         // Final merge point
-        _graph.Connect(chain1_3, chain1_3.Outputs[0], finalMerge, finalMerge.Inputs[0]);
-        _graph.Connect(chain2_3, chain2_3.Outputs[0], finalMerge, finalMerge.Inputs[1]);
+        _graph.AddEdge(chain1_3, chain1_3.Outputs[0], finalMerge, finalMerge.Inputs[0]);
+        _graph.AddEdge(chain2_3, chain2_3.Outputs[0], finalMerge, finalMerge.Inputs[1]);
 
-        _graph.Connect(finalMerge, finalMerge.Outputs[0], sink, sink.Inputs[0]);
+        _graph.AddEdge(finalMerge, finalMerge.Outputs[0], sink, sink.Inputs[0]);
 
         // Execute - should fail due to chain1_2
         var ex = Assert.Throws<AggregateException>(() => _executor.Execute(_graph));

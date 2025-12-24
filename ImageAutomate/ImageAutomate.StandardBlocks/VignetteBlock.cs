@@ -12,9 +12,6 @@ public class VignetteBlock : IBlock
     private readonly IReadOnlyList<Socket> _inputs = [new("Vignette.In", "Image.In")];
     private readonly IReadOnlyList<Socket> _outputs = [new("Vignette.Out", "Image.Out")];
 
-    private int _width = 200;
-    private int _height = 100;
-
     private Color _color = Color.Black;
     private float _strength = 0.6f;
     private bool _disposed;
@@ -37,36 +34,6 @@ public class VignetteBlock : IBlock
     public string Title => "Vignette";
 
     public string Content => $"Color: {Color}\nStrength: {Strength}";
-
-    [Category("Layout")]
-    [Description("Width of the block node")]
-    public int Width
-    {
-        get => _width;
-        set
-        {
-            if (_width != value)
-            {
-                _width = value;
-                OnPropertyChanged(nameof(Width));
-            }
-        }
-    }
-
-    [Category("Layout")]
-    [Description("Height of the block node")]
-    public int Height
-    {
-        get => _height;
-        set
-        {
-            if (_height != value)
-            {
-                _height = value;
-                OnPropertyChanged(nameof(Height));
-            }
-        }
-    }
 
     #endregion
 

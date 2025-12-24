@@ -49,11 +49,15 @@ The editor will show errors if you provide wrong types:
     "version": "1.0",
     "name": "My Workspace",
     "graph": {
-          "blocks": [
+        "blocks": [
             {
                 "blockType": "LoadBlock",  // <-- Shows dropdown with all block types
-                "width": 200,              // <-- Must be number >= 50
-                "height": 100              // <-- Must be number >= 50
+                "layout": {                // <-- Layout embedded in each block
+                    "x": 100,
+                    "y": 100,
+                    "width": 200,          // <-- Must be number >= 50
+                    "height": 100          // <-- Must be number >= 50
+                }
             }
         ]
     },

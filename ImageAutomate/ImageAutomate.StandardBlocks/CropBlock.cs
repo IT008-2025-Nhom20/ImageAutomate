@@ -33,9 +33,6 @@ public class CropBlock : IBlock
 
     private bool _disposed;
 
-    private int _nodeWidth = 200;
-    private int _nodeHeight = 110;
-
     private CropModeOption _cropMode = CropModeOption.Rectangle;
 
     private int _x;
@@ -65,40 +62,6 @@ public class CropBlock : IBlock
             return $"Crop Mode: {CropMode}\n" +
                    $"Width: {CropWidth} Height: {CropHeight}\n" +
                    $"Anchor Position: {AnchorPosition}";
-        }
-    }
-
-    #endregion
-
-    #region Layout
-
-    [Category("Layout")]
-    [Description("Width of the block node")]
-    public int Width
-    {
-        get => _nodeWidth;
-        set
-        {
-            if (_nodeWidth != value)
-            {
-                _nodeWidth = value;
-                OnPropertyChanged(nameof(Width));
-            }
-        }
-    }
-
-    [Category("Layout")]
-    [Description("Height of the block node")]
-    public int Height
-    {
-        get => _nodeHeight;
-        set
-        {
-            if (_nodeHeight != value)
-            {
-                _nodeHeight = value;
-                OnPropertyChanged(nameof(Height));
-            }
         }
     }
 

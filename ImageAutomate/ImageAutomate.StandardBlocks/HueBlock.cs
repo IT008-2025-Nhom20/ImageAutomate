@@ -13,9 +13,6 @@ public class HueBlock : IBlock
 
     private bool _disposed;
 
-    private int _nodeWidth = 200;
-    private int _nodeHeight = 100;
-
     private float _hueShift = 0.0f;
 
     #endregion
@@ -27,40 +24,6 @@ public class HueBlock : IBlock
     public string Title => "Hue";
 
     public string Content => $"Hue shift: {HueShift}";
-
-    #endregion
-
-    #region Layout
-
-    [Category("Layout")]
-    [Description("Width of the block node")]
-    public int Width
-    {
-        get => _nodeWidth;
-        set
-        {
-            if (_nodeWidth != value)
-            {
-                _nodeWidth = value;
-                OnPropertyChanged(nameof(Width));
-            }
-        }
-    }
-
-    [Category("Layout")]
-    [Description("Height of the block node")]
-    public int Height
-    {
-        get => _nodeHeight;
-        set
-        {
-            if (_nodeHeight != value)
-            {
-                _nodeHeight = value;
-                OnPropertyChanged(nameof(Height));
-            }
-        }
-    }
 
     #endregion
 

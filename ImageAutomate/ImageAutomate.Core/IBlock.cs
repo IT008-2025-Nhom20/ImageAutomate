@@ -34,17 +34,6 @@ public interface IBlock: INotifyPropertyChanged, IDisposable
     public string Content { get; }
     #endregion
 
-    #region Layout Properties
-    /// <summary>
-    /// Gets or sets the width of this block.
-    /// </summary>
-    public int Width { get; set; }
-    /// <summary>
-    /// Gets or sets the height of this block.
-    /// </summary>
-    public int Height { get; set; }
-    #endregion
-
     #region Sockets and Execution Contracts
     /// <summary>
     /// Gets the collection of input sockets for this block.

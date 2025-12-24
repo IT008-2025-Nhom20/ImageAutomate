@@ -19,9 +19,6 @@ public class GrayscaleBlock : IBlock
 
     private bool _disposed;
 
-    private int _nodeWidth = 200;
-    private int _nodeHeight = 100;
-
     private GrayscaleOptions _grayOptions = GrayscaleOptions.Bt601;
 
     #endregion
@@ -33,40 +30,6 @@ public class GrayscaleBlock : IBlock
     public string Title => "GrayScale";
 
     public string Content => $"Gray scale option: {GrayscaleOption}";
-
-    #endregion
-
-    #region Layout
-
-    [Category("Layout")]
-    [Description("Width of the block node")]
-    public int Width
-    {
-        get => _nodeWidth;
-        set
-        {
-            if (_nodeWidth != value)
-            {
-                _nodeWidth = value;
-                OnPropertyChanged(nameof(Width));
-            }
-        }
-    }
-
-    [Category("Layout")]
-    [Description("Height of the block node")]
-    public int Height
-    {
-        get => _nodeHeight;
-        set
-        {
-            if (_nodeHeight != value)
-            {
-                _nodeHeight = value;
-                OnPropertyChanged(nameof(Height));
-            }
-        }
-    }
 
     #endregion
 

@@ -33,9 +33,6 @@ public class ResizeBlock : IBlock
 
     private bool _disposed;
 
-    private int _nodeWidth = 200;
-    private int _nodeHeight = 110;
-
     // Configuration
     private ResizeModeOption _resizeMode = ResizeModeOption.Fit;
     private int? _targetWidth;
@@ -75,40 +72,6 @@ public class ResizeBlock : IBlock
                    $"Width: {TargetWidth}\n" +
                    $"Height: {TargetHeight}\n" +
                    $"Resampler: {Resampler}";
-        }
-    }
-
-    #endregion
-
-    #region Layout (node size)
-
-    [Category("Layout")]
-    [Description("Width of the block node")]
-    public int Width
-    {
-        get => _nodeWidth;
-        set
-        {
-            if (_nodeWidth != value)
-            {
-                _nodeWidth = value;
-                OnPropertyChanged(nameof(Width));
-            }
-        }
-    }
-
-    [Category("Layout")]
-    [Description("Height of the block node")]
-    public int Height
-    {
-        get => _nodeHeight;
-        set
-        {
-            if (_nodeHeight != value)
-            {
-                _nodeHeight = value;
-                OnPropertyChanged(nameof(Height));
-            }
         }
     }
 
@@ -303,7 +266,7 @@ public class ResizeBlock : IBlock
         return options;
     }
 
-    private Size ComputeTargetSize(int srcWidth, int srcHeight)
+    private SixLabors.ImageSharp.Size ComputeTargetSize(int srcWidth, int srcHeight)
     {
         int tw = TargetWidth ?? 0;
         int th = TargetHeight ?? 0;
@@ -318,7 +281,7 @@ public class ResizeBlock : IBlock
                     if (tw <= 0 || th <= 0)
                         throw new InvalidOperationException("ResizeBlock (Fixed): TargetWidth and TargetHeight must be positive.");
 
-                    return new Size(tw, th);
+                    return new(tw, th);
                 }
                 else
                 {
@@ -344,7 +307,7 @@ public class ResizeBlock : IBlock
 
                     int rw = Math.Max(1, (int)Math.Round(srcWidth * scale));
                     int rh = Math.Max(1, (int)Math.Round(srcHeight * scale));
-                    return new Size(rw, rh);
+                    return new(rw, rh);
                 }
 
             case ResizeModeOption.KeepAspect:
@@ -371,7 +334,7 @@ public class ResizeBlock : IBlock
 
                     int rw = Math.Max(1, (int)Math.Round(srcWidth * scale));
                     int rh = Math.Max(1, (int)Math.Round(srcHeight * scale));
-                    return new Size(rw, rh);
+                    return new(rw, rh);
                 }
 
             case ResizeModeOption.Fit:
@@ -381,7 +344,7 @@ public class ResizeBlock : IBlock
                     if (tw <= 0 || th <= 0)
                         throw new InvalidOperationException("ResizeBlock (Fit/Fill/Pad): TargetWidth and TargetHeight must be positive.");
 
-                    return new Size(tw, th);
+                    return new(tw, th);
                 }
 
             default:

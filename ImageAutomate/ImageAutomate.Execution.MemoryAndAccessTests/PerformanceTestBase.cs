@@ -38,8 +38,8 @@ public abstract class PerformanceTestBase
         _graph.AddBlock(pass);
         _graph.AddBlock(sink);
 
-        _graph.Connect(source, source.Outputs[0], pass, pass.Inputs[0]);
-        _graph.Connect(pass, pass.Outputs[0], sink, sink.Inputs[0]);
+        _graph.AddEdge(source, source.Outputs[0], pass, pass.Inputs[0]);
+        _graph.AddEdge(pass, pass.Outputs[0], sink, sink.Inputs[0]);
 
         var config = new ExecutorConfiguration { MaxShipmentSize = BatchSize };
         await _executor.ExecuteAsync(_graph, config, CancellationToken.None);
@@ -67,15 +67,15 @@ public abstract class PerformanceTestBase
         _graph.AddBlock(merge);
         _graph.AddBlock(sink);
 
-        _graph.Connect(source, source.Outputs[0], split, split.Inputs[0]);
+        _graph.AddEdge(source, source.Outputs[0], split, split.Inputs[0]);
 
-        _graph.Connect(split, split.Outputs[0], passA, passA.Inputs[0]);
-        _graph.Connect(passA, passA.Outputs[0], merge, merge.Inputs[0]);
+        _graph.AddEdge(split, split.Outputs[0], passA, passA.Inputs[0]);
+        _graph.AddEdge(passA, passA.Outputs[0], merge, merge.Inputs[0]);
 
-        _graph.Connect(split, split.Outputs[1], passB, passB.Inputs[0]);
-        _graph.Connect(passB, passB.Outputs[0], merge, merge.Inputs[1]);
+        _graph.AddEdge(split, split.Outputs[1], passB, passB.Inputs[0]);
+        _graph.AddEdge(passB, passB.Outputs[0], merge, merge.Inputs[1]);
 
-        _graph.Connect(merge, merge.Outputs[0], sink, sink.Inputs[0]);
+        _graph.AddEdge(merge, merge.Outputs[0], sink, sink.Inputs[0]);
 
         var config = new ExecutorConfiguration { MaxShipmentSize = BatchSize };
         await _executor.ExecuteAsync(_graph, config, CancellationToken.None);
@@ -100,7 +100,7 @@ public abstract class PerformanceTestBase
 
         _graph.AddBlock(source);
         _graph.AddBlock(sink);
-        _graph.Connect(source, source.Outputs[0], sink, sink.Inputs[0]);
+        _graph.AddEdge(source, source.Outputs[0], sink, sink.Inputs[0]);
 
         var config = new ExecutorConfiguration { MaxShipmentSize = BatchSize };
         await _executor.ExecuteAsync(_graph, config, CancellationToken.None);
@@ -128,8 +128,8 @@ public abstract class PerformanceTestBase
         _graph.AddBlock(pass);
         _graph.AddBlock(sink);
 
-        _graph.Connect(source, source.Outputs[0], pass, pass.Inputs[0]);
-        _graph.Connect(pass, pass.Outputs[0], sink, sink.Inputs[0]);
+        _graph.AddEdge(source, source.Outputs[0], pass, pass.Inputs[0]);
+        _graph.AddEdge(pass, pass.Outputs[0], sink, sink.Inputs[0]);
 
         var config = new ExecutorConfiguration { MaxShipmentSize = BatchSize };
         await _executor.ExecuteAsync(_graph, config, CancellationToken.None);
