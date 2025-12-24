@@ -4,6 +4,8 @@
  * Graph datastructure for managing Block nodes and their connections.
  */
 
+using ImageAutomate.Core.Serialization;
+
 namespace ImageAutomate.Core;
 
 /// <summary>
@@ -24,7 +26,7 @@ public record Connection(
 /// </remarks>
 public class PipelineGraph
 {
-    private static System.Text.Json.JsonSerializerOptions _serializerOptions = new()
+    private static readonly System.Text.Json.JsonSerializerOptions _serializerOptions = new()
     {
         IncludeFields = true,
         WriteIndented = true,
@@ -135,16 +137,111 @@ public class PipelineGraph
     #endregion
 
     #region Serialization
+    /// <summary>
+    /// Serializes the PipelineGraph to JSON string.
+    /// </summary>
     public string ToJson()
     {
-        throw new NotImplementedException("PipelineGraph serialization is not implemented yet.");
-        //return System.Text.Json.JsonSerializer.Serialize(this, _serializerOptions);
+        var dto = ToDto();
+        return System.Text.Json.JsonSerializer.Serialize(dto, _serializerOptions);
     }
+
+    /// <summary>
+    /// Deserializes a PipelineGraph from JSON string.
+    /// </summary>
     public static PipelineGraph FromJson(string json)
     {
-        throw new NotImplementedException("PipelineGraph deserialization is not implemented yet.");
-        //return System.Text.Json.JsonSerializer.Deserialize<PipelineGraph>(json, _serializerOptions)
-        //    ?? throw new InvalidOperationException("Failed to deserialize PipelineGraph from JSON.");
+        var dto = System.Text.Json.JsonSerializer.Deserialize<PipelineGraphDto>(json, _serializerOptions);
+        if (dto == null)
+            throw new InvalidOperationException("Failed to deserialize PipelineGraph from JSON.");
+        return FromDto(dto);
+    }
+
+    /// <summary>
+    /// Converts the PipelineGraph to a DTO for serialization.
+    /// </summary>
+    internal PipelineGraphDto ToDto()
+    {
+        var dto = new PipelineGraphDto();
+
+        // Serialize blocks
+        foreach (var block in _blocks)
+        {
+            dto.Blocks.Add(BlockSerializer.Serialize(block));
+        }
+
+        // Serialize connections (using block indices)
+        foreach (var connection in _connections)
+        {
+            var sourceIndex = _blocks.IndexOf(connection.Source);
+            var targetIndex = _blocks.IndexOf(connection.Target);
+
+            if (sourceIndex < 0 || targetIndex < 0)
+                continue;
+
+            dto.Connections.Add(new ConnectionDto
+            {
+                SourceBlockIndex = sourceIndex,
+                SourceSocketId = connection.SourceSocket.Id,
+                TargetBlockIndex = targetIndex,
+                TargetSocketId = connection.TargetSocket.Id
+            });
+        }
+
+        // Serialize center block
+        if (_center != null)
+        {
+            dto.CenterBlockIndex = _blocks.IndexOf(_center);
+        }
+
+        return dto;
+    }
+
+    /// <summary>
+    /// Creates a PipelineGraph from a DTO.
+    /// </summary>
+    internal static PipelineGraph FromDto(PipelineGraphDto dto)
+    {
+        var graph = new PipelineGraph();
+
+        // Deserialize blocks
+        var blocks = new List<IBlock>();
+        foreach (var blockDto in dto.Blocks)
+        {
+            var block = BlockSerializer.Deserialize(blockDto);
+            blocks.Add(block);
+            graph.AddBlock(block);
+        }
+
+        // Deserialize connections
+        foreach (var connDto in dto.Connections)
+        {
+            if (connDto.SourceBlockIndex < 0 || connDto.SourceBlockIndex >= blocks.Count)
+                continue;
+            if (connDto.TargetBlockIndex < 0 || connDto.TargetBlockIndex >= blocks.Count)
+                continue;
+
+            var sourceBlock = blocks[connDto.SourceBlockIndex];
+            var targetBlock = blocks[connDto.TargetBlockIndex];
+
+            var sourceSocket = sourceBlock.Outputs.FirstOrDefault(s => s.Id == connDto.SourceSocketId);
+            var targetSocket = targetBlock.Inputs.FirstOrDefault(s => s.Id == connDto.TargetSocketId);
+
+            if (sourceSocket != null && targetSocket != null)
+            {
+                graph.Connect(sourceBlock, sourceSocket, targetBlock, targetSocket);
+            }
+        }
+
+        // Restore center block
+        if (dto.CenterBlockIndex.HasValue &&
+            dto.CenterBlockIndex.Value >= 0 &&
+            dto.CenterBlockIndex.Value < blocks.Count)
+        {
+            graph.Center = blocks[dto.CenterBlockIndex.Value];
+        }
+
+        return graph;
     }
     #endregion
 }
