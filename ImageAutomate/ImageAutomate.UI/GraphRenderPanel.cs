@@ -114,7 +114,6 @@ public class GraphRenderPanel : Panel
     private bool _isDraggingNode;
     private IBlock? _draggedNode;
     private PointF _dragStartNodePos;
-    private Point _mouseDownLocation;
 
     private bool _isConnecting;
     private SocketHit? _dragStartSocket;
@@ -122,9 +121,9 @@ public class GraphRenderPanel : Panel
     #endregion
 
     #region Cursors
-    private Cursor _panCursor = Cursors.SizeAll;
-    private Cursor _dragCursor = Cursors.Hand;
-    private Cursor _connectCursor = Cursors.Cross;
+    private readonly Cursor _panCursor = Cursors.SizeAll;
+    private readonly Cursor _dragCursor = Cursors.Hand;
+    private readonly Cursor _connectCursor = Cursors.Cross;
     #endregion
 
     public GraphRenderPanel()
@@ -457,7 +456,6 @@ public class GraphRenderPanel : Panel
         
         PointF worldPosition = ScreenToWorld(e.Location);
         _lastMousePos = e.Location;
-        _mouseDownLocation = e.Location;
 
         if (e.Button == MouseButtons.Right)
         {
