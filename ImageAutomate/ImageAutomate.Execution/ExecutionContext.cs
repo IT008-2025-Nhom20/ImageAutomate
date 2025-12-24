@@ -180,7 +180,7 @@ internal sealed class ExecutionContext
     private void InitializeDegrees()
     {
         // Initialize all blocks with degree 0 and Pending state
-        foreach (var block in Graph.Blocks)
+        foreach (var block in Graph.Nodes)
         {
             _inDegree[block] = 0;
             _outDegree[block] = 0;
@@ -193,7 +193,7 @@ internal sealed class ExecutionContext
         }
 
         // Build adjacency lists and count degrees from connections
-        foreach (var connection in Graph.Connections)
+        foreach (var connection in Graph.Edges)
         {
             _inDegree[connection.Target]++;
             _outDegree[connection.Source]++;
@@ -517,13 +517,13 @@ internal sealed class ExecutionContext
 
         // Build new connection lists (not yet visible to readers)
         var newConnections = new Dictionary<IBlock, List<Connection>>();
-        foreach (var block in Graph.Blocks)
+        foreach (var block in Graph.Nodes)
         {
             newConnections[block] = [];
         }
 
         // Populate new connection lists based on active sources
-        foreach (var connection in Graph.Connections)
+        foreach (var connection in Graph.Edges)
         {
             // Only add connection if source has active upstream (or is active source itself)
             if (blocksWithActiveUpstream.Contains(connection.Source))
@@ -533,7 +533,7 @@ internal sealed class ExecutionContext
         }
 
         // Atomically replace all lists and update degrees
-        foreach (var block in Graph.Blocks)
+        foreach (var block in Graph.Nodes)
         {
             var connections = newConnections[block];
             _activeIncomingConnections[block] = connections;
@@ -551,7 +551,7 @@ internal sealed class ExecutionContext
         _barriers.Clear();
 
         // Reset all block states to Pending (except blocked and active sources)
-        foreach (var block in Graph.Blocks)
+        foreach (var block in Graph.Nodes)
         {
             if (IsRunning(block))
                 throw new InvalidOperationException("Cannot reset execution context while blocks are still running.");

@@ -37,7 +37,7 @@ internal sealed class SimpleDfsScheduler : IScheduler
     public void Initialize(ExecutionContext context)
     {
         // Find and enqueue all source blocks (IShipmentSource with in-degree 0)
-        foreach (var block in context.Graph.Blocks)
+        foreach (var block in context.Graph.Nodes)
         {
             if (block is IShipmentSource && context.InDegree[block] == 0)
             {

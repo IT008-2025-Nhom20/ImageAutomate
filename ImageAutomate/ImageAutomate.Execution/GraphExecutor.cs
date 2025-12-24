@@ -48,7 +48,7 @@ public class GraphExecutor : IGraphExecutor
         var context = new ExecutionContext(graph, configuration, scheduler, cancellationToken);
 
         // Initialize shipment sources and track them as active
-        foreach (var block in graph.Blocks)
+        foreach (var block in graph.Nodes)
         {
             if (block is IShipmentSource shipmentSource)
             {

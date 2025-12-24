@@ -253,23 +253,23 @@ public class StandardBlocksSerializationTests
         graph.AddBlock(brightnessBlock);
         graph.AddBlock(convertBlock);
 
-        graph.Connect(loadBlock, loadBlock.Outputs[0], brightnessBlock, brightnessBlock.Inputs[0]);
-        graph.Connect(brightnessBlock, brightnessBlock.Outputs[0], convertBlock, convertBlock.Inputs[0]);
+        graph.AddEdge(loadBlock, loadBlock.Outputs[0], brightnessBlock, brightnessBlock.Inputs[0]);
+        graph.AddEdge(brightnessBlock, brightnessBlock.Outputs[0], convertBlock, convertBlock.Inputs[0]);
 
-        graph.Center = brightnessBlock;
+        graph.SelectedItem = brightnessBlock;
 
         // Act
         var json = graph.ToJson();
         var deserialized = PipelineGraph.FromJson(json);
 
         // Assert
-        Assert.Equal(3, deserialized.Blocks.Count);
-        Assert.Equal(2, deserialized.Connections.Count);
-        Assert.NotNull(deserialized.Center);
+        Assert.Equal(3, deserialized.Nodes.Count);
+        Assert.Equal(2, deserialized.Edges.Count);
+        Assert.NotNull(deserialized.SelectedItem);
 
-        var deserializedLoad = deserialized.Blocks[0] as LoadBlock;
-        var deserializedBrightness = deserialized.Blocks[1] as BrightnessBlock;
-        var deserializedConvert = deserialized.Blocks[2] as ConvertBlock;
+        var deserializedLoad = deserialized.Nodes[0] as LoadBlock;
+        var deserializedBrightness = deserialized.Nodes[1] as BrightnessBlock;
+        var deserializedConvert = deserialized.Nodes[2] as ConvertBlock;
 
         Assert.NotNull(deserializedLoad);
         Assert.NotNull(deserializedBrightness);
@@ -314,9 +314,9 @@ public class StandardBlocksSerializationTests
         workspace.Graph.AddBlock(resizeBlock);
         workspace.Graph.AddBlock(convertBlock);
 
-        workspace.Graph.Connect(loadBlock, loadBlock.Outputs[0], brightnessBlock, brightnessBlock.Inputs[0]);
-        workspace.Graph.Connect(brightnessBlock, brightnessBlock.Outputs[0], resizeBlock, resizeBlock.Inputs[0]);
-        workspace.Graph.Connect(resizeBlock, resizeBlock.Outputs[0], convertBlock, convertBlock.Inputs[0]);
+        workspace.Graph.AddEdge(loadBlock, loadBlock.Outputs[0], brightnessBlock, brightnessBlock.Inputs[0]);
+        workspace.Graph.AddEdge(brightnessBlock, brightnessBlock.Outputs[0], resizeBlock, resizeBlock.Inputs[0]);
+        workspace.Graph.AddEdge(resizeBlock, resizeBlock.Outputs[0], convertBlock, convertBlock.Inputs[0]);
 
         workspace.ViewState.SetBlockPosition(loadBlock, new Position(50, 100));
         workspace.ViewState.SetBlockPosition(brightnessBlock, new Position(300, 100));
@@ -333,12 +333,12 @@ public class StandardBlocksSerializationTests
             // Assert
             Assert.Equal(workspace.Name, loaded.Name);
             Assert.NotNull(loaded.Graph);
-            Assert.Equal(4, loaded.Graph.Blocks.Count);
-            Assert.Equal(3, loaded.Graph.Connections.Count);
+            Assert.Equal(4, loaded.Graph.Nodes.Count);
+            Assert.Equal(3, loaded.Graph.Edges.Count);
             Assert.Equal(1.25, loaded.ViewState.Zoom);
 
-            var loadedLoadBlock = loaded.Graph.Blocks[0] as LoadBlock;
-            var loadedConvertBlock = loaded.Graph.Blocks[3] as ConvertBlock;
+            var loadedLoadBlock = loaded.Graph.Nodes[0] as LoadBlock;
+            var loadedConvertBlock = loaded.Graph.Nodes[3] as ConvertBlock;
 
             Assert.NotNull(loadedLoadBlock);
             Assert.NotNull(loadedConvertBlock);
@@ -346,7 +346,7 @@ public class StandardBlocksSerializationTests
             Assert.Equal(ImageFormat.Jpeg, loadedConvertBlock.TargetFormat);
             Assert.Equal(85, loadedConvertBlock.JpegOptions.Quality);
 
-            var pos = loaded.ViewState.GetBlockPosition(loaded.Graph.Blocks[0]);
+            var pos = loaded.ViewState.GetBlockPosition(loaded.Graph.Nodes[0]);
             Assert.NotNull(pos);
             Assert.Equal(50, pos.X);
             Assert.Equal(100, pos.Y);

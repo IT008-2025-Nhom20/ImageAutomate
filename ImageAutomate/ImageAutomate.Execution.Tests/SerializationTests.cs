@@ -1,5 +1,6 @@
 using ImageAutomate.Core;
 using ImageAutomate.Core.Serialization;
+using ImageAutomate.StandardBlocks;
 
 namespace ImageAutomate.Execution.Tests;
 
@@ -79,8 +80,6 @@ public class SerializationTests
 
         // Assert
         Assert.Equal("BrightnessBlock", dto.BlockType);
-        Assert.Equal(block.Width, dto.Width);
-        Assert.Equal(block.Height, dto.Height);
         Assert.NotEmpty(dto.AssemblyQualifiedName);
     }
 
@@ -99,9 +98,9 @@ public class SerializationTests
         var deserialized = PipelineGraph.FromJson(json);
 
         // Assert
-        Assert.Empty(deserialized.Blocks);
-        Assert.Empty(deserialized.Connections);
-        Assert.Null(deserialized.Center);
+        Assert.Empty(deserialized.Nodes);
+        Assert.Empty(deserialized.Edges);
+        Assert.Null(deserialized.SelectedItem);
     }
 
     [Fact]
@@ -117,9 +116,8 @@ public class SerializationTests
         var deserialized = PipelineGraph.FromJson(json);
 
         // Assert
-        Assert.Single(deserialized.Blocks);
-        Assert.Equal(block.Name, deserialized.Blocks[0].Name);
-        Assert.Equal(block.Width, deserialized.Blocks[0].Width);
+        Assert.Single(deserialized.Nodes);
+        Assert.Equal(block.Name, deserialized.Nodes[0].Name);
     }
 
     [Fact]
@@ -132,19 +130,19 @@ public class SerializationTests
 
         graph.AddBlock(source);
         graph.AddBlock(target);
-        graph.Connect(source, source.Outputs[0], target, target.Inputs[0]);
+        graph.AddEdge(source, source.Outputs[0], target, target.Inputs[0]);
 
         // Act
         var json = graph.ToJson();
         var deserialized = PipelineGraph.FromJson(json);
 
         // Assert
-        Assert.Equal(2, deserialized.Blocks.Count);
-        Assert.Single(deserialized.Connections);
+        Assert.Equal(2, deserialized.Nodes.Count);
+        Assert.Single(deserialized.Edges);
 
-        var conn = deserialized.Connections[0];
-        Assert.Equal(deserialized.Blocks[0], conn.Source);
-        Assert.Equal(deserialized.Blocks[1], conn.Target);
+        var conn = deserialized.Edges[0];
+        Assert.Equal(deserialized.Nodes[0], conn.Source);
+        Assert.Equal(deserialized.Nodes[1], conn.Target);
     }
 
     [Fact]
@@ -162,21 +160,21 @@ public class SerializationTests
         graph.AddBlock(convert);
         graph.AddBlock(save);
 
-        graph.Connect(load, load.Outputs[0], brightness, brightness.Inputs[0]);
-        graph.Connect(brightness, brightness.Outputs[0], convert, convert.Inputs[0]);
-        graph.Connect(convert, convert.Outputs[0], save, save.Inputs[0]);
+        graph.AddEdge(load, load.Outputs[0], brightness, brightness.Inputs[0]);
+        graph.AddEdge(brightness, brightness.Outputs[0], convert, convert.Inputs[0]);
+        graph.AddEdge(convert, convert.Outputs[0], save, save.Inputs[0]);
 
-        graph.Center = brightness;
+        graph.SelectedItem = brightness;
 
         // Act
         var json = graph.ToJson();
         var deserialized = PipelineGraph.FromJson(json);
 
         // Assert
-        Assert.Equal(4, deserialized.Blocks.Count);
-        Assert.Equal(3, deserialized.Connections.Count);
-        Assert.NotNull(deserialized.Center);
-        Assert.Equal("Brightness", deserialized.Center.Name);
+        Assert.Equal(4, deserialized.Nodes.Count);
+        Assert.Equal(3, deserialized.Edges.Count);
+        Assert.NotNull(deserialized.SelectedItem);
+        Assert.IsType<BrightnessBlock>(deserialized.SelectedItem);
     }
 
     [Fact]
@@ -185,24 +183,24 @@ public class SerializationTests
         // This test uses a block type that can be instantiated without parameters
         // We'll create a simple scenario with blocks that have default constructors
         var graph = new PipelineGraph();
-        var source1 = new ImageAutomate.StandardBlocks.BrightnessBlock();
-        var source2 = new ImageAutomate.StandardBlocks.BrightnessBlock();
-        var target = new ImageAutomate.StandardBlocks.BrightnessBlock();
+        var source1 = new BrightnessBlock();
+        var source2 = new BrightnessBlock();
+        var target = new BrightnessBlock();
 
         graph.AddBlock(source1);
         graph.AddBlock(source2);
         graph.AddBlock(target);
 
         // Connect first source to target
-        graph.Connect(source1, source1.Outputs[0], target, target.Inputs[0]);
+        graph.AddEdge(source1, source1.Outputs[0], target, target.Inputs[0]);
 
         // Act
         var json = graph.ToJson();
         var deserialized = PipelineGraph.FromJson(json);
 
         // Assert
-        Assert.Equal(3, deserialized.Blocks.Count);
-        Assert.Single(deserialized.Connections);
+        Assert.Equal(3, deserialized.Nodes.Count);
+        Assert.Single(deserialized.Edges);
     }
 
     #endregion
@@ -316,7 +314,7 @@ public class SerializationTests
 
         workspace.Graph.AddBlock(source);
         workspace.Graph.AddBlock(target);
-        workspace.Graph.Connect(source, source.Outputs[0], target, target.Inputs[0]);
+        workspace.Graph.AddEdge(source, source.Outputs[0], target, target.Inputs[0]);
 
         workspace.ViewState.SetBlockPosition(source, new Position(50, 50));
         workspace.ViewState.SetBlockPosition(target, new Position(250, 50));
@@ -329,11 +327,11 @@ public class SerializationTests
         // Assert
         Assert.Equal(workspace.Name, deserialized.Name);
         Assert.NotNull(deserialized.Graph);
-        Assert.Equal(2, deserialized.Graph.Blocks.Count);
-        Assert.Single(deserialized.Graph.Connections);
+        Assert.Equal(2, deserialized.Graph.Nodes.Count);
+        Assert.Single(deserialized.Graph.Edges);
         Assert.Equal(1.5, deserialized.ViewState.Zoom);
 
-        var sourcePos = deserialized.ViewState.GetBlockPosition(deserialized.Graph.Blocks[0]);
+        var sourcePos = deserialized.ViewState.GetBlockPosition(deserialized.Graph.Nodes[0]);
         Assert.NotNull(sourcePos);
         Assert.Equal(50, sourcePos.X);
     }
@@ -362,10 +360,10 @@ public class SerializationTests
             // Assert
             Assert.Equal(workspace.Name, loaded.Name);
             Assert.NotNull(loaded.Graph);
-            Assert.Single(loaded.Graph.Blocks);
-            Assert.Equal("Brightness", loaded.Graph.Blocks[0].Name);
+            Assert.Single(loaded.Graph.Nodes);
+            Assert.Equal("Brightness", loaded.Graph.Nodes[0].Name);
 
-            var pos = loaded.ViewState.GetBlockPosition(loaded.Graph.Blocks[0]);
+            var pos = loaded.ViewState.GetBlockPosition(loaded.Graph.Nodes[0]);
             Assert.NotNull(pos);
             Assert.Equal(100, pos.X);
             Assert.Equal(200, pos.Y);

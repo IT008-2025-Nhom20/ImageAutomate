@@ -303,7 +303,7 @@ public class ResizeBlock : IBlock
         return options;
     }
 
-    private Size ComputeTargetSize(int srcWidth, int srcHeight)
+    private SixLabors.ImageSharp.Size ComputeTargetSize(int srcWidth, int srcHeight)
     {
         int tw = TargetWidth ?? 0;
         int th = TargetHeight ?? 0;
@@ -318,7 +318,7 @@ public class ResizeBlock : IBlock
                     if (tw <= 0 || th <= 0)
                         throw new InvalidOperationException("ResizeBlock (Fixed): TargetWidth and TargetHeight must be positive.");
 
-                    return new Size(tw, th);
+                    return new(tw, th);
                 }
                 else
                 {
@@ -344,7 +344,7 @@ public class ResizeBlock : IBlock
 
                     int rw = Math.Max(1, (int)Math.Round(srcWidth * scale));
                     int rh = Math.Max(1, (int)Math.Round(srcHeight * scale));
-                    return new Size(rw, rh);
+                    return new(rw, rh);
                 }
 
             case ResizeModeOption.KeepAspect:
@@ -371,7 +371,7 @@ public class ResizeBlock : IBlock
 
                     int rw = Math.Max(1, (int)Math.Round(srcWidth * scale));
                     int rh = Math.Max(1, (int)Math.Round(srcHeight * scale));
-                    return new Size(rw, rh);
+                    return new(rw, rh);
                 }
 
             case ResizeModeOption.Fit:
@@ -381,7 +381,7 @@ public class ResizeBlock : IBlock
                     if (tw <= 0 || th <= 0)
                         throw new InvalidOperationException("ResizeBlock (Fit/Fill/Pad): TargetWidth and TargetHeight must be positive.");
 
-                    return new Size(tw, th);
+                    return new(tw, th);
                 }
 
             default:
