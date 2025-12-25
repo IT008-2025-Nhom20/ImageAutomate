@@ -179,6 +179,7 @@ public class GraphExecutor : IGraphExecutor
     private void ExecuteBlock(IBlock block, ExecutionContext context)
     {
         IDictionary<Socket, IReadOnlyList<IBasicWorkItem>>? inputs = null;
+        IReadOnlyDictionary<Socket, IReadOnlyList<IBasicWorkItem>>? outputs = null;
         
         try
         {
@@ -189,7 +190,7 @@ public class GraphExecutor : IGraphExecutor
             inputs = GatherInputs(block, context);
 
             // Execute the block (already on thread pool thread from outer Task.Run)
-            var outputs = block.Execute(inputs, context.CancellationToken);
+            outputs = block.Execute(inputs, context.CancellationToken);
 
             // Commit outputs to warehouse
             ExportOutputs(block, outputs, context);
@@ -232,9 +233,10 @@ public class GraphExecutor : IGraphExecutor
         finally
         {
             // Dispose consumed inputs immediately (even on failure)
+            // But skip items that appear in outputs (blocks may return mutated inputs)
             if (inputs != null)
             {
-                DisposeInputs(inputs);
+                DisposeInputs(inputs, outputs);
             }
             
             context.DecrementActiveBlocks();
@@ -329,15 +331,32 @@ public class GraphExecutor : IGraphExecutor
     }
 
     /// <summary>
-    /// Disposes consumed input work items.
+    /// Disposes consumed input work items that are not reused in outputs.
     /// </summary>
-    private void DisposeInputs(IDictionary<Socket, IReadOnlyList<IBasicWorkItem>> inputs)
+    /// <param name="inputs">The input work items to potentially dispose.</param>
+    /// <param name="outputs">The output work items to exclude from disposal (may contain same objects as inputs).</param>
+    private void DisposeInputs(
+        IDictionary<Socket, IReadOnlyList<IBasicWorkItem>> inputs,
+        IReadOnlyDictionary<Socket, IReadOnlyList<IBasicWorkItem>>? outputs)
     {
+        // Build a set of output items to skip disposal (blocks may return mutated inputs)
+        HashSet<IBasicWorkItem>? outputItems = null;
+        if (outputs != null && outputs.Count > 0)
+        {
+            outputItems = new HashSet<IBasicWorkItem>(
+                outputs.Values.SelectMany(list => list),
+                ReferenceEqualityComparer.Instance);
+        }
+
         foreach (var items in inputs.Values)
         {
             foreach (var item in items)
             {
-                item.Dispose();
+                // Only dispose if not present in outputs
+                if (outputItems == null || !outputItems.Contains(item))
+                {
+                    item.Dispose();
+                }
             }
         }
     }
