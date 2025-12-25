@@ -1,267 +1,146 @@
-# ImageAutomate Plugin System
+# Plugin System Architecture
 
-## Overview
+## Table of Contents
 
-The ImageAutomate Plugin System provides a flexible mechanism for loading, managing, and unloading plugins at runtime. Plugins can extend ImageAutomate by providing new blocks, ImageSharp format extensions, or other functionality.
+1. [Architectural Overview](#1-architectural-overview)
+2. [Runtime Isolation Model](#2-runtime-isolation-model)
+3. [Component Structure](#3-component-structure)
+4. [Discovery & Loading Mechanism](#4-discovery--loading-mechanism)
+5. [Lifecycle Management](#5-lifecycle-management)
+6. [Safety & Consistency](#6-safety--consistency)
+7. [Implementation Details](#7-implementation-details)
 
-## Architecture
+## 1. Architectural Overview
 
-The plugin system is built on top of .NET's `AssemblyLoadContext` with collectible assembly loading, allowing plugins to be dynamically loaded and unloaded without restarting the application.
+The **Plugin System** enables the dynamic extension of the ImageAutomate runtime without recompilation or restart. It adheres to a **Shared-Nothing** architecture (at the dependency level) while maintaining a strict contract via the Host Application's Core library.
 
-### Key Components
+*   **Design Pattern:** Microkernel / Plugin Pattern.
+*   **Isolation Strategy:** `AssemblyLoadContext` (ALC) based isolation.
+*   **Contract:** Types defined in `ImageAutomate.Core` (e.g., `IBlock`, `IPluginUnloadable`).
+*   **Distribution Unit:** Single Assembly (`.dll`), Directory Package, or Archive (`.zip`).
 
-1. **PluginLoader** - Main API for plugin management
-2. **PluginLoadContext** - Custom AssemblyLoadContext for isolated plugin loading
-3. **PluginInfo** - Metadata and state tracking for loaded plugins
-4. **IPluginUnloadable** - Optional interface for plugins to handle unload requests
+## 2. Runtime Isolation Model
 
-## Plugin Formats
+To prevent "Dependency Hell" (version conflicts between plugin dependencies and host dependencies), the system employs a custom **Assembly Isolation Layer**.
 
-The system supports three plugin formats:
+### 2.1. The Load Context Hierarchy
 
-### 1. Single DLL File
-A standalone `.dll` file containing the plugin code.
+Plugins are loaded into discrete `PluginLoadContext` instances, which inherit from .NET's `AssemblyLoadContext`.
 
-```csharp
-var loader = new PluginLoader();
-var plugin = loader.LoadPlugin("path/to/MyPlugin.dll");
-```
+*   **Host Context (Default):** Contains system assemblies, `ImageAutomate.Core`, `SixLabors.ImageSharp`, and the UI shell.
+*   **Plugin Context (Collectible):** Dedicated context for each plugin.
+    *   **Shared Dependencies:** Requests for "Core" assemblies (Host, `System.*`, `netstandard`) are delegated to the Host Context.
+    *   **Private Dependencies:** Requests for plugin-specific libraries (e.g., specific JSON parsers, third-party CV libraries) are resolved locally within the plugin context.
 
-### 2. Directory-Based Plugin
-A directory containing the plugin DLL and its dependencies. The directory name should match the main DLL name (e.g., `MyPlugin/MyPlugin.dll`).
+### 2.2. Collectibility
 
-```
-MyPlugin/
-├── MyPlugin.dll
-├── Dependency1.dll
-└── Dependency2.dll
-```
+The `PluginLoadContext` is configured as **Collectible** (`isCollectible: true`). This enables the Garbage Collector (GC) to unload the entire assembly set and reclaim memory once all references to types within that context are released, supporting dynamic "Hot Unload".
 
-```csharp
-var plugin = loader.LoadPluginFromDirectory("path/to/MyPlugin");
-```
+## 3. Component Structure
 
-### 3. ZIP Archive
-A ZIP file containing a directory structure with the plugin DLL and dependencies.
+### 3.1. PluginLoader
 
-```csharp
-var plugin = loader.LoadPluginFromZip("path/to/MyPlugin.zip");
-```
+The **PluginLoader** serves as the central manager (Facade) for the plugin ecosystem.
 
-## MANIFEST.json (Optional)
+*   **Responsibilities:**
+    *   **Discovery:** Scanning file system locations for valid plugins.
+    *   **Context Management:** Instantiating and maintaining lifecycle of `PluginLoadContexts`.
+    *   **Reference Tracking:** Tracking active instances via reference counting (`ActiveInstanceCount`) to ensure unload safety.
+    *   **Registry:** Maintaining the mapping between loaded Plugins, their Assemblies, and metadata (`PluginInfo`).
 
-Directory-based and ZIP plugins can include an optional `MANIFEST.json` file to specify plugin metadata:
+### 3.2. PluginInfo
+
+A robust metadata descriptor pattern representing a loaded plugin unit.
+
+*   **Identity:** Name, Version, Path.
+*   **Runtime State:** Reference to `Assembly`, `PluginLoadContext`, and `IsLoaded` status.
+*   **Usage Statistics:** `ActiveInstanceCount` for soft-unload decisions.
+
+### 3.3. PluginLoadContext
+
+The implementation of the isolation mechanism.
+
+*   **Overrides:** `Load(AssemblyName)` to enforce the sharing policy.
+*   **Policy:**
+    ```csharp
+    if (assembly.Name == "ImageAutomate.Core" || assembly.Name.StartsWith("System."))
+        return null; // Delegate to Host (Share)
+    else
+        return LoadFromPath(resolvedPath); // Load Private
+    ```
+
+## 4. Discovery & Loading Mechanism
+
+The system supports a hierarchical discovery strategy to accommodate various deployment scenarios.
+
+### 4.1. Discovery Strategies
+
+1.  **Direct Assembly:** Explicit loading of a `.dll`.
+2.  **Directory Bundle:** Scanning a directory for a primary assembly matching the directory name, or a `MANIFEST.json`.
+3.  **Archive Bundle:** Ephemeral extraction of `.zip` packages to a temporary staging area followed by Directory Bundle loading.
+
+### 4.2. Conflict Resolution
+
+*   **Namespace Collisions:** Handled by ALC isolation (two plugins can define `MyNamespace.MyClass` without conflict).
+*   **Name Collisions:** The `PluginLoader` enforces unique logical names. If `MyPlugin` is loaded, a second attempt yields `MyPlugin_1`.
+
+## 5. Lifecycle Management
+
+### 5.1. Instantiation
+
+Code within the Host Application (e.g., the UI or Execution Engine) requests types from the `PluginLoader`.
+
+*   **Type Resolution:** `GetPluginBlockTypes()` reflects over exported types in the isolated context.
+*   **Activation:** Standard `Activator.CreateInstance()` creates the object.
+*   **Registration:** The Host **MUST** call `RegisterInstance(obj, pluginName)` to increment the reference counter.
+
+### 5.2. Unloading (Soft & Hard)
+
+Unloading is a sensitive operation due to the lack of forced memory access revocation in managed code.
+
+1.  **Soft Unload (`TryUnloadPlugin`):**
+    *   **Protocol:** Checks `ActiveInstanceCount`. If > 0, it queries instances implementing `IPluginUnloadable.OnUnloadRequested()`.
+    *   **Cooperation:** If all instances agree to dispose themselves, the unload proceeds.
+    *   **Cleanup:** Polls until `ActiveInstanceCount` drops to zero or timeout occurs.
+
+2.  **Hard Unload (`UnloadPlugin`):**
+    *   **Mechanism:** Calls `PluginLoadContext.Unload()`.
+    *   **Risk:** If the Host holds strong references to plugin types, the GC cannot reclaim the memory, leading to a memory leak (though the plugin is logically "unloaded").
+
+## 6. Safety & Consistency
+
+### 6.1. Type Equivalence
+
+To ensure objects passed between Host and Plugin are compatible, `ImageAutomate.Core` must be shared.
+
+*   **Mechanism:** The `PluginLoadContext` explicitly rejects loading `ImageAutomate.Core.dll` from the plugin folder, forcing usage of the Host's loaded version. This ensures `typeof(IBlock)` in Plugin A is identical to `typeof(IBlock)` in Host.
+
+### 6.2. Reference Counting
+
+The system implements a manual Reference Counting (RC) mechanism for high-level safety, distinct from the GC.
+
+*   **Purpose:** Prevents accidental unloading while a Block is executing or displayed in the UI.
+*   **Implementation:** `ConcurrentDictionary<object, string>` maps instances to plugin names. `Interlocked` counters track total active objects.
+
+## 7. Implementation Details
+
+### 7.1. Thread Safety
+
+All public API methods on `PluginLoader` are thread-safe, utilizing:
+*   `ConcurrentDictionary` for O(1) lookups.
+*   `Monitor` (locks) for critical sections involving file I/O and state mutation (Load/Unload operations).
+
+### 7.2. Manifest Schema
+
+For Directory and Archive bundles, a `MANIFEST.json` provides metadata:
 
 ```json
 {
-  "Name": "MyPlugin",
-  "EntryPoint": "MyPlugin.dll",
-  "Version": "1.0.0",
-  "Description": "Description of the plugin",
-  "Author": "Author Name",
-  "Metadata": {
-    "Website": "https://example.com",
-    "License": "MIT"
-  }
+  "Name": "EdgeDetection",
+  "EntryPoint": "EdgeDetect.dll",
+  "Version": "1.2.0",
+  "Metadata": { ... }
 }
 ```
 
-## Loading Plugins
-
-### Load a Single Plugin
-
-```csharp
-var loader = new PluginLoader();
-var plugin = loader.LoadPlugin("path/to/plugin.dll");
-
-Console.WriteLine($"Loaded: {plugin.Name}");
-Console.WriteLine($"Block types: {plugin.GetBlockTypes().Count()}");
-```
-
-### Load All Plugins from a Directory
-
-```csharp
-var plugins = loader.LoadAllPlugins("path/to/plugins");
-Console.WriteLine($"Loaded {plugins.Count} plugins");
-```
-
-### Get Plugin Information
-
-```csharp
-var plugin = loader.GetPlugin("MyPlugin");
-if (plugin != null)
-{
-    var blockTypes = plugin.GetBlockTypes();
-    var allTypes = plugin.GetExportedTypes();
-}
-```
-
-## Creating Plugin Instances
-
-```csharp
-// Get a block type from a plugin
-var blockTypes = loader.GetPluginBlockTypes("MyPlugin");
-var blockType = blockTypes.FirstOrDefault();
-
-if (blockType != null)
-{
-    var instance = Activator.CreateInstance(blockType) as IBlock;
-    
-    // Register the instance for usage tracking
-    loader.RegisterInstance(instance, "MyPlugin");
-    
-    // Use the instance...
-    
-    // When done, unregister it
-    instance.Dispose();
-    loader.UnregisterInstance(instance);
-}
-```
-
-## Unloading Plugins
-
-### Hard Unload
-Unloads a plugin only if no instances are active. Throws an exception if instances exist.
-
-```csharp
-try
-{
-    loader.UnloadPlugin("MyPlugin");
-    Console.WriteLine("Plugin unloaded");
-}
-catch (PluginException ex)
-{
-    Console.WriteLine($"Cannot unload: {ex.Message}");
-}
-```
-
-### Soft Unload
-Attempts to gracefully unload by requesting cleanup from active instances.
-
-```csharp
-bool unloaded = loader.TryUnloadPlugin("MyPlugin", timeout: TimeSpan.FromSeconds(5));
-if (unloaded)
-{
-    Console.WriteLine("Plugin successfully unloaded");
-}
-else
-{
-    Console.WriteLine("Plugin cannot be unloaded at this time");
-}
-```
-
-## Name Conflict Resolution
-
-If a plugin with the same name is already loaded:
-- Loading from the same path returns the existing plugin
-- Loading from a different path auto-generates a unique name (e.g., `MyPlugin_1`, `MyPlugin_2`)
-
-```csharp
-var plugin1 = loader.LoadPlugin("path1/MyPlugin.dll");  // Name: "MyPlugin"
-var plugin2 = loader.LoadPlugin("path2/MyPlugin.dll");  // Name: "MyPlugin_1"
-```
-
-## Implementing IPluginUnloadable
-
-Plugins can implement `IPluginUnloadable` to participate in the soft unload process:
-
-```csharp
-public class MyBlock : IBlock, IPluginUnloadable
-{
-    private bool _isProcessing = false;
-    
-    public bool OnUnloadRequested()
-    {
-        if (_isProcessing)
-        {
-            // Reject unload - work in progress
-            return false;
-        }
-        
-        // Accept and cleanup
-        Cleanup();
-        return true;
-    }
-}
-```
-
-## Usage Tracking
-
-The plugin system tracks active instances to prevent unloading plugins that are still in use:
-
-```csharp
-// Get active instance count
-int count = loader.GetActiveInstanceCount("MyPlugin");
-Console.WriteLine($"Active instances: {count}");
-
-// Get all loaded plugins
-foreach (var plugin in loader.LoadedPlugins)
-{
-    Console.WriteLine($"{plugin.Name}: {plugin.ActiveInstanceCount} active instances");
-}
-```
-
-## Example: Complete Plugin Workflow
-
-```csharp
-var loader = new PluginLoader();
-
-// Discover and load plugins
-var plugins = loader.LoadAllPlugins("./plugins");
-
-// Find a specific block type
-foreach (var plugin in plugins)
-{
-    var blockType = plugin.GetBlockTypes().FirstOrDefault(t => t.Name == "ImageResizeBlock");
-    if (blockType != null)
-    {
-        // Create and use instance
-        var instance = Activator.CreateInstance(blockType) as IBlock;
-        loader.RegisterInstance(instance, plugin.Name);
-        
-        try
-        {
-            // Use the block...
-            instance.Title = "Resize to 800x600";
-            var result = instance.Execute(inputs);
-        }
-        finally
-        {
-            // Cleanup
-            instance.Dispose();
-            loader.UnregisterInstance(instance);
-        }
-        
-        break;
-    }
-}
-
-// Unload unused plugins
-foreach (var plugin in loader.LoadedPlugins)
-{
-    if (plugin.ActiveInstanceCount == 0)
-    {
-        loader.UnloadPlugin(plugin.Name);
-    }
-}
-```
-
-## Best Practices
-
-1. **Always register instances** - Use `RegisterInstance()` and `UnregisterInstance()` to enable proper usage tracking
-2. **Dispose instances** - Always dispose IBlock instances when done to free resources
-3. **Use TryUnloadPlugin** - Prefer soft unload over hard unload for better user experience
-4. **Shared dependencies** - ImageAutomate.Core and common .NET assemblies are shared between host and plugins
-5. **Error handling** - Always wrap plugin operations in try-catch blocks
-6. **MANIFEST files** - Use MANIFEST.json for better plugin metadata and documentation
-
-## Thread Safety
-
-The PluginLoader is thread-safe and can be safely used from multiple threads. Internal operations are protected by locks.
-
-## Limitations
-
-1. **Force unload not recommended** - Using `UnloadPlugin(name, force: true)` can cause crashes if instances are still active
-2. **GC dependent** - Actual unloading happens during garbage collection
-3. **AppDomain limitations** - .NET Core/5+ doesn't support AppDomains, so collectible AssemblyLoadContext is used instead
-4. **Shared assemblies** - Types from shared assemblies (like ImageAutomate.Core) must match between host and plugins
+This decouples the file system structure from the logical plugin identity.
