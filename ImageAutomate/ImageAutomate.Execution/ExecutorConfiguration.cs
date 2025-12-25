@@ -6,10 +6,12 @@ namespace ImageAutomate.Execution;
 public class ExecutorConfiguration
 {
     /// <summary>
-    /// Gets or sets the execution mode for the pipeline.
-    /// Default: SimpleDfs (Mode A).
+    /// Gets or sets the execution mode or custom scheduler name.
+    /// Built-in modes: "SimpleDfs", "Adaptive" (not implemented), "AdaptiveBatched" (not implemented).
+    /// Custom: Use registered scheduler name from plugins.
+    /// Default: "SimpleDfs".
     /// </summary>
-    public ExecutionMode Mode { get; set; } = ExecutionMode.SimpleDfs;
+    public string Mode { get; set; } = "SimpleDfs";
 
     /// <summary>
     /// Gets or sets the maximum degree of parallelism (concurrent block executions).

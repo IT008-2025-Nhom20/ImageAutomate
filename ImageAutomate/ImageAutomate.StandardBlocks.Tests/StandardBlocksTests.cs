@@ -50,7 +50,7 @@ public class StandardBlocksTests : StandardBlockTestBase
         // Test conversion to JPEG
         var block = new ConvertBlock
         {
-            TargetFormat = ImageFormat.Jpeg,
+            TargetFormat = "JPEG",
             JpegOptions = new JpegEncodingOptions { Quality = 50 }
         };
         await TestBlock(block, res, count, batch);

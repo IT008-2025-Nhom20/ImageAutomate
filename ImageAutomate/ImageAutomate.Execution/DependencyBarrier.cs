@@ -10,7 +10,7 @@ namespace ImageAutomate.Execution;
 /// Ensures exactly-once enqueueing via CAS (Compare-And-Swap).
 /// Initialized lazily when first predecessor completes.
 /// </remarks>
-internal sealed class DependencyBarrier
+public sealed class DependencyBarrier
 {
     private int _dependencyCount; // number of unsatisfied dependencies
     private int  _enqueued; // 0 = false, 1 = true

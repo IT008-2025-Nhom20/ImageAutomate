@@ -70,6 +70,10 @@ public class PluginLoader
             {
                 var loadContext = new PluginLoadContext(fullPath);
                 var assembly = loadContext.LoadFromAssemblyPath(fullPath);
+
+                // Auto-discover and initialize plugin entry point
+                TryInitializePlugin(assembly);
+
                 var pluginInfo = new PluginInfo(name, fullPath, assembly, loadContext);
                 
                 _plugins[name] = pluginInfo;
@@ -487,6 +491,92 @@ public class PluginLoader
             return plugin.ActiveInstanceCount;
         }
         return 0;
+    }
+
+    /// <summary>
+    /// Attempts to discover and initialize the plugin entry point.
+    /// </summary>
+    /// <param name="assembly">The plugin assembly to search.</param>
+    private void TryInitializePlugin(Assembly assembly)
+    {
+        try
+        {
+            // Look for class named "PluginInitializer" implementing IPluginInitializer
+            var initializerType = assembly.GetTypes()
+                .FirstOrDefault(t => t.Name == "PluginInitializer" &&
+                                    typeof(IPluginInitializer).IsAssignableFrom(t) &&
+                                    !t.IsAbstract &&
+                                    !t.IsInterface);
+
+            if (initializerType != null)
+            {
+                var accessor = new RegistryAccessorProxy();
+                var initializer = (IPluginInitializer?)Activator.CreateInstance(initializerType);
+                initializer?.Initialize(accessor);
+            }
+        }
+        catch (Exception ex)
+        {
+            // Log but don't fail plugin load
+            Console.Error.WriteLine($"Plugin initialization warning: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Proxy class that allows Core to access Execution registries via reflection.
+    /// This avoids circular dependency between Core and Execution assemblies.
+    /// </summary>
+    private sealed class RegistryAccessorProxy : IRegistryAccessor
+    {
+        public void RegisterScheduler(string name, Func<object> factory)
+        {
+            // Use fully dynamic reflection to avoid compile-time dependency on Execution
+            var registryType = Type.GetType("ImageAutomate.Execution.Scheduling.SchedulerRegistry, ImageAutomate.Execution");
+            if (registryType == null)
+            {
+                Console.Error.WriteLine("Failed to locate SchedulerRegistry type.");
+                return;
+            }
+
+            var registryProperty = registryType.GetProperty("Registry",
+                System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public);
+            var registry = registryProperty?.GetValue(null);
+            if (registry == null)
+            {
+                Console.Error.WriteLine("Failed to access SchedulerRegistry.Registry property.");
+                return;
+            }
+
+            // Get IScheduler type dynamically
+            var iSchedulerType = Type.GetType("ImageAutomate.Execution.Scheduling.IScheduler, ImageAutomate.Execution");
+            if (iSchedulerType == null)
+            {
+                Console.Error.WriteLine("Failed to locate IScheduler type.");
+                return;
+            }
+
+            // Create Func<IScheduler> type dynamically
+            var funcSchedulerType = typeof(Func<>).MakeGenericType(iSchedulerType);
+            if (funcSchedulerType == null)
+            {
+                Console.Error.WriteLine("Failed to create Func<IScheduler> type.");
+                return;
+            }
+
+            var registerMethod = registry.GetType().GetMethod("RegisterScheduler",
+                new[] { typeof(string), funcSchedulerType });
+
+            if (registerMethod == null)
+            {
+                Console.Error.WriteLine("Failed to find RegisterScheduler method.");
+                return;
+            }
+
+            // Create a wrapper delegate that adapts Func<object> to Func<IScheduler>
+            var typedFactory = factory;
+
+            registerMethod.Invoke(registry, new object[] { name, typedFactory });
+        }
     }
 }
 

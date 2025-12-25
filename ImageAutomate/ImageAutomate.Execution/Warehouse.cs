@@ -11,7 +11,7 @@ namespace ImageAutomate.Execution;
 /// This class is thread-safe. It uses atomic counter operations for lock-free coordination.
 /// Initialized lazily when a block first produces output.
 /// </remarks>
-internal sealed class Warehouse
+public sealed class Warehouse
 {
     private readonly Lock _lock = new(); // mutex lock to protect buffer access
     private ImmutableDictionary<Socket, ImmutableList<IBasicWorkItem>>? _inventory; // immutable data buffer for thread-safe reads

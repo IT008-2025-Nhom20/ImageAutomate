@@ -4,27 +4,31 @@ namespace ImageAutomate.Execution;
 
 /// <summary>
 /// Factory for creating scheduler instances based on execution mode.
+/// Uses the global scheduler registry for lookups.
 /// </summary>
 internal static class SchedulerFactory
 {
+    private static readonly SchedulerRegistry _registry = new();
+
     /// <summary>
-    /// Creates a scheduler for the specified execution mode.
+    /// Gets the global scheduler registry for registration.
     /// </summary>
-    /// <param name="mode">The execution mode.</param>
+    public static SchedulerRegistry Registry => _registry;
+
+    /// <summary>
+    /// Creates a scheduler for the specified mode.
+    /// </summary>
+    /// <param name="mode">The execution mode or custom scheduler name.
+    /// Built-in modes: "SimpleDfs", "Adaptive" (not implemented), "AdaptiveBatched" (not implemented).
+    /// Custom: Use registered scheduler name from plugins.</param>
     /// <returns>A scheduler instance.</returns>
-    /// <exception cref="NotImplementedException">Thrown when Adaptive Mode is selected.</exception>
-    /// <exception cref="ArgumentException">Thrown for unknown execution modes.</exception>
-    public static IScheduler CreateScheduler(ExecutionMode mode)
+    /// <exception cref="ArgumentException">Thrown for unknown modes.</exception>
+    public static IScheduler CreateScheduler(string mode)
     {
         return mode switch
         {
-            ExecutionMode.SimpleDfs => new SimpleDfsScheduler(),
-            
-            // Adaptive and AdaptiveBatched modes commented out until Mode B implementation
-            // ExecutionMode.Adaptive => throw new NotImplementedException(...),
-            // ExecutionMode.AdaptiveBatched => throw new NotImplementedException(...),
-            
-            _ => throw new ArgumentException($"Unknown execution mode: {mode}", nameof(mode))
+            "SimpleDfs" => new SimpleDfsScheduler(),
+            _ => _registry.CreateScheduler(mode)
         };
     }
 }

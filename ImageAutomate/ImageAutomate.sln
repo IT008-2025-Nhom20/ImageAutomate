@@ -19,6 +19,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ImageAutomate.Execution.Mem
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ImageAutomate.StandardBlocks.Tests", "ImageAutomate.StandardBlocks.Tests\ImageAutomate.StandardBlocks.Tests.csproj", "{33652F40-50D5-254C-C7B7-017C46C7EB23}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ImageAutomate.Infrastructure", "ImageAutomate.Infrastructure\ImageAutomate.Infrastructure.csproj", "{838BB081-41D4-4C0C-A99F-F3D422268136}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -125,6 +127,18 @@ Global
 		{33652F40-50D5-254C-C7B7-017C46C7EB23}.Release|x64.Build.0 = Release|Any CPU
 		{33652F40-50D5-254C-C7B7-017C46C7EB23}.Release|x86.ActiveCfg = Release|Any CPU
 		{33652F40-50D5-254C-C7B7-017C46C7EB23}.Release|x86.Build.0 = Release|Any CPU
+		{838BB081-41D4-4C0C-A99F-F3D422268136}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{838BB081-41D4-4C0C-A99F-F3D422268136}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{838BB081-41D4-4C0C-A99F-F3D422268136}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{838BB081-41D4-4C0C-A99F-F3D422268136}.Debug|x64.Build.0 = Debug|Any CPU
+		{838BB081-41D4-4C0C-A99F-F3D422268136}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{838BB081-41D4-4C0C-A99F-F3D422268136}.Debug|x86.Build.0 = Debug|Any CPU
+		{838BB081-41D4-4C0C-A99F-F3D422268136}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{838BB081-41D4-4C0C-A99F-F3D422268136}.Release|Any CPU.Build.0 = Release|Any CPU
+		{838BB081-41D4-4C0C-A99F-F3D422268136}.Release|x64.ActiveCfg = Release|Any CPU
+		{838BB081-41D4-4C0C-A99F-F3D422268136}.Release|x64.Build.0 = Release|Any CPU
+		{838BB081-41D4-4C0C-A99F-F3D422268136}.Release|x86.ActiveCfg = Release|Any CPU
+		{838BB081-41D4-4C0C-A99F-F3D422268136}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

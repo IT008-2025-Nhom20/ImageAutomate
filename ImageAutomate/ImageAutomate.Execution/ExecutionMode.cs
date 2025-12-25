@@ -3,6 +3,7 @@ namespace ImageAutomate.Execution;
 /// <summary>
 /// Specifies the execution mode for the pipeline engine.
 /// </summary>
+[Obsolete("Use string-based scheduler names instead. This enum exists for backward compatibility.")]
 public enum ExecutionMode
 {
     /// <summary>

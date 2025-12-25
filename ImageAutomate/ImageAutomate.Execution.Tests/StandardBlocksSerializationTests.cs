@@ -100,7 +100,7 @@ public class StandardBlocksSerializationTests
         // Arrange
         var block = new ConvertBlock
         {
-            TargetFormat = ImageFormat.Jpeg,
+            TargetFormat = "JPEG",
             AlwaysEncode = true
         };
 
@@ -121,7 +121,7 @@ public class StandardBlocksSerializationTests
         // Arrange
         var block = new ConvertBlock
         {
-            TargetFormat = ImageFormat.Jpeg,
+            TargetFormat = "JPEG",
             JpegOptions = new JpegEncodingOptions { Quality = 90 }
         };
 
@@ -140,7 +140,7 @@ public class StandardBlocksSerializationTests
         // Arrange
         var block = new ConvertBlock
         {
-            TargetFormat = ImageFormat.Png,
+            TargetFormat = "PNG",
             PngOptions = new PngEncodingOptions { CompressionLevel = PngCompressionLevel.BestCompression }
         };
 
@@ -159,7 +159,7 @@ public class StandardBlocksSerializationTests
         // Arrange
         var block = new ConvertBlock
         {
-            TargetFormat = ImageFormat.Gif,
+            TargetFormat = "GIF",
             GifOptions = new GifEncodingOptions
             {
                 ColorTableMode = GifColorTableMode.Local
@@ -181,7 +181,7 @@ public class StandardBlocksSerializationTests
         // Arrange
         var block = new ConvertBlock
         {
-            TargetFormat = ImageFormat.Tiff,
+            TargetFormat = "TIFF",
             TiffOptions = new TiffEncodingOptions { Compression = TiffCompression.Deflate }
         };
 
@@ -200,7 +200,7 @@ public class StandardBlocksSerializationTests
         // Arrange
         var block = new ConvertBlock
         {
-            TargetFormat = ImageFormat.WebP,
+            TargetFormat = "WebP",
             WebPOptions = new WebPEncodingOptions
             {
                 FileFormat = WebpFileFormatType.Lossless,
@@ -229,7 +229,7 @@ public class StandardBlocksSerializationTests
         var graph = new PipelineGraph();
         var loadBlock = new LoadBlock { SourcePath = "/images" };
         var brightnessBlock = new BrightnessBlock { Brightness = 1.2f };
-        var convertBlock = new ConvertBlock { TargetFormat = ImageFormat.Png };
+        var convertBlock = new ConvertBlock { TargetFormat = "PNG" };
 
         graph.AddBlock(loadBlock);
         graph.AddBlock(brightnessBlock);
@@ -259,7 +259,7 @@ public class StandardBlocksSerializationTests
 
         Assert.Equal("/images", deserializedLoad.SourcePath);
         Assert.Equal(1.2f, deserializedBrightness.Brightness, precision: 5);
-        Assert.Equal(ImageFormat.Png, deserializedConvert.TargetFormat);
+        Assert.Equal("PNG", deserializedConvert.TargetFormat);
     }
 
     [Fact]
@@ -296,7 +296,7 @@ public class StandardBlocksSerializationTests
         };
         var convertBlock = new ConvertBlock
         {
-            TargetFormat = ImageFormat.Jpeg,
+            TargetFormat = "JPEG",
             JpegOptions = new JpegEncodingOptions { Quality = 85 },
             X = 800,
             Y = 100
@@ -330,7 +330,7 @@ public class StandardBlocksSerializationTests
             Assert.NotNull(loadedLoadBlock);
             Assert.NotNull(loadedConvertBlock);
             Assert.Equal("/input/images", loadedLoadBlock.SourcePath);
-            Assert.Equal(ImageFormat.Jpeg, loadedConvertBlock.TargetFormat);
+            Assert.Equal("JPEG", loadedConvertBlock.TargetFormat);
             Assert.Equal(85, loadedConvertBlock.JpegOptions.Quality);
 
             var pos = loaded.Graph.Nodes[0];

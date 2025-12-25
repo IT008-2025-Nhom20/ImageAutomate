@@ -7,7 +7,7 @@ namespace ImageAutomate.Execution;
 /// <summary>
 /// The runtime state of a pipeline execution.
 /// </summary>
-internal sealed class ExecutionContext
+public sealed class ExecutionContext
 {
     /// <summary>
     /// The pipeline graph being executed.
