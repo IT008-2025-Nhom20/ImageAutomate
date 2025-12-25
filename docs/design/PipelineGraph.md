@@ -53,11 +53,11 @@ The `PipelineGraph` enforces structural rules to ensure a valid graph state.
 
 *   **Existence:** An Edge cannot exist unless both Source and Target Nodes are present in the `_nodes` list.
 *   **Port Validity:** An Edge must reference valid `Socket` instances belonging to the respective Blocks.
-*   **Type Safety:** (Implicit) Connections are only valid between Output and Input sockets (enforced by UI/API validation logic).
+*   **Type Safety:** Connections are only valid between Output and Input sockets (enforeced by graph's `AddEdge` method).
 
 ### 3.2. Manipulation API
 
-*   **Atomic Operations:** `AddBlock`, `RemoveNode`, `AddEdge`, `RemoveEdge`.
+*   **Standard Graph Operations:** `AddBlock`, `RemoveNode`, `AddEdge`, `RemoveEdge`.
 *   **Cascading Deletion:** `RemoveNode(block)` automatically identifies and purges all incident Edges (`_edges.RemoveAll(...)`), preventing dangling references.
 *   **Layering:** `BringToTop(block)` permutes the `_nodes` list to move the target block to the end, altering render order without changing topology.
 

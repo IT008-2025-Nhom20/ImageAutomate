@@ -29,7 +29,7 @@ Plugins are loaded into discrete `PluginLoadContext` instances, which inherit fr
 
 *   **Host Context (Default):** Contains system assemblies, `ImageAutomate.Core`, `SixLabors.ImageSharp`, and the UI shell.
 *   **Plugin Context (Collectible):** Dedicated context for each plugin.
-    *   **Shared Dependencies:** Requests for "Core" assemblies (Host, `System.*`, `netstandard`) are delegated to the Host Context.
+    *   **Shared Dependencies:** Requests for "Core" assemblies (Host, `System.*`, `Microsoft.*`, `netstandard`, `SixLabors.ImageSharp`) are delegated to the Host Context.
     *   **Private Dependencies:** Requests for plugin-specific libraries (e.g., specific JSON parsers, third-party CV libraries) are resolved locally within the plugin context.
 
 ### 2.2. Collectibility
@@ -63,10 +63,18 @@ The implementation of the isolation mechanism.
 *   **Overrides:** `Load(AssemblyName)` to enforce the sharing policy.
 *   **Policy:**
     ```csharp
-    if (assembly.Name == "ImageAutomate.Core" || assembly.Name.StartsWith("System."))
+    if (assembly.Name == "ImageAutomate.Core" ||
+        assembly.Name.StartsWith("System.") ||
+        assembly.Name.StartsWith("Microsoft.") ||
+        assembly.Name == "netstandard" ||
+        assembly.Name == "SixLabors.ImageSharp")
+    {
         return null; // Delegate to Host (Share)
+    }
     else
+    {
         return LoadFromPath(resolvedPath); // Load Private
+    }
     ```
 
 ## 4. Discovery & Loading Mechanism
