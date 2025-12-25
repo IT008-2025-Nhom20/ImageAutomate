@@ -45,12 +45,18 @@ public class CropBlock : IBlock
 
     private CropModeOption _cropMode = CropModeOption.Rectangle;
 
-    private int _x;
-    private int _y;
+    private int _cropX;
+    private int _cropY;
     private int _cropWidth = 100;
     private int _cropHeight = 100;
 
     private AnchorPositionOption _anchorPosition = AnchorPositionOption.Center;
+
+    // Layout fields
+    private double _layoutX;
+    private double _layoutY;
+    private int _layoutWidth = 200;
+    private int _layoutHeight = 100;
     #endregion
 
     #region IBlock basic
@@ -68,13 +74,73 @@ public class CropBlock : IBlock
         {
             if (CropMode is CropModeOption.Rectangle)
                 return $"Crop Mode: {CropMode}\n" +
-                       $"Left: {X} Top: {Y}\n" +
+                       $"Left: {CropX} Top: {CropY}\n" +
                        $"Width: {CropWidth} Height: {CropHeight}\n" +
                        $"Anchor Position: {AnchorPosition}";
 
             return $"Crop Mode: {CropMode}\n" +
                    $"Width: {CropWidth} Height: {CropHeight}\n" +
                    $"Anchor Position: {AnchorPosition}";
+        }
+    }
+
+    #endregion
+
+    #region Layout Properties
+
+    /// <inheritdoc />
+    public double X
+    {
+        get => _layoutX;
+        set
+        {
+            if (Math.Abs(_layoutX - value) > double.Epsilon)
+            {
+                _layoutX = value;
+                OnPropertyChanged(nameof(X));
+            }
+        }
+    }
+
+    /// <inheritdoc />
+    public double Y
+    {
+        get => _layoutY;
+        set
+        {
+            if (Math.Abs(_layoutY - value) > double.Epsilon)
+            {
+                _layoutY = value;
+                OnPropertyChanged(nameof(Y));
+            }
+        }
+    }
+
+    /// <inheritdoc />
+    public int Width
+    {
+        get => _layoutWidth;
+        set
+        {
+            if (_layoutWidth != value)
+            {
+                _layoutWidth = value;
+                OnPropertyChanged(nameof(Width));
+            }
+        }
+    }
+
+    /// <inheritdoc />
+    public int Height
+    {
+        get => _layoutHeight;
+        set
+        {
+            if (_layoutHeight != value)
+            {
+                _layoutHeight = value;
+                OnPropertyChanged(nameof(Height));
+            }
         }
     }
 
@@ -114,18 +180,18 @@ public class CropBlock : IBlock
     /// </summary>
     [Category("Configuration")]
     [Description("Left coordinate (X) of crop origin in pixels (Rectangle mode).")]
-    public int X
+    public int CropX
     {
-        get => _x;
+        get => _cropX;
         set
         {
-            if (_x != value)
+            if (_cropX != value)
             {
                 if (value < 0)
-                    throw new ArgumentOutOfRangeException(nameof(X), "X must be non-negative.");
+                    throw new ArgumentOutOfRangeException(nameof(CropX), "CropX must be non-negative.");
 
-                _x = value;
-                OnPropertyChanged(nameof(X));
+                _cropX = value;
+                OnPropertyChanged(nameof(CropX));
             }
         }
     }
@@ -135,18 +201,18 @@ public class CropBlock : IBlock
     /// </summary>
     [Category("Configuration")]
     [Description("Top coordinate (Y) of crop origin in pixels (Rectangle mode).")]
-    public int Y
+    public int CropY
     {
-        get => _y;
+        get => _cropY;
         set
         {
-            if (_y != value)
+            if (_cropY != value)
             {
                 if (value < 0)
-                    throw new ArgumentOutOfRangeException(nameof(Y), "Y must be non-negative.");
+                    throw new ArgumentOutOfRangeException(nameof(CropY), "CropY must be non-negative.");
 
-                _y = value;
-                OnPropertyChanged(nameof(Y));
+                _cropY = value;
+                OnPropertyChanged(nameof(CropY));
             }
         }
     }
@@ -292,10 +358,10 @@ public class CropBlock : IBlock
         if (CropWidth <= 0 || CropHeight <= 0)
             throw new InvalidOperationException("CropBlock (Rectangle): CropWidth and CropHeight must be positive.");
 
-        if (X >= sourceWidth || Y >= sourceHeight)
-            throw new InvalidOperationException("CropBlock (Rectangle): X/Y start outside image bounds.");
+        if (CropX >= sourceWidth || CropY >= sourceHeight)
+            throw new InvalidOperationException("CropBlock (Rectangle): CropX/CropY start outside image bounds.");
 
-        return new Rectangle(X, Y, CropWidth, CropHeight);
+        return new Rectangle(CropX, CropY, CropWidth, CropHeight);
     }
 
     private Rectangle BuildCenteredCropRegion(int srcWidth, int srcHeight)

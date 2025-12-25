@@ -174,19 +174,17 @@ public class PipelineGraph
     }
 
     /// <summary>
-    /// Converts the PipelineGraph to a DTO for serialization, embedding layout from ViewState.
+    /// Converts the PipelineGraph to a DTO for serialization.
+    /// Layout is stored directly in each block's properties.
     /// </summary>
-    /// <param name="viewState">Optional ViewState to embed layout information in each block.</param>
-    internal PipelineGraphDto ToDto(ViewState? viewState = null)
+    internal PipelineGraphDto ToDto()
     {
         var dto = new PipelineGraphDto();
 
-        // Serialize blocks with embedded layout
+        // Serialize blocks (layout is now part of block properties)
         foreach (var block in _nodes)
         {
-            Position? position = viewState?.GetBlockPosition(block);
-            Size? size = viewState?.GetBlockSize(block);
-            dto.Blocks.Add(BlockSerializer.Serialize(block, position, size));
+            dto.Blocks.Add(BlockSerializer.Serialize(block));
         }
 
         // Serialize connections (using block indices)
@@ -207,7 +205,7 @@ public class PipelineGraph
             });
         }
 
-        // Serialize center block
+        // Serialize selected block
         if (SelectedBlock != null)
         {
             dto.CenterBlockIndex = _nodes.IndexOf(SelectedBlock);
@@ -217,30 +215,19 @@ public class PipelineGraph
     }
 
     /// <summary>
-    /// Creates a PipelineGraph from a DTO, extracting embedded layout into a ViewState.
+    /// Creates a PipelineGraph from a DTO.
     /// </summary>
-    /// <param name="dto">The DTO to deserialize.</param>
-    /// <param name="viewState">The ViewState to populate with layout information.</param>
-    internal static PipelineGraph FromDto(PipelineGraphDto dto, ViewState? viewState = null)
+    internal static PipelineGraph FromDto(PipelineGraphDto dto)
     {
         var graph = new PipelineGraph();
 
-        // Deserialize blocks with layout extraction
+        // Deserialize blocks (layout is restored directly into block properties)
         var blocks = new List<IBlock>();
         foreach (var blockDto in dto.Blocks)
         {
-            var result = BlockSerializer.DeserializeWithLayout(blockDto);
-            blocks.Add(result.Block);
-            graph.AddBlock(result.Block);
-            
-            // Extract layout into ViewState if provided
-            if (viewState != null)
-            {
-                if (result.Position != null)
-                    viewState.SetBlockPosition(result.Block, result.Position);
-                if (result.Size != null)
-                    viewState.SetBlockSize(result.Block, result.Size);
-            }
+            var block = BlockSerializer.Deserialize(blockDto);
+            blocks.Add(block);
+            graph.AddBlock(block);
         }
 
         // Deserialize connections
@@ -263,7 +250,7 @@ public class PipelineGraph
             }
         }
 
-        // Restore center block
+        // Restore selected block
         if (dto.CenterBlockIndex.HasValue &&
             dto.CenterBlockIndex.Value >= 0 &&
             dto.CenterBlockIndex.Value < blocks.Count)

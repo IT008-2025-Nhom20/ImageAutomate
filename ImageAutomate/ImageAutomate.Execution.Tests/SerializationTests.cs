@@ -70,7 +70,7 @@ public class SerializationTests
         // We use a real block (BrightnessBlock) that has a parameterless constructor
         var block = new ImageAutomate.StandardBlocks.BrightnessBlock
         {
-            Bright = 1.5f
+            Brightness = 1.5f
         };
 
         // Act
@@ -203,87 +203,13 @@ public class SerializationTests
 
     #endregion
 
-    #region ViewState Tests
-
-    [Fact]
-    public void ViewState_DefaultValues_AreCorrect()
-    {
-        // Arrange & Act
-        var viewState = new ViewState();
-
-        // Assert
-        Assert.Equal(1.0, viewState.Zoom);
-        Assert.Equal(0.0, viewState.PanX);
-        Assert.Equal(0.0, viewState.PanY);
-    }
-
-    [Fact]
-    public void ViewState_SetBlockPosition_PreservesPosition()
-    {
-        // Arrange
-        var viewState = new ViewState();
-        var block = new ImageAutomate.StandardBlocks.BrightnessBlock();
-        var position = new Position(100.5, 200.75);
-
-        // Act
-        viewState.SetBlockPosition(block, position);
-        var retrieved = viewState.GetBlockPosition(block);
-
-        // Assert
-        Assert.NotNull(retrieved);
-        Assert.Equal(position.X, retrieved.X);
-        Assert.Equal(position.Y, retrieved.Y);
-    }
-
-    [Fact]
-    public void ViewState_Zoom_ClampsToValidRange()
-    {
-        // Arrange
-        var viewState = new ViewState();
-
-        // Act & Assert - too low
-        viewState.Zoom = -1.0;
-        Assert.Equal(0.1, viewState.Zoom);
-
-        // Act & Assert - too high
-        viewState.Zoom = 100.0;
-        Assert.Equal(10.0, viewState.Zoom);
-
-        // Act & Assert - valid
-        viewState.Zoom = 2.5;
-        Assert.Equal(2.5, viewState.Zoom);
-    }
-
-    [Fact]
-    public void ViewState_Clear_ResetsAllState()
-    {
-        // Arrange
-        var viewState = new ViewState();
-        var block = new ImageAutomate.StandardBlocks.BrightnessBlock();
-        viewState.SetBlockPosition(block, new Position(100, 100));
-        viewState.Zoom = 2.0;
-        viewState.PanX = 50;
-        viewState.PanY = 75;
-
-        // Act
-        viewState.Clear();
-
-        // Assert
-        Assert.Null(viewState.GetBlockPosition(block));
-        Assert.Equal(1.0, viewState.Zoom);
-        Assert.Equal(0.0, viewState.PanX);
-        Assert.Equal(0.0, viewState.PanY);
-    }
-
-    #endregion
-
     #region Workspace Tests
 
     [Fact]
     public void Workspace_Serialization_EmptyWorkspace_RoundTrip()
     {
         // Arrange
-        var workspace = new Workspace
+        var workspace = new Workspace(new())
         {
             Name = "Test Workspace"
         };
@@ -294,29 +220,33 @@ public class SerializationTests
 
         // Assert
         Assert.Equal(workspace.Name, deserialized.Name);
-        Assert.Null(deserialized.Graph);
+        Assert.NotNull(deserialized.Graph);
     }
 
     [Fact]
     public void Workspace_Serialization_WithGraph_RoundTrip()
     {
         // Arrange
-        var workspace = new Workspace
+        var workspace = new Workspace(new())
         {
             Name = "Complex Workspace",
-            Graph = new PipelineGraph()
+            Zoom = 1.5
         };
 
-        var source = new ImageAutomate.StandardBlocks.BrightnessBlock();
-        var target = new ImageAutomate.StandardBlocks.BrightnessBlock();
+        var source = new ImageAutomate.StandardBlocks.BrightnessBlock()
+        {
+            X = 50,
+            Y = 50
+        };
+        var target = new ImageAutomate.StandardBlocks.BrightnessBlock()
+        {
+            X = 250,
+            Y = 50
+        };
 
         workspace.Graph.AddBlock(source);
         workspace.Graph.AddBlock(target);
         workspace.Graph.AddEdge(source, source.Outputs[0], target, target.Inputs[0]);
-
-        workspace.ViewState.SetBlockPosition(source, new Position(50, 50));
-        workspace.ViewState.SetBlockPosition(target, new Position(250, 50));
-        workspace.ViewState.Zoom = 1.5;
 
         // Act
         var json = workspace.ToJson();
@@ -327,9 +257,9 @@ public class SerializationTests
         Assert.NotNull(deserialized.Graph);
         Assert.Equal(2, deserialized.Graph.Nodes.Count);
         Assert.Single(deserialized.Graph.Edges);
-        Assert.Equal(1.5, deserialized.ViewState.Zoom);
+        Assert.Equal(1.5, deserialized.Zoom);
 
-        var sourcePos = deserialized.ViewState.GetBlockPosition(deserialized.Graph.Nodes[0]);
+        var sourcePos = deserialized.Graph.Nodes[0];
         Assert.NotNull(sourcePos);
         Assert.Equal(50, sourcePos.X);
     }
@@ -339,15 +269,17 @@ public class SerializationTests
     {
         // Arrange
         var tempFile = Path.Combine(Path.GetTempPath(), $"test_workspace_{Guid.NewGuid()}.json");
-        var workspace = new Workspace
+        var workspace = new Workspace(new())
         {
             Name = "File Test Workspace",
-            Graph = new PipelineGraph()
         };
 
-        var block = new ImageAutomate.StandardBlocks.BrightnessBlock();
+        var block = new ImageAutomate.StandardBlocks.BrightnessBlock()
+        {
+            X = 100,
+            Y = 200
+        };
         workspace.Graph.AddBlock(block);
-        workspace.ViewState.SetBlockPosition(block, new Position(100, 200));
 
         try
         {
@@ -361,7 +293,7 @@ public class SerializationTests
             Assert.Single(loaded.Graph.Nodes);
             Assert.Equal("Brightness", loaded.Graph.Nodes[0].Name);
 
-            var pos = loaded.ViewState.GetBlockPosition(loaded.Graph.Nodes[0]);
+            var pos = loaded.Graph.Nodes[0];
             Assert.NotNull(pos);
             Assert.Equal(100, pos.X);
             Assert.Equal(200, pos.Y);
@@ -388,7 +320,7 @@ public class SerializationTests
     public void Workspace_WithMetadata_PreservesMetadata()
     {
         // Arrange
-        var workspace = new Workspace
+        var workspace = new Workspace(new())
         {
             Name = "Metadata Test",
             Metadata = new Dictionary<string, object?>

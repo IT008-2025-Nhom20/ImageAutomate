@@ -34,25 +34,8 @@ public class SocketDto
 }
 
 /// <summary>
-/// DTO for block layout information (embedded in each block for human readability).
-/// </summary>
-public class BlockLayoutDto
-{
-    [JsonPropertyName("x")]
-    public double X { get; set; }
-
-    [JsonPropertyName("y")]
-    public double Y { get; set; }
-
-    [JsonPropertyName("width")]
-    public int Width { get; set; }
-
-    [JsonPropertyName("height")]
-    public int Height { get; set; }
-}
-
-/// <summary>
 /// DTO for serializing IBlock data.
+/// Layout properties (X, Y, Width, Height) are serialized as regular properties.
 /// </summary>
 public class BlockDto
 {
@@ -61,12 +44,6 @@ public class BlockDto
 
     [JsonPropertyName("assemblyQualifiedName")]
     public string AssemblyQualifiedName { get; set; } = string.Empty;
-
-    /// <summary>
-    /// Layout information (position and size) embedded in the block for human-readable JSON.
-    /// </summary>
-    [JsonPropertyName("layout")]
-    public BlockLayoutDto? Layout { get; set; }
 
     [JsonPropertyName("properties")]
     public Dictionary<string, object?> Properties { get; set; } = new();
@@ -112,22 +89,6 @@ public class PipelineGraphDto
 }
 
 /// <summary>
-/// DTO for storing view state information (global view settings only).
-/// Block-specific layout is now embedded in each BlockDto.
-/// </summary>
-public class ViewStateDto
-{
-    [JsonPropertyName("zoom")]
-    public double Zoom { get; set; } = 1.0;
-
-    [JsonPropertyName("panX")]
-    public double PanX { get; set; } = 0.0;
-
-    [JsonPropertyName("panY")]
-    public double PanY { get; set; } = 0.0;
-}
-
-/// <summary>
 /// DTO for serializing a complete Workspace.
 /// </summary>
 public class WorkspaceDto
@@ -144,8 +105,14 @@ public class WorkspaceDto
     [JsonPropertyName("graph")]
     public PipelineGraphDto? Graph { get; set; }
 
-    [JsonPropertyName("viewState")]
-    public ViewStateDto? ViewState { get; set; }
+    [JsonPropertyName("zoom")]
+    public double Zoom { get; set; } = 1.0;
+
+    [JsonPropertyName("panX")]
+    public double PanX { get; set; } = 0.0;
+
+    [JsonPropertyName("panY")]
+    public double PanY { get; set; } = 0.0;
 
     [JsonPropertyName("metadata")]
     public Dictionary<string, object?> Metadata { get; set; } = new();

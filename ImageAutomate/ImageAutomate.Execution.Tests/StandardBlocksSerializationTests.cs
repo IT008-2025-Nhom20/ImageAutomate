@@ -45,7 +45,7 @@ public class StandardBlocksSerializationTests
         // Arrange
         var block = new BrightnessBlock
         {
-            Bright = 1.5f
+            Brightness = 1.5f
         };
 
         // Act
@@ -55,7 +55,7 @@ public class StandardBlocksSerializationTests
         // Assert
         Assert.NotNull(deserialized);
         Assert.Equal(block.Name, deserialized.Name);
-        Assert.Equal(block.Bright, deserialized.Bright, precision: 5);
+        Assert.Equal(block.Brightness, deserialized.Brightness, precision: 5);
     }
 
     #endregion
@@ -228,7 +228,7 @@ public class StandardBlocksSerializationTests
         // Arrange
         var graph = new PipelineGraph();
         var loadBlock = new LoadBlock { SourcePath = "/images" };
-        var brightnessBlock = new BrightnessBlock { Bright = 1.2f };
+        var brightnessBlock = new BrightnessBlock { Brightness = 1.2f };
         var convertBlock = new ConvertBlock { TargetFormat = ImageFormat.Png };
 
         graph.AddBlock(loadBlock);
@@ -258,7 +258,7 @@ public class StandardBlocksSerializationTests
         Assert.NotNull(deserializedConvert);
 
         Assert.Equal("/images", deserializedLoad.SourcePath);
-        Assert.Equal(1.2f, deserializedBrightness.Bright, precision: 5);
+        Assert.Equal(1.2f, deserializedBrightness.Brightness, precision: 5);
         Assert.Equal(ImageFormat.Png, deserializedConvert.TargetFormat);
     }
 
@@ -267,28 +267,39 @@ public class StandardBlocksSerializationTests
     {
         // Arrange
         var tempFile = Path.Combine(Path.GetTempPath(), $"test_pipeline_{Guid.NewGuid()}.json");
-        var workspace = new Workspace
+        var workspace = new Workspace(new())
         {
             Name = "Image Processing Pipeline",
-            Graph = new PipelineGraph()
+            Zoom = 1.25
         };
 
         var loadBlock = new LoadBlock
         {
             SourcePath = "/input/images",
-            AutoOrient = true
+            AutoOrient = true,
+            X = 50,
+            Y = 100
         };
-        var brightnessBlock = new BrightnessBlock { Bright = 1.1f };
+        var brightnessBlock = new BrightnessBlock
+        {
+            Brightness = 1.1f,
+            X = 300,
+            Y = 100
+        };
         var resizeBlock = new ResizeBlock
         {
             ResizeMode = ResizeModeOption.Fit,
             TargetWidth = 1024,
-            TargetHeight = 768
+            TargetHeight = 768,
+            X = 550,
+            Y = 100
         };
         var convertBlock = new ConvertBlock
         {
             TargetFormat = ImageFormat.Jpeg,
-            JpegOptions = new JpegEncodingOptions { Quality = 85 }
+            JpegOptions = new JpegEncodingOptions { Quality = 85 },
+            X = 800,
+            Y = 100
         };
 
         workspace.Graph.AddBlock(loadBlock);
@@ -299,12 +310,6 @@ public class StandardBlocksSerializationTests
         workspace.Graph.AddEdge(loadBlock, loadBlock.Outputs[0], brightnessBlock, brightnessBlock.Inputs[0]);
         workspace.Graph.AddEdge(brightnessBlock, brightnessBlock.Outputs[0], resizeBlock, resizeBlock.Inputs[0]);
         workspace.Graph.AddEdge(resizeBlock, resizeBlock.Outputs[0], convertBlock, convertBlock.Inputs[0]);
-
-        workspace.ViewState.SetBlockPosition(loadBlock, new Position(50, 100));
-        workspace.ViewState.SetBlockPosition(brightnessBlock, new Position(300, 100));
-        workspace.ViewState.SetBlockPosition(resizeBlock, new Position(550, 100));
-        workspace.ViewState.SetBlockPosition(convertBlock, new Position(800, 100));
-        workspace.ViewState.Zoom = 1.25;
 
         try
         {
@@ -317,7 +322,7 @@ public class StandardBlocksSerializationTests
             Assert.NotNull(loaded.Graph);
             Assert.Equal(4, loaded.Graph.Nodes.Count);
             Assert.Equal(3, loaded.Graph.Edges.Count);
-            Assert.Equal(1.25, loaded.ViewState.Zoom);
+            Assert.Equal(1.25, loaded.Zoom);
 
             var loadedLoadBlock = loaded.Graph.Nodes[0] as LoadBlock;
             var loadedConvertBlock = loaded.Graph.Nodes[3] as ConvertBlock;
@@ -328,7 +333,7 @@ public class StandardBlocksSerializationTests
             Assert.Equal(ImageFormat.Jpeg, loadedConvertBlock.TargetFormat);
             Assert.Equal(85, loadedConvertBlock.JpegOptions.Quality);
 
-            var pos = loaded.ViewState.GetBlockPosition(loaded.Graph.Nodes[0]);
+            var pos = loaded.Graph.Nodes[0];
             Assert.NotNull(pos);
             Assert.Equal(50, pos.X);
             Assert.Equal(100, pos.Y);

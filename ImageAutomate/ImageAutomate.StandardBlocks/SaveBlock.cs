@@ -31,6 +31,12 @@ public class SaveBlock : IBlock, IShipmentSink
     private bool _createDirectory = true;
     private bool _skipMetadata = false;
 
+    // Layout fields
+    private double _x;
+    private double _y;
+    private int _width = 200;
+    private int _height = 100;
+
     #endregion
 
     #region IBlock basic
@@ -43,6 +49,66 @@ public class SaveBlock : IBlock, IShipmentSink
 
     /// <inheritdoc />
     public string Content => $"Output path: {OutputPath}\nOverwrite: {Overwrite}\nCreate directory: {CreateDirectory}";
+
+    #endregion
+
+    #region Layout Properties
+
+    /// <inheritdoc />
+    public double X
+    {
+        get => _x;
+        set
+        {
+            if (Math.Abs(_x - value) > double.Epsilon)
+            {
+                _x = value;
+                OnPropertyChanged(nameof(X));
+            }
+        }
+    }
+
+    /// <inheritdoc />
+    public double Y
+    {
+        get => _y;
+        set
+        {
+            if (Math.Abs(_y - value) > double.Epsilon)
+            {
+                _y = value;
+                OnPropertyChanged(nameof(Y));
+            }
+        }
+    }
+
+    /// <inheritdoc />
+    public int Width
+    {
+        get => _width;
+        set
+        {
+            if (_width != value)
+            {
+                _width = value;
+                OnPropertyChanged(nameof(Width));
+            }
+        }
+    }
+
+    /// <inheritdoc />
+    public int Height
+    {
+        get => _height;
+        set
+        {
+            if (_height != value)
+            {
+                _height = value;
+                OnPropertyChanged(nameof(Height));
+            }
+        }
+    }
 
     #endregion
 

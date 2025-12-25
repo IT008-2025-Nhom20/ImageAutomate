@@ -21,6 +21,12 @@ public class GrayscaleBlock : IBlock
 
     private GrayscaleOptions _grayOptions = GrayscaleOptions.Bt601;
 
+    // Layout fields
+    private double _x;
+    private double _y;
+    private int _width = 200;
+    private int _height = 100;
+
     #endregion
 
     #region IBlock basic
@@ -30,6 +36,66 @@ public class GrayscaleBlock : IBlock
     public string Title => "GrayScale";
 
     public string Content => $"Gray scale option: {GrayscaleOption}";
+
+    #endregion
+
+    #region Layout Properties
+
+    /// <inheritdoc />
+    public double X
+    {
+        get => _x;
+        set
+        {
+            if (Math.Abs(_x - value) > double.Epsilon)
+            {
+                _x = value;
+                OnPropertyChanged(nameof(X));
+            }
+        }
+    }
+
+    /// <inheritdoc />
+    public double Y
+    {
+        get => _y;
+        set
+        {
+            if (Math.Abs(_y - value) > double.Epsilon)
+            {
+                _y = value;
+                OnPropertyChanged(nameof(Y));
+            }
+        }
+    }
+
+    /// <inheritdoc />
+    public int Width
+    {
+        get => _width;
+        set
+        {
+            if (_width != value)
+            {
+                _width = value;
+                OnPropertyChanged(nameof(Width));
+            }
+        }
+    }
+
+    /// <inheritdoc />
+    public int Height
+    {
+        get => _height;
+        set
+        {
+            if (_height != value)
+            {
+                _height = value;
+                OnPropertyChanged(nameof(Height));
+            }
+        }
+    }
 
     #endregion
 

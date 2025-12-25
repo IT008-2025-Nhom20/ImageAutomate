@@ -23,6 +23,12 @@ public class BrightnessBlock : IBlock
 
     private float _bright = 1.0f;
 
+    // Layout fields
+    private double _x;
+    private double _y;
+    private int _width = 200;
+    private int _height = 100;
+
     #endregion
 
     #region IBlock basic
@@ -34,7 +40,67 @@ public class BrightnessBlock : IBlock
     public string Title => "Brightness";
 
     /// <inheritdoc />
-    public string Content => $"Brightness: {Bright}";
+    public string Content => $"Brightness: {Brightness}";
+
+    #endregion
+
+    #region Layout Properties
+
+    /// <inheritdoc />
+    public double X
+    {
+        get => _x;
+        set
+        {
+            if (Math.Abs(_x - value) > double.Epsilon)
+            {
+                _x = value;
+                OnPropertyChanged(nameof(X));
+            }
+        }
+    }
+
+    /// <inheritdoc />
+    public double Y
+    {
+        get => _y;
+        set
+        {
+            if (Math.Abs(_y - value) > double.Epsilon)
+            {
+                _y = value;
+                OnPropertyChanged(nameof(Y));
+            }
+        }
+    }
+
+    /// <inheritdoc />
+    public int Width
+    {
+        get => _width;
+        set
+        {
+            if (_width != value)
+            {
+                _width = value;
+                OnPropertyChanged(nameof(Width));
+            }
+        }
+    }
+
+    /// <inheritdoc />
+    public int Height
+    {
+        get => _height;
+        set
+        {
+            if (_height != value)
+            {
+                _height = value;
+                OnPropertyChanged(nameof(Height));
+            }
+        }
+    }
 
     #endregion
 
@@ -55,7 +121,7 @@ public class BrightnessBlock : IBlock
     /// </summary>
     [Category("Configuration")]
     [Description("Brightness factor. 1.0 = no change, <1.0 = darker, >1.0 = brighter.")]   
-    public float Bright
+    public float Brightness
     {
         get => _bright;
         set
@@ -64,7 +130,7 @@ public class BrightnessBlock : IBlock
             if (Math.Abs(_bright - clamped) > float.Epsilon)
             {
                 _bright = clamped;
-                OnPropertyChanged(nameof(Bright));
+                OnPropertyChanged(nameof(Brightness));
             }
         }
     }
@@ -120,7 +186,7 @@ public class BrightnessBlock : IBlock
         foreach (var sourceItem in inItems.OfType<WorkItem>())
         {
             cancellationToken.ThrowIfCancellationRequested();
-            sourceItem.Image.Mutate(x => x.Brightness(Bright));
+            sourceItem.Image.Mutate(x => x.Brightness(Brightness));
             outputItems.Add(sourceItem);
         }
 

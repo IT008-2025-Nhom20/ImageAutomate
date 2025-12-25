@@ -12,30 +12,15 @@ using System.Text.Json.Nodes;
 namespace ImageAutomate.Core.Serialization;
 
 /// <summary>
-/// Result of deserializing a block, including optional layout information.
-/// </summary>
-public record BlockDeserializationResult(IBlock Block, Position? Position, Size? Size);
-
-/// <summary>
 /// Provides serialization/deserialization for IBlock instances.
 /// </summary>
 public static class BlockSerializer
 {
     /// <summary>
-    /// Serializes an IBlock to a BlockDto without layout information.
+    /// Serializes an IBlock to a BlockDto.
+    /// Layout properties (X, Y, Width, Height) are serialized as regular properties.
     /// </summary>
     public static BlockDto Serialize(IBlock block)
-    {
-        return Serialize(block, null, null);
-    }
-
-    /// <summary>
-    /// Serializes an IBlock to a BlockDto with embedded layout information.
-    /// </summary>
-    /// <param name="block">The block to serialize.</param>
-    /// <param name="position">Optional position to embed in the DTO.</param>
-    /// <param name="size">Optional size to embed in the DTO.</param>
-    public static BlockDto Serialize(IBlock block, Position? position, Size? size)
     {
         var dto = new BlockDto
         {
@@ -43,28 +28,15 @@ public static class BlockSerializer
             AssemblyQualifiedName = block.GetType().AssemblyQualifiedName ?? block.GetType().FullName ?? block.GetType().Name,
         };
 
-        // Embed layout if provided
-        if (position != null || size != null)
-        {
-            var defaultSize = ViewState.DefaultBlockSize;
-            dto.Layout = new BlockLayoutDto
-            {
-                X = position?.X ?? 0,
-                Y = position?.Y ?? 0,
-                Width = size?.Width ?? defaultSize.Width,
-                Height = size?.Height ?? defaultSize.Height
-            };
-        }
-
         // Serialize sockets
         dto.Inputs = block.Inputs.Select(s => new SocketDto(s)).ToList();
         dto.Outputs = block.Outputs.Select(s => new SocketDto(s)).ToList();
 
-        // Serialize properties
+        // Serialize properties (including layout: X, Y, Width, Height)
         var properties = block.GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance);
         foreach (var prop in properties)
         {
-            // Skip properties that are part of IBlock interface (except Width/Height which we already handled)
+            // Skip properties that are part of IBlock interface (except layout properties)
             if (prop.Name == nameof(IBlock.Name) ||
                 prop.Name == nameof(IBlock.Title) ||
                 prop.Name == nameof(IBlock.Content) ||
@@ -72,10 +44,17 @@ public static class BlockSerializer
                 prop.Name == nameof(IBlock.Outputs))
                 continue;
 
-            // Skip properties without Category attribute (internal implementation details)
-            var categoryAttr = prop.GetCustomAttribute<CategoryAttribute>();
-            if (categoryAttr == null)
-                continue;
+            // Layout properties are always serialized
+            bool isLayoutProperty = prop.Name is nameof(IBlock.X) or nameof(IBlock.Y)
+                or nameof(IBlock.Width) or nameof(IBlock.Height);
+
+            // Skip non-layout properties without Category attribute
+            if (!isLayoutProperty)
+            {
+                var categoryAttr = prop.GetCustomAttribute<CategoryAttribute>();
+                if (categoryAttr == null)
+                    continue;
+            }
 
             // Skip read-only properties
             if (!prop.CanWrite)
@@ -88,8 +67,6 @@ public static class BlockSerializer
             }
             catch (Exception ex)
             {
-                // Skip properties that cannot be serialized
-                // Log for debugging if logger is available
                 System.Diagnostics.Debug.WriteLine($"Failed to serialize property {prop.Name}: {ex.Message}");
             }
         }
@@ -112,7 +89,7 @@ public static class BlockSerializer
         if (block == null)
             throw new InvalidOperationException($"Cannot create instance of type: {type.FullName}");
 
-        // Restore properties
+        // Restore properties (including layout)
         foreach (var kvp in dto.Properties)
         {
             var prop = type.GetProperty(kvp.Key, BindingFlags.Public | BindingFlags.Instance);
@@ -125,33 +102,12 @@ public static class BlockSerializer
                 }
                 catch (Exception ex)
                 {
-                    // Skip properties that cannot be deserialized
-                    // Log for debugging if logger is available
                     System.Diagnostics.Debug.WriteLine($"Failed to deserialize property {kvp.Key}: {ex.Message}");
                 }
             }
         }
 
         return block;
-    }
-
-    /// <summary>
-    /// Deserializes a BlockDto to an IBlock instance with embedded layout information.
-    /// </summary>
-    public static BlockDeserializationResult DeserializeWithLayout(BlockDto dto)
-    {
-        var block = Deserialize(dto);
-        
-        Position? position = null;
-        Size? size = null;
-        
-        if (dto.Layout != null)
-        {
-            position = new Position(dto.Layout.X, dto.Layout.Y);
-            size = new Size(dto.Layout.Width, dto.Layout.Height);
-        }
-        
-        return new BlockDeserializationResult(block, position, size);
     }
 
     private static object? SerializePropertyValue(object? value, Type propertyType)
@@ -177,7 +133,6 @@ public static class BlockSerializer
                 return value;
         }
 
-        // Handle special types that need custom serialization
         // For complex objects, serialize to JSON
         var json = JsonSerializer.Serialize(value, new JsonSerializerOptions
         {

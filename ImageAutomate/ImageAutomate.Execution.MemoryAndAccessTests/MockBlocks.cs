@@ -35,6 +35,8 @@ public abstract class MockBlock : IBlock
     public virtual IReadOnlyList<Socket> Inputs { get; protected set; } = new List<Socket>();
 
     public virtual IReadOnlyList<Socket> Outputs { get; protected set; } = new List<Socket>();
+    public double X { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
+    public double Y { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
 
     public virtual IReadOnlyDictionary<Socket, IReadOnlyList<IBasicWorkItem>> Execute(IDictionary<Socket, IReadOnlyList<IBasicWorkItem>> inputs)
     {

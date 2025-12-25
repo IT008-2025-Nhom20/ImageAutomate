@@ -17,7 +17,7 @@ public record Socket(string Id, string Name);
 /// INotifyPropertyChanged interface and release resources appropriately by implementing IDisposable. Thread safety and
 /// property change semantics depend on the specific implementation.
 /// </remarks>
-public interface IBlock: INotifyPropertyChanged, IDisposable
+public interface IBlock : INotifyPropertyChanged, IDisposable
 {
     #region Basic Properties
     /// <summary>
@@ -32,6 +32,28 @@ public interface IBlock: INotifyPropertyChanged, IDisposable
     /// Gets the display content of this block.
     /// </summary>
     public string Content { get; }
+    #endregion
+
+    #region Layout Properties
+    /// <summary>
+    /// Gets or sets the X position of the block in the graph.
+    /// </summary>
+    public double X { get; set; }
+
+    /// <summary>
+    /// Gets or sets the Y position of the block in the graph.
+    /// </summary>
+    public double Y { get; set; }
+
+    /// <summary>
+    /// Gets or sets the width of the block.
+    /// </summary>
+    public int Width { get; set; }
+
+    /// <summary>
+    /// Gets or sets the height of the block.
+    /// </summary>
+    public int Height { get; set; }
     #endregion
 
     #region Sockets and Execution Contracts

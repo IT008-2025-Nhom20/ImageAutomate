@@ -16,6 +16,12 @@ public class GaussianBlurBlock : IBlock
     private float _sigma = 1.0f;
     private int? _radius = null;
 
+    // Layout fields
+    private double _x;
+    private double _y;
+    private int _width = 200;
+    private int _height = 100;
+
     #endregion
 
     #region IBlock basic
@@ -25,6 +31,66 @@ public class GaussianBlurBlock : IBlock
     public string Title => "Gaussian Blur";
 
     public string Content => $"Sigma: {Sigma}\nRadius: {Radius}";
+
+    #endregion
+
+    #region Layout Properties
+
+    /// <inheritdoc />
+    public double X
+    {
+        get => _x;
+        set
+        {
+            if (Math.Abs(_x - value) > double.Epsilon)
+            {
+                _x = value;
+                OnPropertyChanged(nameof(X));
+            }
+        }
+    }
+
+    /// <inheritdoc />
+    public double Y
+    {
+        get => _y;
+        set
+        {
+            if (Math.Abs(_y - value) > double.Epsilon)
+            {
+                _y = value;
+                OnPropertyChanged(nameof(Y));
+            }
+        }
+    }
+
+    /// <inheritdoc />
+    public int Width
+    {
+        get => _width;
+        set
+        {
+            if (_width != value)
+            {
+                _width = value;
+                OnPropertyChanged(nameof(Width));
+            }
+        }
+    }
+
+    /// <inheritdoc />
+    public int Height
+    {
+        get => _height;
+        set
+        {
+            if (_height != value)
+            {
+                _height = value;
+                OnPropertyChanged(nameof(Height));
+            }
+        }
+    }
 
     #endregion
 

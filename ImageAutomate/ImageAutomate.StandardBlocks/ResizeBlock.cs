@@ -50,6 +50,12 @@ public class ResizeBlock : IBlock
     private ResizeResampler _resampler = ResizeResampler.Bicubic;
     private Color _backgroundColor = Color.Black;
 
+    // Layout fields
+    private double _x;
+    private double _y;
+    private int _width = 200;
+    private int _height = 100;
+
     #endregion
 
     #region IBlock basic
@@ -62,6 +68,66 @@ public class ResizeBlock : IBlock
 
     /// <inheritdoc />
     public string Content => $"Size: {TargetWidth}x{TargetHeight}\nMode: {ResizeMode}";
+
+    #endregion
+
+    #region Layout Properties
+
+    /// <inheritdoc />
+    public double X
+    {
+        get => _x;
+        set
+        {
+            if (Math.Abs(_x - value) > double.Epsilon)
+            {
+                _x = value;
+                OnPropertyChanged(nameof(X));
+            }
+        }
+    }
+
+    /// <inheritdoc />
+    public double Y
+    {
+        get => _y;
+        set
+        {
+            if (Math.Abs(_y - value) > double.Epsilon)
+            {
+                _y = value;
+                OnPropertyChanged(nameof(Y));
+            }
+        }
+    }
+
+    /// <inheritdoc />
+    public int Width
+    {
+        get => _width;
+        set
+        {
+            if (_width != value)
+            {
+                _width = value;
+                OnPropertyChanged(nameof(Width));
+            }
+        }
+    }
+
+    /// <inheritdoc />
+    public int Height
+    {
+        get => _height;
+        set
+        {
+            if (_height != value)
+            {
+                _height = value;
+                OnPropertyChanged(nameof(Height));
+            }
+        }
+    }
 
     #endregion
 
