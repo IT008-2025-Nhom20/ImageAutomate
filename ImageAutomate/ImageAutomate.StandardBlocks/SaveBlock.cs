@@ -180,16 +180,23 @@ public class SaveBlock : IBlock, IShipmentSink
         }
 
         // Determine target format & encoder
-        var targetFormat = ResolveTargetFormat(path, workItem.Image);
-        var encoder = CreateEncoder(targetFormat);
+        var targetFormat = ResolveTargetFormat(path, workItem);
+        var encoder = CreateEncoder(targetFormat, workItem);
         using var fs = File.Open(path, FileMode.Create, FileAccess.Write, FileShare.None);
         workItem.Image.Save(fs, encoder);
     }
 
-    static private ImageFormat ResolveTargetFormat(string path, Image image)
+    static private ImageFormat ResolveTargetFormat(string path, WorkItem workItem)
     {
         // 1) By Convert-stamped metadata
-        // TODO: Implement this
+        if (workItem.Metadata.TryGetValue("Format", out var formatObj) && formatObj is string formatStr)
+        {
+            if (Enum.TryParse<ImageFormat>(formatStr, out var format))
+            {
+                return format;
+            }
+        }
+
         // 2) By original file extension
         // TODO: Check correctness
         var ext = Path.GetExtension(path)?.ToLowerInvariant();
@@ -213,20 +220,48 @@ public class SaveBlock : IBlock, IShipmentSink
         return ImageFormat.Png;
     }
 
-    private IImageEncoder CreateEncoder(ImageFormat format)
+    private IImageEncoder CreateEncoder(ImageFormat format, WorkItem workItem)
     {
-        // TODO: Property propagate Metadata encoding intents (currenly only ConvertBlock uses this)
+        workItem.Metadata.TryGetValue("EncodingOptions", out var options);
+
         return format switch
         {
-            ImageFormat.Jpeg => new JpegEncoder(),
-            ImageFormat.Png => new PngEncoder(),
-            ImageFormat.WebP => new WebpEncoder(),
-            ImageFormat.Tiff => new TiffEncoder(),
-            ImageFormat.Bmp => new BmpEncoder(),
-            ImageFormat.Gif => new GifEncoder(),
-            ImageFormat.Pbm => new PbmEncoder(),
-            ImageFormat.Tga => new TgaEncoder(),
-            ImageFormat.Qoi => new QoiEncoder(),
+            ImageFormat.Jpeg => options is JpegEncodingOptions jpgOpt
+                ? new JpegEncoder { Quality = jpgOpt.Quality }
+                : new JpegEncoder(),
+
+            ImageFormat.Png => options is PngEncodingOptions pngOpt
+                ? new PngEncoder { CompressionLevel = (SixLabors.ImageSharp.Formats.Png.PngCompressionLevel)pngOpt.CompressionLevel }
+                : new PngEncoder(),
+
+            ImageFormat.WebP => options is WebPEncodingOptions webpOpt
+                ? new WebpEncoder
+                {
+                    FileFormat = webpOpt.Lossless ? WebpFileFormatType.Lossless : WebpFileFormatType.Lossy,
+                    Quality = (int)webpOpt.Quality
+                }
+                : new WebpEncoder(),
+
+            ImageFormat.Tiff => options is TiffEncodingOptions tiffOpt
+                ? new TiffEncoder { Compression = (SixLabors.ImageSharp.Formats.Tiff.Constants.TiffCompression)tiffOpt.Compression }
+                : new TiffEncoder(),
+
+            ImageFormat.Bmp => options is BmpEncodingOptions bmpOpt
+                ? new BmpEncoder { BitsPerPixel = (SixLabors.ImageSharp.Formats.Bmp.BmpBitsPerPixel)bmpOpt.BitsPerPixel }
+                : new BmpEncoder(),
+
+            ImageFormat.Gif => options is GifEncodingOptions gifOpt
+                ? new GifEncoder { ColorTableMode = gifOpt.UseDithering ? GifColorTableMode.Global : GifColorTableMode.Local } // Simplified mapping
+                : new GifEncoder(),
+
+            ImageFormat.Pbm => new PbmEncoder(), // No specific options mapped yet
+
+            ImageFormat.Tga => options is TgaEncodingOptions tgaOpt
+                ? new TgaEncoder { Compression = tgaOpt.Compress ? TgaCompression.RunLength : TgaCompression.None }
+                : new TgaEncoder(),
+
+            ImageFormat.Qoi => new QoiEncoder(), // No options in QoiEncoder
+
             _ => new PngEncoder()
         };
     }

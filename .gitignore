@@ -421,3 +421,6 @@ FodyWeavers.xsd
 *.msp
 html/**
 latex/**
+
+# Generated Testcases
+Testcases/
