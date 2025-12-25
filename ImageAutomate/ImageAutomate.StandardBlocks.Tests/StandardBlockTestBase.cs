@@ -127,7 +127,11 @@ public abstract class StandardBlockTestBase : IDisposable
             if (Directory.Exists(_outputPath))
                 Directory.Delete(_outputPath, true);
         }
-        catch { /* ignore */ }
+        catch (Exception ex)
+        {
+            // Log to avoid silently failing cleanup, which can hide issues like file locks.
+            System.Diagnostics.Trace.WriteLine($"Ignoring test cleanup exception: {ex.Message}");
+        }
     }
 }
 
