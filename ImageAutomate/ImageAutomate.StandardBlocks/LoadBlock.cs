@@ -99,6 +99,28 @@ public class LoadBlock : IBlock, IShipmentSource
     /// </summary>
     public int MaxShipmentSize { get; set; } = 64;
 
+    private int _maxCount = int.MaxValue;
+
+    /// <summary>
+    /// Maximum total number of images to load from the source directory.
+    /// Default is int.MaxValue (no limit). Set to a positive value to limit.
+    /// </summary>
+    [Category("Configuration")]
+    [Description("Maximum total number of images to load. Default is unlimited.")]
+    public int MaxCount
+    {
+        get => _maxCount;
+        set
+        {
+            var clamped = Math.Max(1, value);
+            if (_maxCount != clamped)
+            {
+                _maxCount = clamped;
+                OnPropertyChanged(nameof(MaxCount));
+            }
+        }
+    }
+
     #endregion
 
     #region Socket
@@ -170,6 +192,7 @@ public class LoadBlock : IBlock, IShipmentSource
             _cachedFilePaths = Directory.GetFiles(SourcePath)
                 .Where(IsValidImageFile)
                 .OrderBy(file => file, StringComparer.OrdinalIgnoreCase)
+                .Take(MaxCount)
                 .ToList();
             
             _currentOffset = 0;

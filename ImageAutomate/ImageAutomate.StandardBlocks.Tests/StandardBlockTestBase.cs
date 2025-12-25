@@ -68,6 +68,7 @@ public abstract class StandardBlockTestBase : IDisposable
         var load = new LoadBlock();
         load.SourcePath = Path.Combine(_testcasesRoot, resolution);
         load.MaxShipmentSize = batchSize;
+        load.MaxCount = count;
         load.AutoOrient = false;
 
         // Limit the number of items if possible?
@@ -124,8 +125,8 @@ public abstract class StandardBlockTestBase : IDisposable
         // Cleanup output
         try
         {
-            if (Directory.Exists(_outputPath))
-                Directory.Delete(_outputPath, true);
+            // if (Directory.Exists(_outputPath))
+            //     Directory.Delete(_outputPath, true);
         }
         catch (Exception ex)
         {

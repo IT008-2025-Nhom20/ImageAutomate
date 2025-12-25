@@ -424,3 +424,4 @@ latex/**
 
 # Generated Testcases
 Testcases/
+TestOutput/**
