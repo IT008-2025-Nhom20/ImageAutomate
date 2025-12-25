@@ -226,43 +226,119 @@ public class SaveBlock : IBlock, IShipmentSink
 
         return format switch
         {
-            ImageFormat.Jpeg => options is JpegEncodingOptions jpgOpt
-                ? new JpegEncoder { Quality = jpgOpt.Quality }
-                : new JpegEncoder(),
-
-            ImageFormat.Png => options is PngEncodingOptions pngOpt
-                ? new PngEncoder { CompressionLevel = (SixLabors.ImageSharp.Formats.Png.PngCompressionLevel)pngOpt.CompressionLevel }
-                : new PngEncoder(),
-
-            ImageFormat.WebP => options is WebPEncodingOptions webpOpt
-                ? new WebpEncoder
-                {
-                    FileFormat = webpOpt.Lossless ? WebpFileFormatType.Lossless : WebpFileFormatType.Lossy,
-                    Quality = (int)webpOpt.Quality
-                }
-                : new WebpEncoder(),
-
-            ImageFormat.Tiff => options is TiffEncodingOptions tiffOpt
-                ? new TiffEncoder { Compression = (SixLabors.ImageSharp.Formats.Tiff.Constants.TiffCompression)tiffOpt.Compression }
-                : new TiffEncoder(),
-
-            ImageFormat.Bmp => options is BmpEncodingOptions bmpOpt
-                ? new BmpEncoder { BitsPerPixel = (SixLabors.ImageSharp.Formats.Bmp.BmpBitsPerPixel)bmpOpt.BitsPerPixel }
-                : new BmpEncoder(),
-
-            ImageFormat.Gif => options is GifEncodingOptions gifOpt
-                ? new GifEncoder { ColorTableMode = gifOpt.UseDithering ? GifColorTableMode.Global : GifColorTableMode.Local } // Simplified mapping
-                : new GifEncoder(),
-
-            ImageFormat.Pbm => new PbmEncoder(), // No specific options mapped yet
-
-            ImageFormat.Tga => options is TgaEncodingOptions tgaOpt
-                ? new TgaEncoder { Compression = tgaOpt.Compress ? TgaCompression.RunLength : TgaCompression.None }
-                : new TgaEncoder(),
-
-            ImageFormat.Qoi => new QoiEncoder(), // No options in QoiEncoder
-
+            ImageFormat.Jpeg => CreateJpegEncoder(options as JpegEncodingOptions),
+            ImageFormat.Pbm => CreatePbmEncoder(options as PbmEncodingOptions),
+            ImageFormat.Png => CreatePngEncoder(options as PngEncodingOptions),
+            ImageFormat.Bmp => CreateBmpEncoder(options as BmpEncodingOptions),
+            ImageFormat.Gif => CreateGifEncoder(options as GifEncodingOptions),
+            ImageFormat.Tiff => CreateTiffEncoder(options as TiffEncodingOptions),
+            ImageFormat.Tga => CreateTgaEncoder(options as TgaEncodingOptions),
+            ImageFormat.WebP => CreateWebpEncoder(options as WebPEncodingOptions),
+            ImageFormat.Qoi => CreateQoiEncoder(options as QoiEncodingOptions),
             _ => new PngEncoder()
+        };
+    }
+
+    private static JpegEncoder CreateJpegEncoder(JpegEncodingOptions? opt)
+    {
+        if (opt == null) return new JpegEncoder();
+        return new JpegEncoder
+        {
+            Quality = opt.Quality,
+            ColorType = opt.ColorType.HasValue ? (SixLabors.ImageSharp.Formats.Jpeg.JpegEncodingColor)opt.ColorType.Value : null,
+            Interleaved = opt.Interleaved
+        };
+    }
+
+    private static PbmEncoder CreatePbmEncoder(PbmEncodingOptions? opt)
+    {
+        if (opt == null) return new PbmEncoder();
+        return new PbmEncoder
+        {
+            ColorType = (SixLabors.ImageSharp.Formats.Pbm.PbmColorType)opt.ColorType,
+            ComponentType = opt.ComponentType.HasValue ? (SixLabors.ImageSharp.Formats.Pbm.PbmComponentType)opt.ComponentType.Value : null,
+            Encoding = (SixLabors.ImageSharp.Formats.Pbm.PbmEncoding)opt.Encoding
+        };
+    }
+
+    private static PngEncoder CreatePngEncoder(PngEncodingOptions? opt)
+    {
+        if (opt == null) return new PngEncoder();
+        return new PngEncoder
+        {
+            CompressionLevel = (SixLabors.ImageSharp.Formats.Png.PngCompressionLevel)opt.CompressionLevel,
+            ColorType = opt.ColorType.HasValue ? (SixLabors.ImageSharp.Formats.Png.PngColorType)opt.ColorType.Value : null,
+            BitDepth = opt.BitDepth.HasValue ? (SixLabors.ImageSharp.Formats.Png.PngBitDepth)opt.BitDepth.Value : null,
+            InterlaceMethod = opt.InterlaceMethod.HasValue ? (SixLabors.ImageSharp.Formats.Png.PngInterlaceMode)opt.InterlaceMethod.Value : null,
+            TransparentColorMode = (SixLabors.ImageSharp.Formats.Png.PngTransparentColorMode)opt.TransparentColorMode,
+            Quantizer = opt.Quantizer.CreateQuantizer()
+        };
+    }
+
+    private static BmpEncoder CreateBmpEncoder(BmpEncodingOptions? opt)
+    {
+        if (opt == null) return new BmpEncoder();
+        return new BmpEncoder
+        {
+            BitsPerPixel = opt.BitsPerPixel.HasValue ? (SixLabors.ImageSharp.Formats.Bmp.BmpBitsPerPixel)opt.BitsPerPixel.Value : null,
+            SupportTransparency = opt.SupportTransparency,
+            Quantizer = opt.Quantizer.CreateQuantizer()
+        };
+    }
+
+    private static GifEncoder CreateGifEncoder(GifEncodingOptions? opt)
+    {
+        if (opt == null) return new GifEncoder();
+        return new GifEncoder
+        {
+            ColorTableMode = (SixLabors.ImageSharp.Formats.Gif.GifColorTableMode)opt.ColorTableMode,
+            Quantizer = opt.Quantizer.CreateQuantizer()
+        };
+    }
+
+    private static TiffEncoder CreateTiffEncoder(TiffEncodingOptions? opt)
+    {
+        if (opt == null) return new TiffEncoder();
+        return new TiffEncoder
+        {
+            Compression = opt.Compression.HasValue ? (SixLabors.ImageSharp.Formats.Tiff.Constants.TiffCompression)opt.Compression.Value : null,
+            BitsPerPixel = opt.BitsPerPixel.HasValue ? (SixLabors.ImageSharp.Formats.Tiff.TiffBitsPerPixel)opt.BitsPerPixel.Value : null,
+            CompressionLevel = (SixLabors.ImageSharp.Compression.Zlib.DeflateCompressionLevel)opt.CompressionLevel,
+            HorizontalPredictor = opt.HorizontalPredictor.HasValue ? (SixLabors.ImageSharp.Formats.Tiff.Constants.TiffPredictor)opt.HorizontalPredictor.Value : null,
+            Quantizer = opt.Quantizer.CreateQuantizer()
+        };
+    }
+
+    private static TgaEncoder CreateTgaEncoder(TgaEncodingOptions? opt)
+    {
+        if (opt == null) return new TgaEncoder();
+        return new TgaEncoder
+        {
+            BitsPerPixel = opt.BitsPerPixel.HasValue ? (SixLabors.ImageSharp.Formats.Tga.TgaBitsPerPixel)opt.BitsPerPixel.Value : null,
+            Compression = (SixLabors.ImageSharp.Formats.Tga.TgaCompression)opt.Compression
+        };
+    }
+
+    private static WebpEncoder CreateWebpEncoder(WebPEncodingOptions? opt)
+    {
+        if (opt == null) return new WebpEncoder();
+        return new WebpEncoder
+        {
+            FileFormat = (SixLabors.ImageSharp.Formats.Webp.WebpFileFormatType)opt.FileFormat,
+            Quality = opt.Quality,
+            Method = (SixLabors.ImageSharp.Formats.Webp.WebpEncodingMethod)opt.Method,
+            NearLossless = opt.NearLossless,
+            NearLosslessQuality = opt.NearLosslessQuality
+        };
+    }
+
+    private static QoiEncoder CreateQoiEncoder(QoiEncodingOptions? opt)
+    {
+        if (opt == null) return new QoiEncoder();
+        return new QoiEncoder
+        {
+            Channels = opt.Channels.HasValue ? (SixLabors.ImageSharp.Formats.Qoi.QoiChannels)opt.Channels.Value : null,
+            ColorSpace = opt.ColorSpace.HasValue ? (SixLabors.ImageSharp.Formats.Qoi.QoiColorSpace)opt.ColorSpace.Value : null
         };
     }
 

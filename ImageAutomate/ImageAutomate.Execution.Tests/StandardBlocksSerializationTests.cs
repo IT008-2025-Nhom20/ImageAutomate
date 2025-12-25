@@ -162,8 +162,7 @@ public class StandardBlocksSerializationTests
             TargetFormat = ImageFormat.Gif,
             GifOptions = new GifEncodingOptions
             {
-                UseDithering = false,
-                ColorPaletteSize = 128
+                ColorTableMode = GifColorTableMode.Local
             }
         };
 
@@ -173,8 +172,7 @@ public class StandardBlocksSerializationTests
 
         // Assert
         Assert.NotNull(deserialized);
-        Assert.False(deserialized.GifOptions.UseDithering);
-        Assert.Equal(128, deserialized.GifOptions.ColorPaletteSize);
+        Assert.Equal(GifColorTableMode.Local, deserialized.GifOptions.ColorTableMode);
     }
 
     [Fact]
@@ -184,7 +182,7 @@ public class StandardBlocksSerializationTests
         var block = new ConvertBlock
         {
             TargetFormat = ImageFormat.Tiff,
-            TiffOptions = new TiffEncodingOptions { Compression = TiffCompression.Zip }
+            TiffOptions = new TiffEncodingOptions { Compression = TiffCompression.Deflate }
         };
 
         // Act
@@ -193,7 +191,7 @@ public class StandardBlocksSerializationTests
 
         // Assert
         Assert.NotNull(deserialized);
-        Assert.Equal(TiffCompression.Zip, deserialized.TiffOptions.Compression);
+        Assert.Equal(TiffCompression.Deflate, deserialized.TiffOptions.Compression);
     }
 
     [Fact]
@@ -205,8 +203,8 @@ public class StandardBlocksSerializationTests
             TargetFormat = ImageFormat.WebP,
             WebPOptions = new WebPEncodingOptions
             {
-                Lossless = true,
-                Quality = 85.5f
+                FileFormat = WebpFileFormatType.Lossless,
+                Quality = 85
             }
         };
 
@@ -216,8 +214,8 @@ public class StandardBlocksSerializationTests
 
         // Assert
         Assert.NotNull(deserialized);
-        Assert.True(deserialized.WebPOptions.Lossless);
-        Assert.Equal(85.5f, deserialized.WebPOptions.Quality, precision: 2);
+        Assert.Equal(WebpFileFormatType.Lossless, deserialized.WebPOptions.FileFormat);
+        Assert.Equal(85, deserialized.WebPOptions.Quality);
     }
 
     #endregion
