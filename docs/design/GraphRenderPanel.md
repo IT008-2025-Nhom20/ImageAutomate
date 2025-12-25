@@ -23,7 +23,7 @@ The rendering system employs a customized **Immediate Mode** loop triggered by s
 
 ### 2.1. Double Buffering
 
-To prevent flickering during high-frequency updates (e.g., dragging a node), the panel enables `DoubleBuffered = true`.
+To prevent flickering during high-frequency updates (e.g., dragging a node), the panel enables `DoubleBuffered = true` by default.
 *   **Mechanism:** GDI+ renders to an off-screen bitmap first, then blits the result to the screen in a single operation.
 
 ### 2.2. The Paint Cycle (`OnPaint`)
@@ -31,7 +31,7 @@ To prevent flickering during high-frequency updates (e.g., dragging a node), the
 1.  **State Retrieval:** Accesses the `PipelineGraph` (Model) and `ViewState` (Layout).
 2.  **Transform Setup:** Applies the Global Transform Matrix (Pan + Scale) to the `Graphics` context.
 3.  **Layer 1: Connections:** Iterates through `Graph.Edges`. Delegates drawing to `NodeRenderer` to draw Bezier curves.
-    *   *Rationale:* Edges are drawn first so they appear "behind" nodes.
+    *   Edges are drawn first so they appear "behind" nodes.
 4.  **Layer 2: Interaction Feedback:** Draws transient elements like the "Drag Line" during connection creation.
 5.  **Layer 3: Nodes:** Iterates through `Graph.Nodes`. Delegates drawing to `NodeRenderer` for blocks and sockets.
     *   *Ordering:* Iterates in list order, ensuring the "Selected" (last in list) node draws on top.
@@ -78,7 +78,7 @@ To determine interaction targets, the panel performs geometric intersection test
 1.  **Socket Hit Test:** Checks collision with circular regions around input/output ports. Used for initiating connections.
 2.  **Node Hit Test:** Checks collision with the node's bounding box. Used for selection and dragging.
 3.  **Edge Hit Test:** Checks collision with the Bezier curve of a connection.
-    *   **Optimization:** Uses a widened `GraphicsPath` (e.g., 10px width) to make selecting thin lines easier for the user.
+    *   Uses a widened invisible `GraphicsPath` (e.g., 10px width) to make selecting thin lines easier for the user.
 
 ## 5. Visual Component System
 
@@ -108,4 +108,3 @@ All rendering and interaction occur on the **UI Thread**.
 ### 6.2. Dirty Rectangles
 
 Currently, the implementation uses `Invalidate()` (full repaint) for simplicity.
-*   *Optimization Note:* Future versions could utilize `Invalidate(Rectangle)` to redraw only changed regions, though GDI+ double buffering performance is generally sufficient for typical graph sizes (< 100 nodes).
