@@ -6,7 +6,7 @@ namespace ImageAutomate.Execution;
 /// Factory for creating scheduler instances based on execution mode.
 /// Uses the global scheduler registry for lookups.
 /// </summary>
-internal static class SchedulerFactory
+public static class SchedulerFactory
 {
     private static readonly SchedulerRegistry _registry = new();
 

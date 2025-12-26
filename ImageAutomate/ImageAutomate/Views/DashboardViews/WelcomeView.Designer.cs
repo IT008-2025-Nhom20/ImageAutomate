@@ -1,6 +1,6 @@
-﻿namespace ImageAutomate
+﻿namespace ImageAutomate.Views.DashboardViews
 {
-    partial class DashboardView
+    partial class WelcomeView
     {
         /// <summary> 
         /// Required designer variable.
@@ -28,13 +28,6 @@
         /// </summary>
         private void InitializeComponent()
         {
-            MainSplitter = new SplitContainer();
-            LeftSidebarPanel = new Panel();
-            BtnSettings = new Button();
-            BtnPluginManager = new Button();
-            BtnWorkspaces = new Button();
-            BtnWelcome = new Button();
-            MenuLabel = new Label();
             RightContentSplit = new SplitContainer();
             LabelSub = new Label();
             LabelMain = new Label();
@@ -55,11 +48,6 @@
             ButtonTable = new TableLayoutPanel();
             BtnBlankGraph = new Button();
             BtnLoadGraph = new Button();
-            ((System.ComponentModel.ISupportInitialize)MainSplitter).BeginInit();
-            MainSplitter.Panel1.SuspendLayout();
-            MainSplitter.Panel2.SuspendLayout();
-            MainSplitter.SuspendLayout();
-            LeftSidebarPanel.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)RightContentSplit).BeginInit();
             RightContentSplit.Panel1.SuspendLayout();
             RightContentSplit.Panel2.SuspendLayout();
@@ -76,98 +64,10 @@
             ButtonTable.SuspendLayout();
             SuspendLayout();
             // 
-            // MainSplitter
-            // 
-            MainSplitter.Dock = DockStyle.Fill;
-            MainSplitter.Location = new Point(0, 0);
-            MainSplitter.Name = "MainSplitter";
-            // 
-            // MainSplitter.Panel1
-            // 
-            MainSplitter.Panel1.Controls.Add(LeftSidebarPanel);
-            // 
-            // MainSplitter.Panel2
-            // 
-            MainSplitter.Panel2.Controls.Add(RightContentSplit);
-            MainSplitter.Size = new Size(800, 600);
-            MainSplitter.SplitterDistance = 59;
-            MainSplitter.TabIndex = 1;
-            // 
-            // LeftSidebarPanel
-            // 
-            LeftSidebarPanel.AutoScroll = true;
-            LeftSidebarPanel.Controls.Add(BtnSettings);
-            LeftSidebarPanel.Controls.Add(BtnPluginManager);
-            LeftSidebarPanel.Controls.Add(BtnWorkspaces);
-            LeftSidebarPanel.Controls.Add(BtnWelcome);
-            LeftSidebarPanel.Controls.Add(MenuLabel);
-            LeftSidebarPanel.Dock = DockStyle.Fill;
-            LeftSidebarPanel.Location = new Point(0, 0);
-            LeftSidebarPanel.Margin = new Padding(7);
-            LeftSidebarPanel.Name = "LeftSidebarPanel";
-            LeftSidebarPanel.Size = new Size(59, 600);
-            LeftSidebarPanel.TabIndex = 0;
-            // 
-            // BtnSettings
-            // 
-            BtnSettings.Dock = DockStyle.Top;
-            BtnSettings.Location = new Point(0, 187);
-            BtnSettings.Name = "BtnSettings";
-            BtnSettings.Size = new Size(59, 50);
-            BtnSettings.TabIndex = 4;
-            BtnSettings.Tag = "icon_mode";
-            BtnSettings.Text = "Settings";
-            BtnSettings.UseVisualStyleBackColor = true;
-            // 
-            // BtnPluginManager
-            // 
-            BtnPluginManager.Dock = DockStyle.Top;
-            BtnPluginManager.Location = new Point(0, 137);
-            BtnPluginManager.Name = "BtnPluginManager";
-            BtnPluginManager.Size = new Size(59, 50);
-            BtnPluginManager.TabIndex = 3;
-            BtnPluginManager.Tag = "icon_mode";
-            BtnPluginManager.Text = "Plugin";
-            BtnPluginManager.UseVisualStyleBackColor = true;
-            // 
-            // BtnWorkspaces
-            // 
-            BtnWorkspaces.Dock = DockStyle.Top;
-            BtnWorkspaces.Location = new Point(0, 87);
-            BtnWorkspaces.Name = "BtnWorkspaces";
-            BtnWorkspaces.Size = new Size(59, 50);
-            BtnWorkspaces.TabIndex = 2;
-            BtnWorkspaces.Tag = "icon_mode";
-            BtnWorkspaces.Text = "Workspaces";
-            BtnWorkspaces.UseVisualStyleBackColor = true;
-            // 
-            // BtnWelcome
-            // 
-            BtnWelcome.Dock = DockStyle.Top;
-            BtnWelcome.Location = new Point(0, 37);
-            BtnWelcome.Name = "BtnWelcome";
-            BtnWelcome.Size = new Size(59, 50);
-            BtnWelcome.TabIndex = 1;
-            BtnWelcome.Tag = "icon_mode";
-            BtnWelcome.Text = "Welcome";
-            BtnWelcome.UseVisualStyleBackColor = true;
-            // 
-            // MenuLabel
-            // 
-            MenuLabel.Dock = DockStyle.Top;
-            MenuLabel.Font = new Font("Segoe UI", 15.75F, FontStyle.Regular, GraphicsUnit.Point, 0);
-            MenuLabel.Location = new Point(0, 0);
-            MenuLabel.Margin = new Padding(5);
-            MenuLabel.Name = "MenuLabel";
-            MenuLabel.Size = new Size(59, 37);
-            MenuLabel.TabIndex = 0;
-            MenuLabel.Tag = "icon_mode";
-            MenuLabel.Text = "Menu";
-            MenuLabel.TextAlign = ContentAlignment.MiddleRight;
-            // 
             // RightContentSplit
             // 
             RightContentSplit.Dock = DockStyle.Fill;
+            RightContentSplit.FixedPanel = FixedPanel.Panel1;
             RightContentSplit.IsSplitterFixed = true;
             RightContentSplit.Location = new Point(0, 0);
             RightContentSplit.Name = "RightContentSplit";
@@ -182,9 +82,9 @@
             // 
             RightContentSplit.Panel2.Controls.Add(RecentGroup);
             RightContentSplit.Panel2.Controls.Add(ButtonGroup);
-            RightContentSplit.Size = new Size(737, 600);
+            RightContentSplit.Size = new Size(740, 600);
             RightContentSplit.SplitterDistance = 72;
-            RightContentSplit.TabIndex = 0;
+            RightContentSplit.TabIndex = 1;
             // 
             // LabelSub
             // 
@@ -202,7 +102,7 @@
             LabelMain.Font = new Font("Segoe UI", 18F, FontStyle.Bold, GraphicsUnit.Point, 0);
             LabelMain.Location = new Point(0, 0);
             LabelMain.Name = "LabelMain";
-            LabelMain.Size = new Size(737, 37);
+            LabelMain.Size = new Size(740, 37);
             LabelMain.TabIndex = 0;
             LabelMain.Text = "ImageAutomate";
             // 
@@ -212,7 +112,7 @@
             RecentGroup.Dock = DockStyle.Top;
             RecentGroup.Location = new Point(0, 129);
             RecentGroup.Name = "RecentGroup";
-            RecentGroup.Size = new Size(737, 129);
+            RecentGroup.Size = new Size(740, 129);
             RecentGroup.TabIndex = 5;
             RecentGroup.TabStop = false;
             RecentGroup.Text = "Recent Workspaces";
@@ -228,7 +128,7 @@
             PanelRecentGroup.Dock = DockStyle.Fill;
             PanelRecentGroup.Location = new Point(3, 19);
             PanelRecentGroup.Name = "PanelRecentGroup";
-            PanelRecentGroup.Size = new Size(731, 107);
+            PanelRecentGroup.Size = new Size(734, 107);
             PanelRecentGroup.TabIndex = 2;
             // 
             // PanelRecent5
@@ -342,7 +242,7 @@
             ButtonGroup.Dock = DockStyle.Top;
             ButtonGroup.Location = new Point(0, 0);
             ButtonGroup.Name = "ButtonGroup";
-            ButtonGroup.Size = new Size(737, 129);
+            ButtonGroup.Size = new Size(740, 129);
             ButtonGroup.TabIndex = 4;
             ButtonGroup.TabStop = false;
             ButtonGroup.Text = "Start";
@@ -354,7 +254,7 @@
             PanelStartGroup.Dock = DockStyle.Fill;
             PanelStartGroup.Location = new Point(3, 19);
             PanelStartGroup.Name = "PanelStartGroup";
-            PanelStartGroup.Size = new Size(731, 107);
+            PanelStartGroup.Size = new Size(734, 107);
             PanelStartGroup.TabIndex = 2;
             // 
             // ButtonTable
@@ -369,7 +269,7 @@
             ButtonTable.Name = "ButtonTable";
             ButtonTable.RowCount = 1;
             ButtonTable.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
-            ButtonTable.Size = new Size(731, 100);
+            ButtonTable.Size = new Size(734, 100);
             ButtonTable.TabIndex = 3;
             // 
             // BtnBlankGraph
@@ -377,7 +277,7 @@
             BtnBlankGraph.Dock = DockStyle.Fill;
             BtnBlankGraph.Location = new Point(3, 3);
             BtnBlankGraph.Name = "BtnBlankGraph";
-            BtnBlankGraph.Size = new Size(359, 94);
+            BtnBlankGraph.Size = new Size(361, 94);
             BtnBlankGraph.TabIndex = 3;
             BtnBlankGraph.Text = "Blank Graph";
             BtnBlankGraph.UseVisualStyleBackColor = true;
@@ -385,25 +285,20 @@
             // BtnLoadGraph
             // 
             BtnLoadGraph.Dock = DockStyle.Fill;
-            BtnLoadGraph.Location = new Point(368, 3);
+            BtnLoadGraph.Location = new Point(370, 3);
             BtnLoadGraph.Name = "BtnLoadGraph";
-            BtnLoadGraph.Size = new Size(360, 94);
+            BtnLoadGraph.Size = new Size(361, 94);
             BtnLoadGraph.TabIndex = 1;
             BtnLoadGraph.Text = "Load Graph";
             BtnLoadGraph.UseVisualStyleBackColor = true;
             // 
-            // DashboardView
+            // WelcomeView
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
-            Controls.Add(MainSplitter);
-            Name = "DashboardView";
-            Size = new Size(800, 600);
-            MainSplitter.Panel1.ResumeLayout(false);
-            MainSplitter.Panel2.ResumeLayout(false);
-            ((System.ComponentModel.ISupportInitialize)MainSplitter).EndInit();
-            MainSplitter.ResumeLayout(false);
-            LeftSidebarPanel.ResumeLayout(false);
+            Controls.Add(RightContentSplit);
+            Name = "WelcomeView";
+            Size = new Size(740, 600);
             RightContentSplit.Panel1.ResumeLayout(false);
             RightContentSplit.Panel1.PerformLayout();
             RightContentSplit.Panel2.ResumeLayout(false);
@@ -430,21 +325,9 @@
 
         #endregion
 
-        private SplitContainer MainSplitter;
-        private Panel LeftSidebarPanel;
-        private Button BtnSettings;
-        private Button BtnPluginManager;
-        private Button BtnWorkspaces;
-        private Button BtnWelcome;
-        private Label MenuLabel;
         private SplitContainer RightContentSplit;
         private Label LabelSub;
         private Label LabelMain;
-        private GroupBox ButtonGroup;
-        private Panel PanelStartGroup;
-        private TableLayoutPanel ButtonTable;
-        private Button BtnBlankGraph;
-        private Button BtnLoadGraph;
         private GroupBox RecentGroup;
         private Panel PanelRecentGroup;
         private Panel PanelRecent5;
@@ -457,5 +340,10 @@
         private Button BtnRecent2;
         private Panel PanelRecent1;
         private Button BtnRecent1;
+        private GroupBox ButtonGroup;
+        private Panel PanelStartGroup;
+        private TableLayoutPanel ButtonTable;
+        private Button BtnBlankGraph;
+        private Button BtnLoadGraph;
     }
 }

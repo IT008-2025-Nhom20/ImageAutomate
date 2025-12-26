@@ -8,11 +8,11 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
-namespace ImageAutomate
+namespace ImageAutomate.Views.DashboardViews
 {
-    public partial class DashboardView : UserControl
+    public partial class WorkspaceView : UserControl
     {
-        public DashboardView()
+        public WorkspaceView()
         {
             InitializeComponent();
         }

@@ -8,4 +8,16 @@
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
 
+  <ItemGroup>
+    <Folder Include="Controls\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ImageAutomate.Core\ImageAutomate.Core.csproj" />
+    <ProjectReference Include="..\ImageAutomate.Execution\ImageAutomate.Execution.csproj" />
+    <ProjectReference Include="..\ImageAutomate.Infrastructure\ImageAutomate.Infrastructure.csproj" />
+    <ProjectReference Include="..\ImageAutomate.StandardBlocks\ImageAutomate.StandardBlocks.csproj" />
+    <ProjectReference Include="..\ImageAutomate.UI\ImageAutomate.UI.csproj" />
+  </ItemGroup>
+
 </Project>
