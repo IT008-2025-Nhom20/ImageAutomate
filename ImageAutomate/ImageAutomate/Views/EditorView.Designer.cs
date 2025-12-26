@@ -39,8 +39,11 @@
             groupBox1 = new GroupBox();
             toolListBox = new ListBox();
             splitContainer2 = new SplitContainer();
-            propertyGrid1 = new PropertyGrid();
+            splitContainer3 = new SplitContainer();
+            deleteButton = new Button();
+            clearButton = new Button();
             graphRenderPanel1 = new ImageAutomate.UI.GraphRenderPanel();
+            propertyGrid1 = new PropertyGrid();
             menuStrip1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)splitContainer1).BeginInit();
             splitContainer1.Panel1.SuspendLayout();
@@ -51,6 +54,10 @@
             splitContainer2.Panel1.SuspendLayout();
             splitContainer2.Panel2.SuspendLayout();
             splitContainer2.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)splitContainer3).BeginInit();
+            splitContainer3.Panel1.SuspendLayout();
+            splitContainer3.Panel2.SuspendLayout();
+            splitContainer3.SuspendLayout();
             SuspendLayout();
             // 
             // menuStrip1
@@ -145,7 +152,7 @@
             // 
             // splitContainer2.Panel1
             // 
-            splitContainer2.Panel1.Controls.Add(graphRenderPanel1);
+            splitContainer2.Panel1.Controls.Add(splitContainer3);
             // 
             // splitContainer2.Panel2
             // 
@@ -153,6 +160,58 @@
             splitContainer2.Size = new Size(605, 576);
             splitContainer2.SplitterDistance = 446;
             splitContainer2.TabIndex = 0;
+            // 
+            // splitContainer3
+            // 
+            splitContainer3.Dock = DockStyle.Fill;
+            splitContainer3.Location = new Point(0, 0);
+            splitContainer3.Name = "splitContainer3";
+            splitContainer3.Orientation = Orientation.Horizontal;
+            // 
+            // splitContainer3.Panel1
+            // 
+            splitContainer3.Panel1.Controls.Add(deleteButton);
+            splitContainer3.Panel1.Controls.Add(clearButton);
+            // 
+            // splitContainer3.Panel2
+            // 
+            splitContainer3.Panel2.Controls.Add(graphRenderPanel1);
+            splitContainer3.Size = new Size(446, 576);
+            splitContainer3.SplitterDistance = 25;
+            splitContainer3.TabIndex = 0;
+            // 
+            // deleteButton
+            // 
+            deleteButton.Dock = DockStyle.Right;
+            deleteButton.Location = new Point(296, 0);
+            deleteButton.Name = "deleteButton";
+            deleteButton.Size = new Size(75, 25);
+            deleteButton.TabIndex = 1;
+            deleteButton.Text = "Delete";
+            deleteButton.UseVisualStyleBackColor = true;
+            deleteButton.Click += deleteButton_Click;
+            // 
+            // clearButton
+            // 
+            clearButton.Dock = DockStyle.Right;
+            clearButton.Location = new Point(371, 0);
+            clearButton.Name = "clearButton";
+            clearButton.Size = new Size(75, 25);
+            clearButton.TabIndex = 0;
+            clearButton.Text = "Clear";
+            clearButton.UseVisualStyleBackColor = true;
+            clearButton.Click += clearButton_Click;
+            // 
+            // graphRenderPanel1
+            // 
+            graphRenderPanel1.AllowDrop = true;
+            graphRenderPanel1.BackColor = Color.White;
+            graphRenderPanel1.Dock = DockStyle.Fill;
+            graphRenderPanel1.Location = new Point(0, 0);
+            graphRenderPanel1.Name = "graphRenderPanel1";
+            graphRenderPanel1.Size = new Size(446, 547);
+            graphRenderPanel1.TabIndex = 0;
+            graphRenderPanel1.MouseDown += graphRenderPanel1_MouseDown;
             // 
             // propertyGrid1
             // 
@@ -162,16 +221,6 @@
             propertyGrid1.Name = "propertyGrid1";
             propertyGrid1.Size = new Size(155, 576);
             propertyGrid1.TabIndex = 0;
-            // 
-            // graphRenderPanel1
-            // 
-            graphRenderPanel1.AllowDrop = true;
-            graphRenderPanel1.BackColor = Color.White;
-            graphRenderPanel1.Dock = DockStyle.Fill;
-            graphRenderPanel1.Location = new Point(0, 0);
-            graphRenderPanel1.Name = "graphRenderPanel1";
-            graphRenderPanel1.Size = new Size(446, 576);
-            graphRenderPanel1.TabIndex = 0;
             // 
             // EditorView
             // 
@@ -192,6 +241,10 @@
             splitContainer2.Panel2.ResumeLayout(false);
             ((System.ComponentModel.ISupportInitialize)splitContainer2).EndInit();
             splitContainer2.ResumeLayout(false);
+            splitContainer3.Panel1.ResumeLayout(false);
+            splitContainer3.Panel2.ResumeLayout(false);
+            ((System.ComponentModel.ISupportInitialize)splitContainer3).EndInit();
+            splitContainer3.ResumeLayout(false);
             ResumeLayout(false);
             PerformLayout();
         }
@@ -210,6 +263,9 @@
         private ListBox toolListBox;
         private SplitContainer splitContainer2;
         private PropertyGrid propertyGrid1;
+        private SplitContainer splitContainer3;
+        private Button deleteButton;
+        private Button clearButton;
         private UI.GraphRenderPanel graphRenderPanel1;
     }
 }

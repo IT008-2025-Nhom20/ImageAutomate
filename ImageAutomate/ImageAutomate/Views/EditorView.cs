@@ -16,11 +16,11 @@ namespace ImageAutomate.Views
 {
     public partial class EditorView : UserControl
     {
+        private PipelineGraph graph = new PipelineGraph();
         public EditorView()
         {
             InitializeComponent();
 
-            var graph = new PipelineGraph();
             var workspace = new Workspace(graph);
             graphRenderPanel1.Workspace = workspace;
 
@@ -76,6 +76,32 @@ namespace ImageAutomate.Views
                 graphRenderPanel1.Invalidate();
             }
 
+        }
+
+        private void graphRenderPanel1_MouseDown(object sender, MouseEventArgs e)
+        {
+            if (graphRenderPanel1.Graph != null)
+            {
+                propertyGrid1.SelectedObject = graphRenderPanel1.Graph.SelectedItem;
+            }
+        }
+
+        private void clearButton_Click(object sender, EventArgs e)
+        {
+            if (graphRenderPanel1.Graph != null)
+            {
+                graphRenderPanel1.Graph.Clear();
+                graphRenderPanel1.Invalidate();
+            }
+        }
+
+        private void deleteButton_Click(object sender, EventArgs e)
+        {
+            if (graphRenderPanel1.Graph != null)
+            {
+                graphRenderPanel1.DeleteSelectedItem();
+                graphRenderPanel1.Invalidate();
+            }
         }
     }
 }
