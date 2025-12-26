@@ -53,7 +53,7 @@ namespace ImageAutomate.Views
                 block.Y = clientPoint.Y;
 
                 graphRenderPanel1.Graph.AddBlock(block);
-
+                propertyGrid1.SelectedObject = block;
                 graphRenderPanel1.Invalidate();
             }
 

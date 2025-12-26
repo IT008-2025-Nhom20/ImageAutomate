@@ -38,15 +38,19 @@
             splitContainer1 = new SplitContainer();
             groupBox1 = new GroupBox();
             toolListBox = new ListBox();
+            splitContainer2 = new SplitContainer();
+            propertyGrid1 = new PropertyGrid();
             graphRenderPanel1 = new ImageAutomate.UI.GraphRenderPanel();
-            button1 = new Button();
             menuStrip1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)splitContainer1).BeginInit();
             splitContainer1.Panel1.SuspendLayout();
             splitContainer1.Panel2.SuspendLayout();
             splitContainer1.SuspendLayout();
             groupBox1.SuspendLayout();
-            graphRenderPanel1.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)splitContainer2).BeginInit();
+            splitContainer2.Panel1.SuspendLayout();
+            splitContainer2.Panel2.SuspendLayout();
+            splitContainer2.SuspendLayout();
             SuspendLayout();
             // 
             // menuStrip1
@@ -107,7 +111,7 @@
             // 
             // splitContainer1.Panel2
             // 
-            splitContainer1.Panel2.Controls.Add(graphRenderPanel1);
+            splitContainer1.Panel2.Controls.Add(splitContainer2);
             splitContainer1.Size = new Size(730, 576);
             splitContainer1.SplitterDistance = 121;
             splitContainer1.TabIndex = 1;
@@ -133,28 +137,41 @@
             toolListBox.TabIndex = 0;
             toolListBox.MouseDown += toolListBox_MouseDown;
             // 
+            // splitContainer2
+            // 
+            splitContainer2.Dock = DockStyle.Fill;
+            splitContainer2.Location = new Point(0, 0);
+            splitContainer2.Name = "splitContainer2";
+            // 
+            // splitContainer2.Panel1
+            // 
+            splitContainer2.Panel1.Controls.Add(graphRenderPanel1);
+            // 
+            // splitContainer2.Panel2
+            // 
+            splitContainer2.Panel2.Controls.Add(propertyGrid1);
+            splitContainer2.Size = new Size(605, 576);
+            splitContainer2.SplitterDistance = 446;
+            splitContainer2.TabIndex = 0;
+            // 
+            // propertyGrid1
+            // 
+            propertyGrid1.BackColor = SystemColors.Control;
+            propertyGrid1.Dock = DockStyle.Fill;
+            propertyGrid1.Location = new Point(0, 0);
+            propertyGrid1.Name = "propertyGrid1";
+            propertyGrid1.Size = new Size(155, 576);
+            propertyGrid1.TabIndex = 0;
+            // 
             // graphRenderPanel1
             // 
             graphRenderPanel1.AllowDrop = true;
             graphRenderPanel1.BackColor = Color.White;
-            graphRenderPanel1.Controls.Add(button1);
             graphRenderPanel1.Dock = DockStyle.Fill;
             graphRenderPanel1.Location = new Point(0, 0);
             graphRenderPanel1.Name = "graphRenderPanel1";
-            graphRenderPanel1.Size = new Size(605, 576);
+            graphRenderPanel1.Size = new Size(446, 576);
             graphRenderPanel1.TabIndex = 0;
-            graphRenderPanel1.DragDrop += graphRenderPanel1_DragDrop;
-            graphRenderPanel1.DragEnter += graphRenderPanel1_DragEnter;
-            // 
-            // button1
-            // 
-            button1.Location = new Point(152, 73);
-            button1.Name = "button1";
-            button1.Size = new Size(75, 23);
-            button1.TabIndex = 0;
-            button1.Text = "button1";
-            button1.UseVisualStyleBackColor = true;
-            button1.Click += button1_Click;
             // 
             // EditorView
             // 
@@ -171,7 +188,10 @@
             ((System.ComponentModel.ISupportInitialize)splitContainer1).EndInit();
             splitContainer1.ResumeLayout(false);
             groupBox1.ResumeLayout(false);
-            graphRenderPanel1.ResumeLayout(false);
+            splitContainer2.Panel1.ResumeLayout(false);
+            splitContainer2.Panel2.ResumeLayout(false);
+            ((System.ComponentModel.ISupportInitialize)splitContainer2).EndInit();
+            splitContainer2.ResumeLayout(false);
             ResumeLayout(false);
             PerformLayout();
         }
@@ -188,7 +208,8 @@
         private ToolStripMenuItem saveToolStripMenuItem1;
         private GroupBox groupBox1;
         private ListBox toolListBox;
+        private SplitContainer splitContainer2;
+        private PropertyGrid propertyGrid1;
         private UI.GraphRenderPanel graphRenderPanel1;
-        private Button button1;
     }
 }
