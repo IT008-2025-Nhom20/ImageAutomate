@@ -15,7 +15,7 @@ namespace ImageAutomate.Execution.Scheduling;
 /// No depth calculation needed - greedy strategy naturally follows deep paths.
 /// Simple, fast (O(In-Degree) per enqueue), and optimal for memory pressure.
 /// </remarks>
-internal sealed class SimpleDfsScheduler : IScheduler
+public sealed class SimpleDfsScheduler : IScheduler
 {
     private readonly PriorityQueue<IBlock, float> _queue = new();
     private readonly HashSet<IBlock> _enqueuedBlocks = [];
