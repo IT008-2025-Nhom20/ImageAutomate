@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
+using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
 using System.Text;
@@ -50,7 +51,9 @@ namespace ImageAutomate.Views.DashboardViews
         public SettingsView()
         {
             InitializeComponent();
-        
+
+            Debug.WriteLine("Settings view initialized.");
+
             schedulerRegistry.RegisterScheduler("EmptyScheduler", () => new EmptyScheduler());
         }
 

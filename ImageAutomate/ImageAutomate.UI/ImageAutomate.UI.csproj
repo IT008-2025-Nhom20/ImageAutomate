@@ -11,6 +11,9 @@
 		<Compile Update="GraphRenderPanel.cs">
 			<SubType>Component</SubType>
 		</Compile>
+		<Compile Update="SidebarControl.cs">
+			<SubType>Component</SubType>
+		</Compile>
 	</ItemGroup>
 
 	<ItemGroup>
