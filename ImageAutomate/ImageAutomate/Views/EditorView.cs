@@ -24,21 +24,21 @@ namespace ImageAutomate.Views
             var workspace = new Workspace(graph);
             graphRenderPanel1.Workspace = workspace;
 
-            toolListBox.Items.AddRange([typeof(BrightnessBlock)]);
-            toolListBox.Items.AddRange([typeof(ContrastBlock)]);
-            toolListBox.Items.AddRange([typeof(ConvertBlock)]);
-            toolListBox.Items.AddRange([typeof(CropBlock)]);
-            toolListBox.Items.AddRange([typeof(FlipBlock)]);
-            toolListBox.Items.AddRange([typeof(GaussianBlurBlock)]);
-            toolListBox.Items.AddRange([typeof(GrayscaleBlock)]);
-            toolListBox.Items.AddRange([typeof(HueBlock)]);
-            toolListBox.Items.AddRange([typeof(LoadBlock)]);
-            toolListBox.Items.AddRange([typeof(PixelateBlock)]);
-            toolListBox.Items.AddRange([typeof(ResizeBlock)]);
-            toolListBox.Items.AddRange([typeof(SaturationBlock)]);
-            toolListBox.Items.AddRange([typeof(SaveBlock)]);
-            toolListBox.Items.AddRange([typeof(SharpenBlock)]);
-            toolListBox.Items.AddRange([typeof(VignetteBlock)]);
+            toolListBox.Items.AddRange("BrightnessBlock");
+            toolListBox.Items.AddRange("ContrastBlock");
+            toolListBox.Items.AddRange("ConvertBlock");
+            toolListBox.Items.AddRange("CropBlock");
+            toolListBox.Items.AddRange("FlipBlock");
+            toolListBox.Items.AddRange("GaussianBlurBlock");
+            toolListBox.Items.AddRange("GrayscaleBlock");
+            toolListBox.Items.AddRange("HueBlock");
+            toolListBox.Items.AddRange("LoadBlock");
+            toolListBox.Items.AddRange("PixelateBlock");
+            toolListBox.Items.AddRange("ResizeBlock");
+            toolListBox.Items.AddRange("SaturationBlock");
+            toolListBox.Items.AddRange("SaveBlock");
+            toolListBox.Items.AddRange("SharpenBlock");
+            toolListBox.Items.AddRange("VignetteBlock");
         }
 
         private void toolListBox_MouseDown(object sender, MouseEventArgs e)
@@ -49,22 +49,25 @@ namespace ImageAutomate.Views
 
             if (index >= 0)
             {
-                lb.DoDragDrop(lb.Items[index], DragDropEffects.Copy);
+                lb.DoDragDrop(MapType(lb.Items[index].ToString()), DragDropEffects.Copy);
             }
         }
 
         private void graphRenderPanel1_DragEnter(object sender, DragEventArgs e)
         {
-            if (e.Data.GetDataPresent(typeof(Type)))
+            if (e.Data.GetDataPresent(typeof(String)))
                 e.Effect = DragDropEffects.Copy;
         }
 
         private void graphRenderPanel1_DragDrop(object sender, DragEventArgs e)
         {
-            if (e.Data.GetDataPresent(typeof(Type)))
+            if (e.Data.GetDataPresent(typeof(String)))
             {
-                var type = (Type)e.Data.GetData(typeof(Type));
-                var block = (IBlock)Activator.CreateInstance(type);
+                var type = (String)e.Data.GetData(typeof(String));
+                
+                var blocktype = MapType(type);
+
+                var block = (IBlock)Activator.CreateInstance(blocktype);
 
                 Point clientPoint = graphRenderPanel1.PointToClient(new Point(e.X, e.Y));
 
@@ -72,7 +75,6 @@ namespace ImageAutomate.Views
                 block.Y = clientPoint.Y;
 
                 graphRenderPanel1.Graph.AddBlock(block);
-                propertyGrid1.SelectedObject = block;
                 graphRenderPanel1.Invalidate();
             }
 
@@ -101,6 +103,45 @@ namespace ImageAutomate.Views
             {
                 graphRenderPanel1.DeleteSelectedItem();
                 graphRenderPanel1.Invalidate();
+            }
+        }
+
+        private Type MapType(String str)
+        {
+            switch (str)
+            {
+                case "BrightnessBlock":
+                    return typeof(BrightnessBlock);
+                case "ContrastBlock":
+                    return typeof(ContrastBlock);
+                case "ConvertBlock":
+                    return typeof(ConvertBlock);
+                case "CropBlock":
+                    return typeof(CropBlock);
+                case "FlipBlock":
+                    return typeof(FlipBlock);
+                case "GaussianBlurBlock":
+                    return typeof(GaussianBlurBlock);
+                case "GrayscaleBlock":
+                    return typeof(GrayscaleBlock);
+                case "HueBlock":
+                    return typeof(HueBlock);
+                case "LoadBlock":
+                    return typeof(LoadBlock);
+                case "PixelateBlock":
+                    return typeof(PixelateBlock);
+                case "ResizeBlock":
+                    return typeof(ResizeBlock);
+                case "SaturationBlock":
+                    return typeof(SaturationBlock);
+                case "SaveBlock":
+                    return typeof(SaveBlock);
+                case "SharpenBlock":
+                    return typeof(SharpenBlock);
+                case "VignetteBlock":
+                    return typeof(VignetteBlock);
+                default:
+                    throw new ArgumentException($"{str} does not exist");
             }
         }
     }
