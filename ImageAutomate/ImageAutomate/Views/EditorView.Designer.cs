@@ -40,6 +40,7 @@
             toolListBox = new ListBox();
             splitContainer2 = new SplitContainer();
             splitContainer3 = new SplitContainer();
+            startButton = new Button();
             deleteButton = new Button();
             clearButton = new Button();
             graphRenderPanel1 = new ImageAutomate.UI.GraphRenderPanel();
@@ -164,12 +165,14 @@
             // splitContainer3
             // 
             splitContainer3.Dock = DockStyle.Fill;
+            splitContainer3.IsSplitterFixed = true;
             splitContainer3.Location = new Point(0, 0);
             splitContainer3.Name = "splitContainer3";
             splitContainer3.Orientation = Orientation.Horizontal;
             // 
             // splitContainer3.Panel1
             // 
+            splitContainer3.Panel1.Controls.Add(startButton);
             splitContainer3.Panel1.Controls.Add(deleteButton);
             splitContainer3.Panel1.Controls.Add(clearButton);
             // 
@@ -179,6 +182,16 @@
             splitContainer3.Size = new Size(446, 576);
             splitContainer3.SplitterDistance = 25;
             splitContainer3.TabIndex = 0;
+            // 
+            // startButton
+            // 
+            startButton.Dock = DockStyle.Left;
+            startButton.Location = new Point(0, 0);
+            startButton.Name = "startButton";
+            startButton.Size = new Size(75, 25);
+            startButton.TabIndex = 2;
+            startButton.Text = "Start";
+            startButton.UseVisualStyleBackColor = true;
             // 
             // deleteButton
             // 
@@ -267,5 +280,6 @@
         private Button deleteButton;
         private Button clearButton;
         private UI.GraphRenderPanel graphRenderPanel1;
+        private Button startButton;
     }
 }
