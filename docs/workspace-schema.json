@@ -20,8 +20,22 @@
     "graph": {
       "$ref": "#/definitions/PipelineGraph"
     },
-    "viewState": {
-      "$ref": "#/definitions/ViewState"
+    "zoom": {
+      "type": "number",
+      "description": "Zoom level of the canvas",
+      "minimum": 0.1,
+      "maximum": 10.0,
+      "default": 1.0
+    },
+    "panX": {
+      "type": "number",
+      "description": "Horizontal pan offset",
+      "default": 0.0
+    },
+    "panY": {
+      "type": "number",
+      "description": "Vertical pan offset",
+      "default": 0.0
     },
     "metadata": {
       "type": "object",
@@ -152,30 +166,6 @@
           "description": "ID of the input socket on the target block"
         }
       }
-    },
-    "ViewState": {
-      "type": "object",
-      "description": "Global UI state information for the workspace (block-specific layout is embedded in each block)",
-      "properties": {
-        "zoom": {
-          "type": "number",
-          "description": "Zoom level of the canvas",
-          "minimum": 0.1,
-          "maximum": 10.0,
-          "default": 1.0
-        },
-        "panX": {
-          "type": "number",
-          "description": "Horizontal pan offset",
-          "default": 0.0
-        },
-        "panY": {
-          "type": "number",
-          "description": "Vertical pan offset",
-          "default": 0.0
-        }
-      },
-      "required": ["zoom", "panX", "panY"]
     },
     "BlockLayout": {
       "type": "object",

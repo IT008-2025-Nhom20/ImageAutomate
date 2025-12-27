@@ -103,4 +103,122 @@ public partial class EditorView : UserControl
             BlockPropertyGrid.SelectedObject = panel.Graph?.SelectedItem;
         }
     }
+
+    private void OnNewMenuItemClick(object sender, EventArgs e)
+    {
+        var result = MessageBox.Show(
+            "Create a new workspace? Any unsaved changes will be lost.",
+            "New Workspace",
+            MessageBoxButtons.YesNo,
+            MessageBoxIcon.Question);
+
+        if (result == DialogResult.Yes)
+        {
+            graph = new PipelineGraph();
+            var workspace = new Workspace(graph);
+            GraphPanel.Workspace = workspace;
+            GraphPanel.Invalidate();
+        }
+    }
+
+    private void OnOpenMenuItemClick(object sender, EventArgs e)
+    {
+        using OpenFileDialog dialog = new()
+        {
+            Filter = "ImageAutomate Workspace (*.imageautomate;*.json)|*.imageautomate;*.json|All Files (*.*)|*.*",
+            Title = "Open Workspace"
+        };
+
+        if (dialog.ShowDialog() == DialogResult.OK)
+        {
+            try
+            {
+                var workspace = Workspace.LoadFromFile(dialog.FileName);
+                graph = workspace.Graph;
+                GraphPanel.Workspace = workspace;
+                GraphPanel.Invalidate();
+
+                MessageBox.Show("Workspace loaded successfully!", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Failed to load workspace: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+    }
+
+    private void OnSaveMenuItemClick(object sender, EventArgs e)
+    {
+        if (GraphPanel.Workspace == null)
+        {
+            MessageBox.Show("No workspace to save.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            return;
+        }
+
+        using SaveFileDialog dialog = new()
+        {
+            Filter = "ImageAutomate Workspace (*.imageautomate)|*.imageautomate|JSON File (*.json)|*.json|All Files (*.*)|*.*",
+            DefaultExt = "imageautomate",
+            Title = "Save Workspace"
+        };
+
+        if (dialog.ShowDialog() == DialogResult.OK)
+        {
+            try
+            {
+                GraphPanel.Workspace.SaveToFile(dialog.FileName);
+                MessageBox.Show("Workspace saved successfully!", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Failed to save workspace: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+    }
+
+    private void OnCloseMenuItemClick(object sender, EventArgs e)
+    {
+        var result = MessageBox.Show(
+            "Close the current workspace? Any unsaved changes will be lost.",
+            "Close Workspace",
+            MessageBoxButtons.YesNo,
+            MessageBoxIcon.Warning);
+
+        if (result == DialogResult.Yes)
+        {
+            // Clear the graph and reset the workspace
+            graph = new PipelineGraph();
+            var workspace = new Workspace(graph);
+            GraphPanel.Workspace = workspace;
+            GraphPanel.Invalidate();
+            BlockPropertyGrid.SelectedObject = null;
+        }
+    }
+
+    private void OnAboutMenuItemClick(object sender, EventArgs e)
+    {
+        MessageBox.Show(
+            "ImageAutomate - Visual Node-Based Image Processing\n\n" +
+            "Version 1.0\n\n" +
+            "A powerful image processing pipeline editor with a visual programming interface.\n\n" +
+            "© 2025 ImageAutomate Team",
+            "About ImageAutomate",
+            MessageBoxButtons.OK,
+            MessageBoxIcon.Information);
+    }
+
+    private void OnHelpMenuItemClick(object sender, EventArgs e)
+    {
+        MessageBox.Show(
+            "ImageAutomate Help\n\n" +
+            "• Drag blocks from the toolbox to the canvas\n" +
+            "• Connect blocks by dragging from output sockets to input sockets\n" +
+            "• Select blocks to edit their properties in the property grid\n" +
+            "• Press Delete to remove selected items\n" +
+            "• Use Execute menu to run the pipeline\n\n" +
+            "For more information, visit the documentation.",
+            "Help",
+            MessageBoxButtons.OK,
+            MessageBoxIcon.Information);
+    }
 }

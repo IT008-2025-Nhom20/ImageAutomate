@@ -74,24 +74,28 @@
             NewGraphMenuItem.Name = "NewGraphMenuItem";
             NewGraphMenuItem.Size = new Size(103, 22);
             NewGraphMenuItem.Text = "New";
+            NewGraphMenuItem.Click += OnNewMenuItemClick;
             // 
             // OpenMenuItem
             // 
             OpenMenuItem.Name = "OpenMenuItem";
             OpenMenuItem.Size = new Size(103, 22);
             OpenMenuItem.Text = "Open";
+            OpenMenuItem.Click += OnOpenMenuItemClick;
             // 
             // SaveMenuItem
             // 
             SaveMenuItem.Name = "SaveMenuItem";
             SaveMenuItem.Size = new Size(103, 22);
             SaveMenuItem.Text = "Save";
+            SaveMenuItem.Click += OnSaveMenuItemClick;
             // 
             // CloseMenuItem
             // 
             CloseMenuItem.Name = "CloseMenuItem";
             CloseMenuItem.Size = new Size(103, 22);
             CloseMenuItem.Text = "Close";
+            CloseMenuItem.Click += OnCloseMenuItemClick;
             // 
             // ExecuteMenuItem
             // 
@@ -105,12 +109,14 @@
             AboutMenuItem.Name = "AboutMenuItem";
             AboutMenuItem.Size = new Size(52, 20);
             AboutMenuItem.Text = "About";
+            AboutMenuItem.Click += OnAboutMenuItemClick;
             // 
             // HelpMenuItem
             // 
             HelpMenuItem.Name = "HelpMenuItem";
             HelpMenuItem.Size = new Size(44, 20);
             HelpMenuItem.Text = "Help";
+            HelpMenuItem.Click += OnHelpMenuItemClick;
             // 
             // MainSplit
             // 

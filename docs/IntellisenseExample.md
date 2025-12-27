@@ -10,7 +10,9 @@ Type `"` inside the root object and you'll see suggestions for:
 - `version`
 - `name`
 - `graph`
-- `viewState`
+- `zoom`
+- `panX`
+- `panY`
 - `metadata`
 
 ## 2. Property Validation
@@ -61,11 +63,9 @@ The editor will show errors if you provide wrong types:
             }
         ]
     },
-    "viewState": {
-        "zoom": 1.25,                  // <-- Must be between 0.1 and 10.0
-        "panX": 0.0,
-        "panY": 0.0
-    }
+    "zoom": 1.25,                      // <-- Must be between 0.1 and 10.0
+    "panX": 0.0,
+    "panY": 0.0
 }
 ```
 
