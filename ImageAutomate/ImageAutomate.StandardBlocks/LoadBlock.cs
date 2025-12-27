@@ -313,7 +313,7 @@ public class LoadBlock : IBlock, IShipmentSource
         files = SortOrder switch
         {
             FileSortOrder.None => files,
-            FileSortOrder.Lexicographic => files.OrderBy(f => f, StringComparer.Ordinal),
+            FileSortOrder.Lexicographic => files.OrderBy(f => f, StringComparer.OrdinalIgnoreCase),
             // FileSortOrder.Natural => files.OrderBy(f => f, new NaturalStringComparer()),
             _ => files
         };

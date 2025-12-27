@@ -3,6 +3,7 @@ using ImageAutomate.Infrastructure;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats;
 using System.ComponentModel;
+using System.Diagnostics;
 
 namespace ImageAutomate.StandardBlocks;
 
@@ -341,9 +342,12 @@ public class SaveBlock : IBlock, IShipmentSink
     /// <exception cref="InvalidOperationException">Thrown when format is not registered.</exception>
     private IImageEncoder CreateEncoder(string formatName, object encodingOptions)
     {
-        var strategy = _formatRegistry.GetFormat(formatName);
+        var strategy = _formatRegistry.GetFormat(formatName.ToUpper());
         if (strategy == null)
         {
+            Debug.WriteLine("Formats registered:");
+            foreach (var format in _formatRegistry.GetRegisteredFormats())
+                Debug.WriteLine(format);
             throw new InvalidOperationException($"Unknown format: {formatName}");
         }
 
