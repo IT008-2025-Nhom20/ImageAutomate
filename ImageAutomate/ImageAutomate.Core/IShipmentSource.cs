@@ -28,4 +28,25 @@ public interface IShipmentSource
     /// Default recommendation: 64 work items per shipment.
     /// </remarks>
     int MaxShipmentSize { get; set; }
+
+    /// <summary>
+    /// Gets or sets transient data for the current shipment cycle.
+    /// </summary>
+    /// <remarks>
+    /// For LoadBlock, this contains the file paths to load in this batch.
+    /// Set by ExecutionContext before Execute(), cleared after.
+    /// This property should not be serialized or persisted.
+    /// </remarks>
+    IReadOnlyList<string>? ShipmentData { get; set; }
+
+    /// <summary>
+    /// Scans and returns all targets for shipment processing.
+    /// </summary>
+    /// <remarks>
+    /// Called once during execution bootstrap by the ExecutionContext.
+    /// For LoadBlock, this scans the directory, validates images, applies sorting,
+    /// and returns the list of file paths to be processed.
+    /// </remarks>
+    /// <returns>Read-only list of targets (e.g., file paths) to process in shipments.</returns>
+    IReadOnlyList<string> GetShipmentTargets();
 }

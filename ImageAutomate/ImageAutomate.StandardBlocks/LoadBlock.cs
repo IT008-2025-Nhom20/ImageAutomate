@@ -19,12 +19,9 @@ public class LoadBlock : IBlock, IShipmentSource
 
     private string _sourcePath = string.Empty;
     private bool _autoOrient = false;
+    private FileSortOrder _sortOrder = FileSortOrder.Lexicographic;
 
     private bool disposedValue = false;
-
-    // Shipment state
-    private List<string>? _cachedFilePaths;
-    private int _currentOffset = 0;
 
     // Layout fields
     private double _x;
@@ -160,10 +157,35 @@ public class LoadBlock : IBlock, IShipmentSource
     }
 
     /// <summary>
+    /// Gets or sets the sort order for file loading.
+    /// </summary>
+    [Category("Configuration")]
+    [Description("Sort order for loading files: None (no sort), Lexicographic (standard string sort)")]
+    public FileSortOrder SortOrder
+    {
+        get => _sortOrder;
+        set
+        {
+            if (_sortOrder != value)
+            {
+                _sortOrder = value;
+                OnPropertyChanged(nameof(SortOrder));
+            }
+        }
+    }
+
+    /// <summary>
     /// Maximum number of images to load per execution (shipment size).
     /// Set by the executor during initialization.
     /// </summary>
     public int MaxShipmentSize { get; set; } = 64;
+
+    /// <summary>
+    /// Gets or sets transient data for the current shipment cycle.
+    /// Contains the file paths to load in this batch.
+    /// Set by ExecutionContext before Execute(), cleared after.
+    /// </summary>
+    public IReadOnlyList<string>? ShipmentData { get; set; }
 
     private int _maxCount = int.MaxValue;
 
@@ -246,33 +268,18 @@ public class LoadBlock : IBlock, IShipmentSource
 
     private IEnumerable<IBasicWorkItem> LoadWorkItems(CancellationToken cancellationToken)
     {
+        if (ShipmentData == null)
+            throw new InvalidOperationException("LoadBlock: ShipmentData not set by ExecutionContext.");
+
         if (string.IsNullOrWhiteSpace(SourcePath))
             throw new InvalidOperationException("LoadBlock: SourcePath is required.");
 
-        // Initialize file list on first execution
-        if (_cachedFilePaths == null)
-        {
-            if (!Directory.Exists(SourcePath))
-                throw new DirectoryNotFoundException($"LoadBlock: directory not found: {SourcePath}");
-
-            _cachedFilePaths = Directory.GetFiles(SourcePath)
-                .Where(IsValidImageFile)
-                .OrderBy(file => file, StringComparer.OrdinalIgnoreCase)
-                .Take(MaxCount)
-                .ToList();
-            
-            _currentOffset = 0;
-        }
-
-        // Load next shipment batch
-        int remaining = _cachedFilePaths.Count - _currentOffset;
-        int batchSize = Math.Min(MaxShipmentSize, remaining);
-
-        for (int i = 0; i < batchSize; i++)
+        // Load the batch of files provided by ExecutionContext
+        for (int i = 0; i < ShipmentData.Count; i++)
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            string file = _cachedFilePaths[_currentOffset + i];
+            string file = ShipmentData[i];
             
             Image image = LoadImageFile(file);
             var builder = ImmutableDictionary.CreateBuilder<string, object>();
@@ -280,15 +287,39 @@ public class LoadBlock : IBlock, IShipmentSource
             builder.Add("FileName", Path.GetFileName(file));
             builder.Add("FullPath", file);
             builder.Add("Format", image.Metadata.DecodedImageFormat?.Name ?? "Unknown");
-            builder.Add("ShipmentOffset", _currentOffset);
             builder.Add("ShipmentIndex", i);
             var metadata = builder.ToImmutable();
             WorkItem wi = new(image, metadata);
             yield return wi;
         }
+    }
 
-        // Advance offset for next shipment
-        _currentOffset += batchSize;
+    /// <summary>
+    /// Scans the source directory and returns all valid image file paths.
+    /// </summary>
+    public IReadOnlyList<string> GetShipmentTargets()
+    {
+        if (string.IsNullOrWhiteSpace(SourcePath))
+            throw new InvalidOperationException("LoadBlock: SourcePath is required.");
+
+        if (!Directory.Exists(SourcePath))
+            throw new DirectoryNotFoundException($"LoadBlock: directory not found: {SourcePath}");
+
+        // Get all valid image files
+        var files = Directory.GetFiles(SourcePath)
+            .Where(IsValidImageFile);
+
+        // Apply user's sort preference
+        files = SortOrder switch
+        {
+            FileSortOrder.None => files,
+            FileSortOrder.Lexicographic => files.OrderBy(f => f, StringComparer.Ordinal),
+            // FileSortOrder.Natural => files.OrderBy(f => f, new NaturalStringComparer()),
+            _ => files
+        };
+
+        // Take up to MaxCount and return as list
+        return files.Take(MaxCount).ToList();
     }
 
     private bool IsValidImageFile(string path)
