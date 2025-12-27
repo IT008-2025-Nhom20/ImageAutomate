@@ -1,15 +1,14 @@
-# FR-BRI-001: Brightness Block
+# Brightness Block
 
 ## Description
-Adjusts image brightness by scaling pixel luminance uniformly using ImageSharp’s brightness processor.
+Adjusts image brightness by scaling pixel luminance uniformly using ImageSharp's brightness processor.
 
 ## Configuration Parameters
-### Brightness
-Float value:
-- 1.0 = no change
-- <1.0 = darker
-- >1.0 = brighter  
-Valid range: 0.0–3.0
+
+### `Brightness`
+*   **Type**: `float`
+*   **Description**: Brightness factor. 1.0 = no change, <1.0 = darker, >1.0 = brighter.
+*   **Range**: 0.0 to 3.0
 
 ## Acceptance Criteria
 - Brightness applied uniformly across all pixels.
@@ -19,7 +18,7 @@ Valid range: 0.0–3.0
 ## Operational Behaviour
 ImageSharp implementation:
 ```csharp
-image.Mutate(x => x.Brightness(brightnessValue));
+image.Mutate(x => x.Brightness(Brightness));
 ```
 
 ## Technical Notes

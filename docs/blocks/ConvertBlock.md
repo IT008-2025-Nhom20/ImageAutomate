@@ -21,7 +21,7 @@ Specifies desired output format. Supported values:
 - Qoi
 - Pbm
 
-### JpegOptions / PngOptions / BmpOptions / GifOptions / TiffOptions / TgaOptions / WebPOptions / QoiOptions / PbmOptions
+### JpegEncodingOptions / PngEncodingOptions / BmpEncodingOptions / GifEncodingOptions / TiffEncodingOptions / TgaEncodingOptions / WebPEncodingOptions / QoiEncodingOptions / PbmEncodingOptions
 Format-specific encoder configuration, exposed based on `TargetFormat`:
 
 | Format | Options |

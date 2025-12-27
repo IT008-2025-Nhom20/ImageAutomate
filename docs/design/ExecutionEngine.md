@@ -35,6 +35,14 @@ The `Warehouse`[^C.20] is a storage component attached to the output face of a p
     1. **Storage:** Holds the `IDictionary<Socket, IReadOnlyList<WorkItem>>` produced by the block (immutable after commit).
     2. **Inventory Tracking:** Maintains a **Consumer Counter** (`int32` atomically decremented) initialized to the output `Socket`'s `Fan-Out / Out-Degree`[^C.28] (number of downstream `links`[^C.3]).
     3. **Distribution:** Serves data to consumers upon request, implementing JIT Cloning logic (see Section 3.2).
+* **Key Methods:**
+    - `Import(IDictionary<Socket, IReadOnlyList<IBasicWorkItem>> outputs)`: Commits output data to the warehouse.
+    - `GetInventory()`: Returns all data (always clones).
+    - `GetInventory(IEnumerable<Socket> sockets)`: Returns data for specific sockets (always clones).
+    - `DecrementConsumerCount()`: Decrements the consumer count for blocked block cleanup.
+* **Properties:**
+    - `RemainingConsumers`: Current count of remaining consumers.
+    - `TotalSizeMp`: Total size in megapixels of stored items.
 * **Thread Safety:**
     - Counter updates use `Interlocked.Decrement`.
     - Data reads for *cloning* (intermediate consumers) are lock-free.
@@ -43,25 +51,24 @@ The `Warehouse`[^C.20] is a storage component attached to the output face of a p
 
 ### 2.2. The Dependency Barrier (Control Gate)
 
-The `Barrier`[^C.21] is a lightweight control structure attached to the consumer block.
+The `DependencyBarrier`[^C.21] is a lightweight control structure attached to the consumer block.
 
 * **Affinity:** Consumer-Centric (Downstream).
 * **Responsibility:**
     1. **Readiness Tracking:** Maintains a **Dependency Counter** (`int32` atomically decremented) initialized to the block's `Fan-In / In-Degree`[^C.27] (Total incoming connections).
-    2. **Signaling:** When the counter reaches zero via `Interlocked.Decrement`, it atomically enqueues the block to the `Engine`'s `Ready Queue` (once per cycle).
-* **Implementation:** Uses a simple `int32` counter + atomic `int32` flag:
-
+    2. **Signaling:** When the counter reaches zero via `Signal()`, returns `true` to indicate the block should be enqueued.
+* **Properties:**
+    - `Block`: The `IBlock` this barrier is attached to.
+    - `RemainingDependencies`: Current count of unsatisfied dependencies.
+    - `HasEnqueued`: Whether the block has been enqueued (once per cycle).
+* **Method:**
     ```csharp
-    private int dependencyCounter;      // Initialized to In-Degree
-    private int enqueuedFlag = 0;       // 0 = not enqueued, 1 = enqueued
-
-    public bool TrySignalReady() {
+    public bool Signal() {
         int remaining = Interlocked.Decrement(ref dependencyCounter);
         if (remaining == 0) {
             // Atomically set flag to prevent duplicate enqueue
             if (Interlocked.CompareExchange(ref enqueuedFlag, 1, 0) == 0) {
-                Engine.EnqueueReady(this.BlockId);
-                return true;
+                return true;  // Block should be enqueued
             }
         }
         return false;
@@ -291,7 +298,9 @@ To prevent OOM, the `Engine` enforces memory limits:
 
 ## 6. Optimization Strategy: Runtime Adaptation
 
-The `Engine` supports **two execution modes** (configurable via `ExecutionMode` enum):
+The `Engine` supports execution modes configured via `ExecutorConfiguration.Mode` (string-based for extensibility):
+
+* **Default Mode**: `"SimpleDfs"` - Depth-first scheduler using greedy completion pressure.
 
 ### Mode A: Greedy Completion Pressure (Default, Production-Ready)
 

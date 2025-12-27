@@ -17,29 +17,6 @@ using System.ComponentModel;
 
 namespace ImageAutomate.StandardBlocks;
 
-#region Format Enum
-
-/// <summary>
-/// Image format enum for backward compatibility.
-/// Use string-based format names with format registry instead.
-/// </summary>
-[Obsolete("Use string-based format names instead. This enum exists for backward compatibility.")]
-public enum ImageFormat
-{
-    Unknown = 0,
-    Bmp,
-    Gif,
-    Jpeg,
-    Pbm,
-    Png,
-    Tiff,
-    Tga,
-    WebP,
-    Qoi
-}
-
-#endregion
-
 #region Quantizer Enums and Options
 
 public enum QuantizerType
@@ -1440,23 +1417,3 @@ public class TiffEncodingOptions : INotifyPropertyChanged
 }
 
 #endregion
-
-public static class ImageSharpExtensions
-{
-    public static ImageFormat ToSimpleFormat(this IImageFormat format)
-    {
-        return format switch
-        {
-            BmpFormat => ImageFormat.Bmp,
-            GifFormat => ImageFormat.Gif,
-            JpegFormat => ImageFormat.Jpeg,
-            PbmFormat => ImageFormat.Pbm,
-            PngFormat => ImageFormat.Png,
-            TiffFormat => ImageFormat.Tiff,
-            TgaFormat => ImageFormat.Tga,
-            WebpFormat => ImageFormat.WebP,
-            QoiFormat => ImageFormat.Qoi,
-            _ => ImageFormat.Unknown
-        };
-    }
-}

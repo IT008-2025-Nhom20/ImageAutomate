@@ -1,23 +1,22 @@
-# FR-CON-001: Contrast Block
+# Contrast Block
 
 ## Description
 Modifies global contrast of the image based on ImageSharp's contrast transformation.
 
 ## Configuration Parameters
-### Contrast
-Float value:
-- 1.0 = no change
-- <1.0 = reduced contrast
-- >1.0 = increased contrast  
-Valid range: 0.0–3.0
+
+### `Contrast`
+*   **Type**: `float`
+*   **Description**: Contrast factor (0.0–3.0). 1.0 = no change, <1.0 = lower contrast, >1.0 = higher contrast.
+*   **Range**: 0.0 to 3.0
 
 ## Acceptance Criteria
-- Output contrast correctly matches ImageSharp’s implementation.
+- Output contrast correctly matches ImageSharp's implementation.
 - Metadata and alpha preserved.
 
 ## Operational Behaviour
 ```csharp
-image.Mutate(x => x.Contrast(contrastValue));
+image.Mutate(x => x.Contrast(Contrast));
 ```
 
 ## Technical Notes

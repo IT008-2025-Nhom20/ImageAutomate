@@ -25,15 +25,20 @@ The graph is implemented as an adjacency list representation, optimized for the 
 
 The primary vertex of the graph.
 
-*   **Storage:** `List<IBlock> _nodes`.
+*   **Storage:** `List<IBlock> _nodes` (exposed as `IReadOnlyList<IBlock>` via `Nodes` property).
 *   **Ordering:** The list order implies the **Z-Order** (Rendering Layer) for the UI. The last element is rendered on top ("Painter's Algorithm").
-*   **Identity:** Reference equality is used for runtime operations; `Guid Id` is used for persistence.
+*   **Identity:** Reference equality is used for runtime operations; `string Id` is used for persistence.
+*   **Socket Record:**
+    ```csharp
+    public record Socket(string Id, string Name);
+    ```
+    **Important**: `Socket.Id` is a `string`, NOT a `Guid`.
 
 ### 2.2. The Edge (`Connection`)
 
 The directed link between two vertices.
 
-*   **Storage:** `List<Connection> _edges`.
+*   **Storage:** `List<Connection> _edges` (exposed as `IReadOnlyList<Connection>` via `Edges` property).
 *   **Definition:**
     ```csharp
     public record Connection(
@@ -116,9 +121,11 @@ Connections are serialized using **Index-Based Referencing** (Source Block Index
 
 ### 6.1. Selection State
 
-The `PipelineGraph` maintains a `SelectedItem` property (typed as `object`).
-*   **Polymorphism:** Can hold either an `IBlock` or a `Connection`.
-*   **Scope:** Used primarily for UI interactions (Deletion, Property Grid population).
+The `PipelineGraph` maintains selection state:
+*   **`SelectedItem`** (`object?`): The currently selected item - can be either an `IBlock` or a `Connection` (public property).
+*   **Note**: `SelectedBlock` is a private helper property. The public API uses `SelectedItem` which supports polymorphic selection.
+
+### 6.2. Thread Safety
 
 ### 6.2. Thread Safety
 

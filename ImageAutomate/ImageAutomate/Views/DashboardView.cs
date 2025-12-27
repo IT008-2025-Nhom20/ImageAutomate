@@ -17,6 +17,7 @@ namespace ImageAutomate
         private Lazy<WorkspaceView> workspaceView;
         private Lazy<PluginsView> pluginView;
         private Lazy<SettingsView> settingsView;
+        UserControl currentView;
 
         public DashboardView()
         {
@@ -25,6 +26,7 @@ namespace ImageAutomate
             workspaceView = new Lazy<WorkspaceView>(() => new WorkspaceView());
             pluginView = new Lazy<PluginsView>(() => new PluginsView());
             settingsView = new Lazy<SettingsView>(() => new SettingsView());
+            currentView = WelcomeView;
         }
 
         private void Sidebar_NavigationRequested(object? sender, string viewName)
@@ -66,9 +68,11 @@ namespace ImageAutomate
 
         private void SwitchToView(UserControl view)
         {
-            MainSplitter.Panel2.Controls.Clear();
-            MainSplitter.Panel2.Controls.Add(view);
-            view.Dock = DockStyle.Fill;
+            Controls.Remove(currentView);
+            Controls.Add(view);
+            currentView = view;
+            view.Location = new Point(Sidebar.Width, 0);
+            view.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
         }
 
         private void BtnWelcome_Click(object? sender, EventArgs e)

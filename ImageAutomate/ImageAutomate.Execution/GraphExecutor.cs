@@ -53,6 +53,7 @@ public class GraphExecutor : IGraphExecutor
             if (block is IShipmentSource shipmentSource)
             {
                 shipmentSource.MaxShipmentSize = configuration.MaxShipmentSize;
+                context.InitializeShipmentSource(shipmentSource); // Scan directories and prepare file lists
                 context.MarkSourceActive(block);
             }
         }
@@ -186,6 +187,12 @@ public class GraphExecutor : IGraphExecutor
             // Mark as running
             context.SetBlockState(block, BlockExecutionState.Running);
 
+            // Prepare shipment data for sources before execution
+            if (block is IShipmentSource shipmentSource)
+            {
+                context.PrepareShipment(shipmentSource);
+            }
+
             // Gather inputs from upstream warehouses
             inputs = GatherInputs(block, context);
 
@@ -196,7 +203,14 @@ public class GraphExecutor : IGraphExecutor
             ExportOutputs(block, outputs, context);
 
             // Check if this is a shipment source that has more shipments
-            bool hasMoreShipments = ShouldReEnqueueShipment(block, outputs, context);
+            bool hasMoreShipments = false;
+            if (block is IShipmentSource source)
+            {
+                // Consume the processed shipment and check if exhausted
+                int processedCount = outputs.Values.FirstOrDefault()?.Count ?? 0;
+                bool isExhausted = context.ConsumeShipment(source, processedCount);
+                hasMoreShipments = !isExhausted;
+            }
 
             // Notify scheduler of completion FIRST
             context.Scheduler.NotifyCompleted(block, context);
@@ -241,38 +255,6 @@ public class GraphExecutor : IGraphExecutor
             
             context.DecrementActiveBlocks();
         }
-    }
-
-    /// <summary>
-    /// Determines if a shipment source should be re-enqueued for another execution.
-    /// </summary>
-    /// <remarks>
-    /// A block is re-enqueued if:
-    /// 1. It implements IShipmentSource
-    /// 2. It has no incoming connections (is a source block)
-    /// 3. Its output count equals MaxShipmentSize (indicating more may be available)
-    ///
-    /// When output count &lt; MaxShipmentSize, the source is exhausted.
-    /// </remarks>
-    private bool ShouldReEnqueueShipment(
-        IBlock block,
-        IReadOnlyDictionary<Socket, IReadOnlyList<IBasicWorkItem>> outputs,
-        ExecutionContext context)
-    {
-        // Only shipment sources can be re-enqueued
-        if (block is not IShipmentSource shipmentSource)
-            return false;
-
-        // Only source blocks (in-degree == 0) are shipment sources
-        if (context.InDegree[block] != 0)
-            return false;
-
-        // Check if output count indicates more shipments available
-        int totalOutputCount = outputs.Values.Sum(list => list.Count);
-
-        // If output count equals max shipment size, assume more shipments exist
-        // If output count < max shipment size, source is exhausted
-        return totalOutputCount >= shipmentSource.MaxShipmentSize;
     }
 
     /// <summary>

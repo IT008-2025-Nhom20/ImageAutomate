@@ -10,18 +10,18 @@ Supports various resize modes to handle aspect ratio preservation, cropping, and
 
 ### `ResizeMode`
 Specifies how the image is resized.
-- **Fixed**: Stretches the image to `TargetWidth` x `TargetHeight`. If `PreserveAspectRatio` is true, scales to fit within the box.
-- **KeepAspect**: Scales the image to fit within `TargetWidth` or `TargetHeight`, preserving aspect ratio.
+- **Fixed**: Stretches the image to `Width` x `Height`. If `MaintainAspectRatio` is true, scales to fit within the box.
+- **KeepAspect**: Scales the image to fit within `Width` or `Height`, preserving aspect ratio.
 - **Fit**: Fits the image within the target box, preserving aspect ratio.
 - **Fill**: Fills the target box, preserving aspect ratio (cropping if necessary).
 - **Pad**: Fits the image within the target box and pads the remaining space with `BackgroundColor`.
 
-### `TargetWidth`, `TargetHeight`
+### `Width`, `Height`
 - The target dimensions in pixels.
 - Must be positive integers.
 - Can be nullable in some modes (e.g. KeepAspect can specify only one dimension).
 
-### `PreserveAspectRatio`
+### `MaintainAspectRatio`
 - Used in **Fixed** mode to toggle between stretching and scaling.
 
 ### `Resampler`
@@ -47,8 +47,8 @@ Specifies the algorithm used for resampling.
 
 ## UI Behaviour
 - **ResizeMode** dropdown selects the mode.
-- **TargetWidth, TargetHeight** inputs.
-- **PreserveAspectRatio** checkbox (visible for Fixed mode).
+- **Width, Height** inputs.
+- **MaintainAspectRatio** checkbox (visible for Fixed mode).
 - **Resampler** dropdown.
 - **BackgroundColor** picker (visible for Pad mode).
 

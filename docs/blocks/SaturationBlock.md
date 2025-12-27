@@ -1,15 +1,14 @@
-# FR-SAT-001: Saturation Block
+# Saturation Block
 
 ## Description
 Modifies color intensity (saturation) using HSL-based saturation transformation.
 
 ## Configuration Parameters
-### Saturation
-Float factor:
-- 1.0 = no change
-- <1.0 = desaturated
-- >1.0 = more saturated  
-Valid range: 0.0–3.0
+
+### `Saturation`
+*   **Type**: `float`
+*   **Description**: Saturation factor (0.0–3.0). 1.0 = no change, <1.0 = desaturate, >1.0 = more saturated.
+*   **Range**: 0.0 to 3.0
 
 ## Acceptance Criteria
 - Saturation adjustment consistent with ImageSharp behaviour.
@@ -17,7 +16,7 @@ Valid range: 0.0–3.0
 
 ## Operational Behaviour
 ```csharp
-image.Mutate(x => x.Saturate(saturationValue));
+image.Mutate(x => x.Saturate(Saturation));
 ```
 
 ## Technical Notes

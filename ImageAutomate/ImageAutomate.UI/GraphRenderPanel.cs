@@ -26,7 +26,7 @@ public record SocketHit(IBlock Block, Socket Socket, bool IsInput, PointF Positi
 /// </summary>
 public class GraphRenderPanel : Panel
 {
-    #region Exposed Properties
+    #region Designer Properties
 
     [Category("Node Appearance")]
     [Description("Outline color for the selected block")]
@@ -87,6 +87,7 @@ public class GraphRenderPanel : Panel
 
     #endregion
 
+    #region Public Properties
     [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
     public Workspace? Workspace
     {
@@ -102,10 +103,15 @@ public class GraphRenderPanel : Panel
     [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
     public PipelineGraph? Graph => _workspace?.Graph;
 
-    private PointF _panOffset = new(0, 0);
-    private Point _lastMousePos;
+    [Category("Graph Events")]
+    [Description("Event fired when the selected item changes")]
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
+    public event Action<object?, EventArgs> SelectedItemChanged;
+    #endregion
 
     #region Interaction States
+    private PointF _panOffset = new(0, 0);
+    private Point _lastMousePos;
     private bool _isPanning;
     private bool _isDraggingNode;
     private IBlock? _draggedNode;
@@ -233,6 +239,10 @@ public class GraphRenderPanel : Panel
             Graph.RemoveNode(block);
         else if (selected is Connection conn)
             Graph.RemoveEdge(conn);
+
+        Graph.SelectedItem = null;
+
+        SelectedItemChanged?.Invoke(this, EventArgs.Empty);
 
         Invalidate();
     }
@@ -377,6 +387,7 @@ public class GraphRenderPanel : Panel
             {
                 Graph.BringToTop(hitNode);
                 Graph.SelectedItem = hitNode;
+                SelectedItemChanged?.Invoke(this, EventArgs.Empty);
 
                 _isDraggingNode = true;
                 _draggedNode = hitNode;
@@ -391,12 +402,14 @@ public class GraphRenderPanel : Panel
             if (hitEdge != null)
             {
                 Graph.SelectedItem = hitEdge;
+                SelectedItemChanged?.Invoke(this, EventArgs.Empty);
                 Invalidate();
                 base.OnMouseDown(e);
                 return;
             }
 
             Graph.SelectedItem = null;
+            SelectedItemChanged?.Invoke(this, EventArgs.Empty);
             Invalidate();
         }
 
@@ -559,7 +572,7 @@ public class GraphRenderPanel : Panel
         {
             var rawData = e.Data.GetData(e.Data.GetFormats()[0]);
             if (rawData is Type t && typeof(IBlock).IsAssignableFrom(t))
-            {
+            { 
                 e.Effect = DragDropEffects.Copy;
                 _ghostBlockType = t;
                 _isDragOver = true;

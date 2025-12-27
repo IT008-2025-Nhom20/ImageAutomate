@@ -2,6 +2,14 @@
 
 The `IBlock` interface defines the contract for all graph nodes (blocks) within the ImageAutomate dataflow system. It abstracts the underlying implementation of image manipulation operations, allowing the `PipelineGraph` and `GraphRenderPanel` to handle various block types uniformly.
 
+## Socket Record
+
+```csharp
+public record Socket(string Id, string Name);
+```
+
+**Important**: `Socket.Id` is a `string`, NOT a `Guid`. Sockets are identified by their string IDs within blocks.
+
 ## Definition
 
 ```csharp
@@ -40,35 +48,45 @@ public interface IBlock : INotifyPropertyChanged, IDisposable
 
 ### `Inputs` / `Outputs`
 *   **Type**: `IReadOnlyList<Socket>`
-*   **Description**: Collections of input and output sockets.
+*   **Description**: Collections of input and output sockets (using `Socket` record with `string Id`).
 *   **Usage**: Defines the connectivity points for the block.
+
+### Layout Properties
+*   **`X`**: `double` - X position in graph coordinates
+*   **`Y`**: `double` - Y position in graph coordinates
+*   **`Width`**: `int` - Width of the block (settable)
+*   **`Height`**: `int` - Height of the block (settable)
 
 ## Methods
 
 ### `Execute`
 
-The `Execute` method has overloads to support synchronous and asynchronous execution patterns (via cancellation tokens), as well as socket-based or string-based input keys.
+The `Execute` method has four overloads. All overloads require an `inputs` parameter.
 
 #### Socket-Keyed Execute
 ```csharp
 IReadOnlyDictionary<Socket, IReadOnlyList<IBasicWorkItem>> Execute(
+    IDictionary<Socket, IReadOnlyList<IBasicWorkItem>> inputs);
+IReadOnlyDictionary<Socket, IReadOnlyList<IBasicWorkItem>> Execute(
     IDictionary<Socket, IReadOnlyList<IBasicWorkItem>> inputs,
-    CancellationToken cancellationToken = default)
+    CancellationToken cancellationToken);
 ```
-*   **Description**: The primary execution method that accepts Socket-keyed inputs.
+*   **Description**: Primary execution methods that accept Socket-keyed inputs.
 *   **Parameters**:
-    *   `inputs`: Dictionary mapping input sockets to their work items.
-    *   `cancellationToken`: Token to observe for cancellation requests.
+    *   `inputs`: Dictionary mapping input sockets to their work items (required).
+    *   `cancellationToken`: Token to observe for cancellation requests (optional).
 *   **Returns**: Dictionary mapping output sockets to their work items.
 
 #### String-Keyed Execute (Convenience Overload)
 ```csharp
 IReadOnlyDictionary<Socket, IReadOnlyList<IBasicWorkItem>> Execute(
+    IDictionary<string, IReadOnlyList<IBasicWorkItem>> inputs);
+IReadOnlyDictionary<Socket, IReadOnlyList<IBasicWorkItem>> Execute(
     IDictionary<string, IReadOnlyList<IBasicWorkItem>> inputs,
-    CancellationToken cancellationToken = default)
+    CancellationToken cancellationToken);
 ```
-*   **Description**: Convenience overload that accepts string socket IDs instead of Socket objects.
+*   **Description**: Convenience overloads that accept string socket IDs instead of Socket objects.
 *   **Parameters**:
-    *   `inputs`: Dictionary mapping socket IDs to their work items.
-    *   `cancellationToken`: Token to observe for cancellation requests.
+    *   `inputs`: Dictionary mapping socket IDs to their work items (required).
+    *   `cancellationToken`: Token to observe for cancellation requests (optional).
 *   **Returns**: Dictionary mapping output sockets to their work items.

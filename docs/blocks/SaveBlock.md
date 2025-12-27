@@ -22,6 +22,16 @@ This block takes incoming image work items and writes them to disk. It handles d
 *   **Description**: If true, automatically creates the `OutputPath` directory if it does not exist.
 *   **Default**: `true`
 
+## Interface Implementation
+SaveBlock implements the `IShipmentSink` marker interface for terminal blocks.
+
+## Properties
+
+### `SkipMetadata`
+*   **Type**: `bool`
+*   **Description**: If true, skips writing metadata to the output file.
+*   **Default**: `false`
+
 ## Behavior
 
 *   **File Naming**: Uses the `FileName` metadata from the input `WorkItem`.

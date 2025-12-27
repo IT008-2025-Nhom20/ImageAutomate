@@ -24,10 +24,10 @@ public static class FormatRegistryInitializer
 
         lock (_lock)
         {
-            if (_initialized)
-            {
-                return;
-            }
+            //if (_initialized)
+            //{
+            //    return;
+            //}
 
             registry.RegisterFormat("JPEG", new JpegFormatStrategy());
             registry.RegisterFormat("PNG", new PngFormatStrategy());

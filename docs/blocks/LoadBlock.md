@@ -17,12 +17,19 @@ This block scans a local directory for supported image files and emits them as `
 *   **Description**: If true, automatically rotates the image based on EXIF orientation metadata.
 *   **Default**: `false`
 
+## Interface Implementation
+LoadBlock implements the `IShipmentSource` marker interface for batch-producing blocks.
+
 ## Properties
 
 ### `MaxShipmentSize`
 *   **Type**: `int`
 *   **Description**: The maximum number of images to load and emit in a single execution cycle.
 *   **Default**: `64`
+
+### `MaxCount`
+*   **Type**: `int`
+*   **Description**: The maximum number of images to load (optional).
 
 ## Behavior
 

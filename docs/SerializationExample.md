@@ -28,18 +28,17 @@ string json = graph.ToJson();
 PipelineGraph loadedGraph = PipelineGraph.FromJson(json);
 ```
 
-## Workspace Serialization with ViewState
+## Workspace Serialization
 
 ```csharp
 using ImageAutomate.Core;
 using ImageAutomate.StandardBlocks;
 
 // Create a workspace
-var workspace = new Workspace
+var workspace = new Workspace(new PipelineGraph())
 {
     Name = "My Image Processing Project",
-    IncludeSchemaReference = true,  // Include $schema for IntelliSense (default: true)
-    Graph = new PipelineGraph()
+    IncludeSchemaReference = true  // Include $schema for IntelliSense (default: true)
 };
 
 // Add blocks
@@ -54,10 +53,16 @@ workspace.Graph.AddBlock(loadBlock);
 workspace.Graph.AddBlock(convertBlock);
 workspace.Graph.Connect(loadBlock, loadBlock.Outputs[0], convertBlock, convertBlock.Inputs[0]);
 
-// Set view state (for UI)
-workspace.ViewState.SetBlockPosition(loadBlock, new Position(100, 100));
-workspace.ViewState.SetBlockPosition(convertBlock, new Position(400, 100));
-workspace.ViewState.Zoom = 1.5;
+// Set block positions
+loadBlock.X = 100;
+loadBlock.Y = 100;
+convertBlock.X = 400;
+convertBlock.Y = 100;
+
+// Set view state (zoom and pan)
+workspace.Zoom = 1.5;
+workspace.PanX = 0.0;
+workspace.PanY = 0.0;
 
 // Add metadata
 workspace.Metadata["Author"] = "John Doe";
@@ -133,11 +138,9 @@ The serialized JSON has the following structure (with optional `$schema` for Int
         ],
         "centerBlockIndex": null
     },
-    "viewState": {
-        "zoom": 1.5,
-        "panX": 0.0,
-        "panY": 0.0
-    },
+    "zoom": 1.5,
+    "panX": 0.0,
+    "panY": 0.0,
     "metadata": {
         "Author": "John Doe",
         "CreatedDate": "2024-01-01T12:00:00Z"

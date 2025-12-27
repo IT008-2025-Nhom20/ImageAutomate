@@ -156,6 +156,16 @@ public sealed class ExecutionContext
 
     #endregion
 
+    #region Shipment Source Management
+
+    /// <summary>
+    /// File lists for shipment sources (LoadBlock).
+    /// Maps IShipmentSource -> List of file paths remaining to be processed.
+    /// </summary>
+    private readonly Dictionary<IShipmentSource, List<string>> _sourceFileLists = new();
+
+    #endregion
+
     public ExecutionContext(
         PipelineGraph graph,
         ExecutorConfiguration configuration,
@@ -625,6 +635,70 @@ public sealed class ExecutionContext
         }
 
         return blocksWithActiveUpstream;
+    }
+
+    #endregion
+
+    #region Shipment Source Management
+
+    /// <summary>
+    /// Initializes a shipment source by calling GetShipmentTargets() and storing the results.
+    /// Called once during execution bootstrap.
+    /// </summary>
+    public void InitializeShipmentSource(IShipmentSource source)
+    {
+        // Delegate to the source to scan and return targets
+        var targets = source.GetShipmentTargets();
+        _sourceFileLists[source] = targets.ToList();
+    }
+
+    /// <summary>
+    /// Prepares the next shipment batch for a source by setting its ShipmentData.
+    /// Called before each Execute() of the source block.
+    /// </summary>
+    public void PrepareShipment(IShipmentSource source)
+    {
+        if (_sourceFileLists.TryGetValue(source, out var fileList))
+        {
+            int batchSize = Math.Min(source.MaxShipmentSize, fileList.Count);
+            var slice = fileList.Take(batchSize).ToList();
+            source.ShipmentData = slice;
+        }
+        else
+        {
+            // No files remaining or not initialized
+            source.ShipmentData = Array.Empty<string>();
+        }
+    }
+
+    /// <summary>
+    /// Consumes the processed shipment by removing processed files from the list.
+    /// Called after Execute() completes successfully.
+    /// Returns true if the source is exhausted (no more files).
+    /// </summary>
+    public bool ConsumeShipment(IShipmentSource source, int processedCount)
+    {
+        if (_sourceFileLists.TryGetValue(source, out var fileList))
+        {
+            // Destructively remove processed items
+            fileList.RemoveRange(0, processedCount);
+
+            // Clear transient data
+            source.ShipmentData = null;
+
+            // Check if exhausted
+            if (fileList.Count == 0)
+            {
+                _sourceFileLists.Remove(source);
+                return true; // Exhausted
+            }
+
+            return false; // More shipments remaining
+        }
+
+        // Not in list means already exhausted or not initialized
+        source.ShipmentData = null;
+        return true;
     }
 
     #endregion

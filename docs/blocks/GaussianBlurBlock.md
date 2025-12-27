@@ -1,18 +1,19 @@
-# FR-GBL-001: Gaussian Blur Block
+# Gaussian Blur Block
 
 ## Description
-Applies Gaussian Blur using ImageSharp’s convolution-based GaussianBlur processor.  
+Applies Gaussian Blur using ImageSharp's convolution-based GaussianBlur processor.
 Used for smoothing, noise reduction, and softening edges.
 
 ## Configuration Parameters
-### Sigma
-Float representing blur intensity.  
-Higher values = stronger blur.  
-Recommended range: 0.5–25.0
 
-### Radius
-Optional override for kernel radius (int).  
-If not provided, ImageSharp auto-computes based on Sigma.
+### `Sigma`
+*   **Type**: `float`
+*   **Description**: Blur intensity. Higher values = stronger blur.
+*   **Recommended Range**: 0.5–25.0
+
+### `Radius`
+*   **Type**: `int?` (nullable int)
+*   **Description**: Optional override for Gaussian kernel radius. If null, ImageSharp auto-computes based on Sigma.
 
 ## Acceptance Criteria
 - Blur strength matches ImageSharp GaussianBlur behaviour.
@@ -22,12 +23,7 @@ If not provided, ImageSharp auto-computes based on Sigma.
 ## Operational Behaviour
 Implemented via:
 ```csharp
-image.Mutate(x => x.GaussianBlur(sigma));
-```
-
-Or with radius:
-```csharp
-image.Mutate(x => x.GaussianBlur(new GaussianBlurOptions { Sigma = sigma, Radius = radius }));
+image.Mutate(x => x.GaussianBlur(Sigma, Radius));
 ```
 
 ## Technical Notes

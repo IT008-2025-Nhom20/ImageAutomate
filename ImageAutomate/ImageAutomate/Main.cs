@@ -8,6 +8,8 @@
         {
             InitializeComponent();
             InitializeEvents();
+
+            DoubleBuffered = true;
         }
 
         private void InitializeEvents()

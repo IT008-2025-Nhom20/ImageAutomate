@@ -34,15 +34,10 @@
             RecentGroup = new GroupBox();
             PanelRecentGroup = new Panel();
             PanelRecent5 = new Panel();
-            BtnRecent5 = new Button();
             PanelRecent4 = new Panel();
-            BtnRecent4 = new Button();
             PanelRecent3 = new Panel();
-            BtnRecent3 = new Button();
             PanelRecent2 = new Panel();
-            BtnRecent2 = new Button();
             PanelRecent1 = new Panel();
-            BtnRecent1 = new Button();
             ButtonGroup = new GroupBox();
             PanelStartGroup = new Panel();
             ButtonTable = new TableLayoutPanel();
@@ -54,11 +49,6 @@
             RightContentSplit.SuspendLayout();
             RecentGroup.SuspendLayout();
             PanelRecentGroup.SuspendLayout();
-            PanelRecent5.SuspendLayout();
-            PanelRecent4.SuspendLayout();
-            PanelRecent3.SuspendLayout();
-            PanelRecent2.SuspendLayout();
-            PanelRecent1.SuspendLayout();
             ButtonGroup.SuspendLayout();
             PanelStartGroup.SuspendLayout();
             ButtonTable.SuspendLayout();
@@ -134,107 +124,47 @@
             // PanelRecent5
             // 
             PanelRecent5.AutoSize = true;
-            PanelRecent5.Controls.Add(BtnRecent5);
             PanelRecent5.Dock = DockStyle.Left;
-            PanelRecent5.Location = new Point(592, 0);
+            PanelRecent5.Location = new Point(0, 0);
             PanelRecent5.Name = "PanelRecent5";
-            PanelRecent5.Size = new Size(148, 90);
+            PanelRecent5.Size = new Size(0, 107);
             PanelRecent5.TabIndex = 6;
-            // 
-            // BtnRecent5
-            // 
-            BtnRecent5.AutoSize = true;
-            BtnRecent5.Dock = DockStyle.Fill;
-            BtnRecent5.Location = new Point(0, 0);
-            BtnRecent5.Name = "BtnRecent5";
-            BtnRecent5.Size = new Size(148, 90);
-            BtnRecent5.TabIndex = 0;
-            BtnRecent5.Text = "button11";
-            BtnRecent5.UseVisualStyleBackColor = true;
             // 
             // PanelRecent4
             // 
             PanelRecent4.AutoSize = true;
-            PanelRecent4.Controls.Add(BtnRecent4);
             PanelRecent4.Dock = DockStyle.Left;
-            PanelRecent4.Location = new Point(444, 0);
+            PanelRecent4.Location = new Point(0, 0);
             PanelRecent4.Name = "PanelRecent4";
-            PanelRecent4.Size = new Size(148, 90);
+            PanelRecent4.Size = new Size(0, 107);
             PanelRecent4.TabIndex = 5;
-            // 
-            // BtnRecent4
-            // 
-            BtnRecent4.AutoSize = true;
-            BtnRecent4.Dock = DockStyle.Fill;
-            BtnRecent4.Location = new Point(0, 0);
-            BtnRecent4.Name = "BtnRecent4";
-            BtnRecent4.Size = new Size(148, 90);
-            BtnRecent4.TabIndex = 0;
-            BtnRecent4.Text = "button10";
-            BtnRecent4.UseVisualStyleBackColor = true;
             // 
             // PanelRecent3
             // 
             PanelRecent3.AutoSize = true;
-            PanelRecent3.Controls.Add(BtnRecent3);
             PanelRecent3.Dock = DockStyle.Left;
-            PanelRecent3.Location = new Point(296, 0);
+            PanelRecent3.Location = new Point(0, 0);
             PanelRecent3.Name = "PanelRecent3";
-            PanelRecent3.Size = new Size(148, 90);
+            PanelRecent3.Size = new Size(0, 107);
             PanelRecent3.TabIndex = 4;
-            // 
-            // BtnRecent3
-            // 
-            BtnRecent3.AutoSize = true;
-            BtnRecent3.Dock = DockStyle.Fill;
-            BtnRecent3.Location = new Point(0, 0);
-            BtnRecent3.Name = "BtnRecent3";
-            BtnRecent3.Size = new Size(148, 90);
-            BtnRecent3.TabIndex = 0;
-            BtnRecent3.Text = "button9";
-            BtnRecent3.UseVisualStyleBackColor = true;
             // 
             // PanelRecent2
             // 
             PanelRecent2.AutoSize = true;
-            PanelRecent2.Controls.Add(BtnRecent2);
             PanelRecent2.Dock = DockStyle.Left;
-            PanelRecent2.Location = new Point(148, 0);
+            PanelRecent2.Location = new Point(0, 0);
             PanelRecent2.Name = "PanelRecent2";
-            PanelRecent2.Size = new Size(148, 90);
+            PanelRecent2.Size = new Size(0, 107);
             PanelRecent2.TabIndex = 3;
-            // 
-            // BtnRecent2
-            // 
-            BtnRecent2.AutoSize = true;
-            BtnRecent2.Dock = DockStyle.Fill;
-            BtnRecent2.Location = new Point(0, 0);
-            BtnRecent2.Name = "BtnRecent2";
-            BtnRecent2.Size = new Size(148, 90);
-            BtnRecent2.TabIndex = 0;
-            BtnRecent2.Text = "button8";
-            BtnRecent2.UseVisualStyleBackColor = true;
             // 
             // PanelRecent1
             // 
             PanelRecent1.AutoSize = true;
-            PanelRecent1.Controls.Add(BtnRecent1);
             PanelRecent1.Dock = DockStyle.Left;
             PanelRecent1.Location = new Point(0, 0);
             PanelRecent1.Name = "PanelRecent1";
-            PanelRecent1.Size = new Size(148, 90);
+            PanelRecent1.Size = new Size(0, 107);
             PanelRecent1.TabIndex = 2;
-            // 
-            // BtnRecent1
-            // 
-            BtnRecent1.AutoSize = true;
-            BtnRecent1.Dock = DockStyle.Fill;
-            BtnRecent1.Location = new Point(0, 0);
-            BtnRecent1.Name = "BtnRecent1";
-            BtnRecent1.Size = new Size(148, 90);
-            BtnRecent1.TabIndex = 0;
-            BtnRecent1.Text = "button7";
-            BtnRecent1.UseVisualStyleBackColor = true;
             // 
             // ButtonGroup
             // 
@@ -307,16 +237,6 @@
             RecentGroup.ResumeLayout(false);
             PanelRecentGroup.ResumeLayout(false);
             PanelRecentGroup.PerformLayout();
-            PanelRecent5.ResumeLayout(false);
-            PanelRecent5.PerformLayout();
-            PanelRecent4.ResumeLayout(false);
-            PanelRecent4.PerformLayout();
-            PanelRecent3.ResumeLayout(false);
-            PanelRecent3.PerformLayout();
-            PanelRecent2.ResumeLayout(false);
-            PanelRecent2.PerformLayout();
-            PanelRecent1.ResumeLayout(false);
-            PanelRecent1.PerformLayout();
             ButtonGroup.ResumeLayout(false);
             PanelStartGroup.ResumeLayout(false);
             ButtonTable.ResumeLayout(false);
@@ -331,15 +251,10 @@
         private GroupBox RecentGroup;
         private Panel PanelRecentGroup;
         private Panel PanelRecent5;
-        private Button BtnRecent5;
         private Panel PanelRecent4;
-        private Button BtnRecent4;
         private Panel PanelRecent3;
-        private Button BtnRecent3;
         private Panel PanelRecent2;
-        private Button BtnRecent2;
         private Panel PanelRecent1;
-        private Button BtnRecent1;
         private GroupBox ButtonGroup;
         private Panel PanelStartGroup;
         private TableLayoutPanel ButtonTable;
