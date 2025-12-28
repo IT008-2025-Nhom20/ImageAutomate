@@ -1,18 +1,7 @@
 using ImageAutomate.Core;
 using ImageAutomate.Infrastructure;
-using SixLabors.ImageSharp.Formats;
-using SixLabors.ImageSharp.Formats.Bmp;
-using SixLabors.ImageSharp.Formats.Gif;
-using SixLabors.ImageSharp.Formats.Jpeg;
-using SixLabors.ImageSharp.Formats.Pbm;
-using SixLabors.ImageSharp.Formats.Png;
-using SixLabors.ImageSharp.Formats.Qoi;
-using SixLabors.ImageSharp.Formats.Tga;
-using SixLabors.ImageSharp.Formats.Tiff;
-using SixLabors.ImageSharp.Formats.Webp;
 using SixLabors.ImageSharp.Processing.Processors.Dithering;
 using SixLabors.ImageSharp.Processing.Processors.Quantization;
-using System.Collections.Immutable;
 using System.ComponentModel;
 
 namespace ImageAutomate.StandardBlocks;
@@ -563,7 +552,7 @@ public class ConvertBlock : IBlock
     #region Fields
     private static readonly ImageFormatRegistry _formatRegistry = new();
 
-    public static IReadOnlyList<string> SupportedFormats => _formatRegistry.GetRegisteredFormats().ToList();
+    public static IReadOnlyList<string> SupportedFormats => _formatRegistry.GetRegisteredFormats();
 
     static ConvertBlock()
     {
@@ -1042,7 +1031,7 @@ public class ImageFormatConverter : StringConverter
 
     public override StandardValuesCollection GetStandardValues(ITypeDescriptorContext? context)
     {
-        return new StandardValuesCollection(ConvertBlock.SupportedFormats);
+        return new StandardValuesCollection(ConvertBlock.SupportedFormats.ToList());
     }
 }
 
