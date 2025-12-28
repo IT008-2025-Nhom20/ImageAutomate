@@ -553,23 +553,6 @@ public class PluginLoader
     {
         public void RegisterScheduler(string name, Func<object> factory)
         {
-            // Use fully dynamic reflection to avoid compile-time dependency on Execution
-            var registryType = Type.GetType("ImageAutomate.Execution.Scheduling.SchedulerRegistry, ImageAutomate.Execution");
-            if (registryType == null)
-            {
-                Console.Error.WriteLine("Failed to locate SchedulerRegistry type.");
-                return;
-            }
-
-            var registryProperty = registryType.GetProperty("Instance",
-                System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public);
-            var registry = registryProperty?.GetValue(null);
-            if (registry == null)
-            {
-                Console.Error.WriteLine("Failed to access SchedulerRegistry.Instance property.");
-                return;
-            }
-
             // Get IScheduler type dynamically
             var iSchedulerType = Type.GetType("ImageAutomate.Execution.Scheduling.IScheduler, ImageAutomate.Execution");
             if (iSchedulerType == null)
@@ -586,28 +569,33 @@ public class PluginLoader
                 return;
             }
 
-            var registerMethod = registry.GetType().GetMethod("RegisterScheduler",
-                new[] { typeof(string), funcSchedulerType });
-
-            if (registerMethod == null)
-            {
-                Console.Error.WriteLine("Failed to find RegisterScheduler method.");
-                return;
-            }
-
             // Create a wrapper delegate that adapts Func<object> to Func<IScheduler>
             var typedFactory = factory;
 
-            registerMethod.Invoke(registry, new object[] { name, typedFactory });
+            CallRegistryMethod(
+                "ImageAutomate.Execution.Scheduling.SchedulerRegistry, ImageAutomate.Execution",
+                "RegisterScheduler",
+                [typeof(string), funcSchedulerType],
+                [name, typedFactory]
+            );
         }
 
         public void RegisterImageFormat(string formatName, IImageFormatStrategy strategy)
         {
-            // Use reflection to access Infrastructure assembly
-            var registryType = Type.GetType("ImageAutomate.Infrastructure.ImageFormatRegistry, ImageAutomate.Infrastructure");
+            CallRegistryMethod(
+                "ImageAutomate.Infrastructure.ImageFormatRegistry, ImageAutomate.Infrastructure",
+                "RegisterFormat",
+                [typeof(string), typeof(IImageFormatStrategy)],
+                [formatName, strategy]
+            );
+        }
+
+        private void CallRegistryMethod(string fullRegistryTypeName, string methodName, Type[] parameterTypes, object[] parameters)
+        {
+            var registryType = Type.GetType(fullRegistryTypeName);
             if (registryType == null)
             {
-                Console.Error.WriteLine("Failed to locate ImageFormatRegistry type.");
+                Console.Error.WriteLine($"Failed to locate {fullRegistryTypeName} type.");
                 return;
             }
 
@@ -616,20 +604,19 @@ public class PluginLoader
             var registry = registryProperty?.GetValue(null);
             if (registry == null)
             {
-                Console.Error.WriteLine("Failed to access ImageFormatRegistry.Instance property.");
+                Console.Error.WriteLine($"Failed to access {registryType.Name}.Instance property.");
                 return;
             }
 
-            var registerMethod = registry.GetType().GetMethod("RegisterFormat",
-                new[] { typeof(string), typeof(IImageFormatStrategy) });
+            var registerMethod = registry.GetType().GetMethod(methodName, parameterTypes);
 
             if (registerMethod == null)
             {
-                Console.Error.WriteLine("Failed to find RegisterFormat method.");
+                Console.Error.WriteLine($"Failed to find {methodName} method in {registryType.Name}.");
                 return;
             }
 
-            registerMethod.Invoke(registry, new object[] { formatName, strategy });
+            registerMethod.Invoke(registry, parameters);
         }
     }
 }

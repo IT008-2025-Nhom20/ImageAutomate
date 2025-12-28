@@ -50,12 +50,8 @@ public sealed class SchedulerRegistry
     {
         if (string.IsNullOrEmpty(name))
         {
-            // Default to simpledfs if name is null/empty, matching historical behavior
-            // or we could throw. Let's default for empty, but throw for specific unknown names.
-            if (_factories.TryGetValue("simpledfs", out var defaultFactory))
-            {
-                return defaultFactory();
-            }
+            // Default to simpledfs if name is null/empty, matching historical behavior.
+            name = "simpledfs";
         }
 
         if (_factories.TryGetValue(name, out var factory))
