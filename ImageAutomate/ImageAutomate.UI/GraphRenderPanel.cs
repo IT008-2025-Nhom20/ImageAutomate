@@ -129,6 +129,12 @@ public class GraphRenderPanel : Panel
                 _renderScale = (float)_workspace.Zoom;
                 _panOffset = new PointF((float)_workspace.PanX, (float)_workspace.PanY);
             }
+            else
+            {
+                // Reset pan and zoom to default when workspace is cleared.
+                _renderScale = 1.0f;
+                _panOffset = PointF.Empty;
+            }
             Invalidate();
         }
     }
