@@ -7,7 +7,6 @@ namespace ImageAutomate.Views.DashboardViews
 {
     public partial class SettingsView : UserControl
     {
-        SchedulerRegistry schedulerRegistry = SchedulerFactory.Registry;
         public SettingsView()
         {
             InitializeComponent();
