@@ -14,13 +14,6 @@ public class SaveBlock : IBlock, IShipmentSink
 {
     #region Fields
 
-    private static readonly ImageFormatRegistry _formatRegistry = new();
-
-    static SaveBlock()
-    {
-        FormatRegistryInitializer.InitializeBuiltInFormats(_formatRegistry);
-    }
-
     private readonly IReadOnlyList<Socket> _inputs = [new("Save.In", "Image.In")];
     private readonly IReadOnlyList<Socket> _outputs = [];
 
@@ -36,18 +29,33 @@ public class SaveBlock : IBlock, IShipmentSink
     private double _y;
     private int _width = 200;
     private int _height = 100;
+    private string _title = "Save";
 
     #endregion
 
     #region IBlock basic
 
     /// <inheritdoc />
+    [Browsable(false)]
     public string Name => "Save";
 
     /// <inheritdoc />
-    public string Title => "Save";
+    [Category("Title")]
+    public string Title
+    {
+        get => _title;
+        set
+        {
+            if (_title != value)
+            {
+                _title = value;
+                OnPropertyChanged(nameof(Title));
+            }
+        }
+    }
 
     /// <inheritdoc />
+    [Browsable(false)]
     public string Content => $"Output path: {OutputPath}\nOverwrite: {Overwrite}\nCreate directory: {CreateDirectory}";
 
     #endregion
@@ -55,6 +63,7 @@ public class SaveBlock : IBlock, IShipmentSink
     #region Layout Properties
 
     /// <inheritdoc />
+    [Category("Layout")]
     public double X
     {
         get => _x;
@@ -69,6 +78,7 @@ public class SaveBlock : IBlock, IShipmentSink
     }
 
     /// <inheritdoc />
+    [Category("Layout")]
     public double Y
     {
         get => _y;
@@ -83,6 +93,7 @@ public class SaveBlock : IBlock, IShipmentSink
     }
 
     /// <inheritdoc />
+    [Category("Layout")]
     public int Width
     {
         get => _width;
@@ -97,6 +108,7 @@ public class SaveBlock : IBlock, IShipmentSink
     }
 
     /// <inheritdoc />
+    [Category("Layout")]
     public int Height
     {
         get => _height;
@@ -115,8 +127,10 @@ public class SaveBlock : IBlock, IShipmentSink
     #region Sockets
 
     /// <inheritdoc />
+    [Browsable(false)]
     public IReadOnlyList<Socket> Inputs => _inputs;
     /// <inheritdoc />
+    [Browsable(false)]
     public IReadOnlyList<Socket> Outputs => _outputs;
 
     #endregion
@@ -128,6 +142,7 @@ public class SaveBlock : IBlock, IShipmentSink
     /// </summary>
     [Category("Configuration")]
     [Description("Directory path for saving the processed images.")]
+    [Editor("System.Windows.Forms.Design.FolderNameEditor, System.Design, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a", "System.Drawing.Design.UITypeEditor, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a")]
     public string OutputPath
     {
         get => _outputPath;
@@ -323,7 +338,7 @@ public class SaveBlock : IBlock, IShipmentSink
     /// <returns>The file name with the updated extension.</returns>
     private static string UpdateFileExtension(string fileName, string formatName)
     {
-        var strategy = _formatRegistry.GetFormat(formatName);
+        var strategy = ImageFormatRegistry.Instance.GetFormat(formatName);
         if (strategy == null)
         {
             return fileName; // Keep original if unknown
@@ -342,11 +357,11 @@ public class SaveBlock : IBlock, IShipmentSink
     /// <exception cref="InvalidOperationException">Thrown when format is not registered.</exception>
     private IImageEncoder CreateEncoder(string formatName, object encodingOptions)
     {
-        var strategy = _formatRegistry.GetFormat(formatName.ToUpper());
+        var strategy = ImageFormatRegistry.Instance.GetFormat(formatName.ToUpper());
         if (strategy == null)
         {
             Debug.WriteLine("Formats registered:");
-            foreach (var format in _formatRegistry.GetRegisteredFormats())
+            foreach (var format in ImageFormatRegistry.Instance.GetRegisteredFormats())
                 Debug.WriteLine(format);
             throw new InvalidOperationException($"Unknown format: {formatName}");
         }

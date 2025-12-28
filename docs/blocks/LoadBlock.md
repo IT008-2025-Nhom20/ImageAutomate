@@ -10,6 +10,7 @@ This block scans a local directory for supported image files and emits them as `
 ### `SourcePath`
 *   **Type**: `string`
 *   **Description**: The full file system path to the directory containing input images.
+*   **Editor**: A folder selection dialog is provided for ease of use.
 *   **Required**: Yes
 
 ### `AutoOrient`
@@ -26,6 +27,7 @@ LoadBlock implements the `IShipmentSource` marker interface for batch-producing 
 *   **Type**: `int`
 *   **Description**: The maximum number of images to load and emit in a single execution cycle.
 *   **Default**: `64`
+*   **Visibility**: Hidden in property grid.
 
 ### `MaxCount`
 *   **Type**: `int`

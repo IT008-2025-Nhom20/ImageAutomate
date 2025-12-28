@@ -28,6 +28,7 @@ public class LoadBlock : IBlock, IShipmentSource
     private double _y;
     private int _width = 200;
     private int _height = 100;
+    private string _title = "Load";
 
     #endregion
 
@@ -49,18 +50,33 @@ public class LoadBlock : IBlock, IShipmentSource
     #region Basic Properties
 
     /// <inheritdoc />
+    [Browsable(false)]
     public string Name => "Load";
 
     /// <inheritdoc />
-    public string Title => "Load";
+    [Category("Title")]
+    public string Title
+    {
+        get => _title;
+        set
+        {
+            if (_title != value)
+            {
+                _title = value;
+                OnPropertyChanged(nameof(Title));
+            }
+        }
+    }
 
     /// <inheritdoc />
+    [Browsable(false)]
     public string Content => $"Path: {SourcePath}\nAuto Orient: {AutoOrient}";
     #endregion
 
     #region Layout Properties
 
     /// <inheritdoc />
+    [Category("Layout")]
     public double X
     {
         get => _x;
@@ -75,6 +91,7 @@ public class LoadBlock : IBlock, IShipmentSource
     }
 
     /// <inheritdoc />
+    [Category("Layout")]
     public double Y
     {
         get => _y;
@@ -89,6 +106,7 @@ public class LoadBlock : IBlock, IShipmentSource
     }
 
     /// <inheritdoc />
+    [Category("Layout")]
     public int Width
     {
         get => _width;
@@ -103,6 +121,7 @@ public class LoadBlock : IBlock, IShipmentSource
     }
 
     /// <inheritdoc />
+    [Category("Layout")]
     public int Height
     {
         get => _height;
@@ -125,6 +144,7 @@ public class LoadBlock : IBlock, IShipmentSource
     /// </summary>
     [Category("Configuration")]
     [Description("File system path to the input image ")]
+    [Editor("System.Windows.Forms.Design.FolderNameEditor, System.Design, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a", "System.Drawing.Design.UITypeEditor, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a")]
     public string SourcePath
     {
         get => _sourcePath;
@@ -178,6 +198,7 @@ public class LoadBlock : IBlock, IShipmentSource
     /// Maximum number of images to load per execution (shipment size).
     /// Set by the executor during initialization.
     /// </summary>
+    [Browsable(false)]
     public int MaxShipmentSize { get; set; } = 64;
 
     /// <summary>
@@ -185,6 +206,7 @@ public class LoadBlock : IBlock, IShipmentSource
     /// Contains the file paths to load in this batch.
     /// Set by ExecutionContext before Execute(), cleared after.
     /// </summary>
+    [Browsable(false)]
     public IReadOnlyList<string>? ShipmentData { get; set; }
 
     private int _maxCount = int.MaxValue;
@@ -214,8 +236,10 @@ public class LoadBlock : IBlock, IShipmentSource
     #region Socket
 
     /// <inheritdoc />
+    [Browsable(false)]
     public IReadOnlyList<Socket> Inputs => _inputs;
     /// <inheritdoc />
+    [Browsable(false)]
     public IReadOnlyList<Socket> Outputs => _outputs;
 
     #endregion

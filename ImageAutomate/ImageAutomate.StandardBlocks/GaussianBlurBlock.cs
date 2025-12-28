@@ -1,4 +1,4 @@
-﻿using ImageAutomate.Core;
+using ImageAutomate.Core;
 using SixLabors.ImageSharp.Processing;
 using System.ComponentModel;
 
@@ -21,15 +21,30 @@ public class GaussianBlurBlock : IBlock
     private double _y;
     private int _width = 200;
     private int _height = 100;
+    private string _title = "Gaussian Blur";
 
     #endregion
 
     #region IBlock basic
 
+    [Browsable(false)]
     public string Name => "GaussianBlur";
 
-    public string Title => "Gaussian Blur";
+    [Category("Title")]
+    public string Title
+    {
+        get => _title;
+        set
+        {
+            if (_title != value)
+            {
+                _title = value;
+                OnPropertyChanged(nameof(Title));
+            }
+        }
+    }
 
+    [Browsable(false)]
     public string Content => $"Sigma: {Sigma}\nRadius: {Radius}";
 
     #endregion
@@ -37,6 +52,7 @@ public class GaussianBlurBlock : IBlock
     #region Layout Properties
 
     /// <inheritdoc />
+    [Category("Layout")]
     public double X
     {
         get => _x;
@@ -51,6 +67,7 @@ public class GaussianBlurBlock : IBlock
     }
 
     /// <inheritdoc />
+    [Category("Layout")]
     public double Y
     {
         get => _y;
@@ -65,6 +82,7 @@ public class GaussianBlurBlock : IBlock
     }
 
     /// <inheritdoc />
+    [Category("Layout")]
     public int Width
     {
         get => _width;
@@ -79,6 +97,7 @@ public class GaussianBlurBlock : IBlock
     }
 
     /// <inheritdoc />
+    [Category("Layout")]
     public int Height
     {
         get => _height;
@@ -96,7 +115,9 @@ public class GaussianBlurBlock : IBlock
 
     #region Sockets
 
+    [Browsable(false)]
     public IReadOnlyList<Socket> Inputs => _inputs;
+    [Browsable(false)]
     public IReadOnlyList<Socket> Outputs => _outputs;
 
     #endregion

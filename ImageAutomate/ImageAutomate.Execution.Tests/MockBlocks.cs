@@ -23,7 +23,7 @@ public abstract class MockBlock : IBlock
 
     public string Name { get; }
 
-    public string Title { get; }
+    public string Title { get; set; }
 
     public string Content { get; }
 
