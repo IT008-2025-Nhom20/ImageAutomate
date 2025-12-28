@@ -18,11 +18,17 @@ public class SaturationBlock : IBlock
     // Layout fields
     private double _x;
     private double _y;
-    private int _width = 200;
-    private int _height = 100;
+    private int _width;
+    private int _height;
     private string _title = "Saturation";
 
     #endregion
+
+    public SaturationBlock(int width = 200, int height = 100)
+    {
+        _width = width;
+        _height = height;
+    }
 
     #region IBlock basic
 

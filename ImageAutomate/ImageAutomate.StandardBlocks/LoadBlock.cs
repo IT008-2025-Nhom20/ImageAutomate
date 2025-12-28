@@ -26,11 +26,17 @@ public class LoadBlock : IBlock, IShipmentSource
     // Layout fields
     private double _x;
     private double _y;
-    private int _width = 200;
-    private int _height = 100;
+    private int _width;
+    private int _height;
     private string _title = "Load";
 
     #endregion
+
+    public LoadBlock(int width = 200, int height = 100)
+    {
+        _width = width;
+        _height = height;
+    }
 
     #region InotifyPropertyChanged
 

@@ -583,15 +583,14 @@ public class GraphRenderPanel : Panel
 
     protected override void OnMouseWheel(MouseEventArgs e)
     {
-        const float zoomFactor = 1.1f;
         float oldScale = _renderScale;
 
         if (e.Delta > 0)
-            _renderScale *= zoomFactor;
+            _renderScale *= EditorConfiguration.ZoomFactor;
         else
-            _renderScale /= zoomFactor;
+            _renderScale /= EditorConfiguration.ZoomFactor;
 
-        _renderScale = Math.Max(0.1f, Math.Min(_renderScale, 5.0f));
+        _renderScale = Math.Max(EditorConfiguration.MinZoom, Math.Min(_renderScale, EditorConfiguration.MaxZoom));
 
         float mouseX = e.X;
         float mouseY = e.Y;
@@ -662,14 +661,18 @@ public class GraphRenderPanel : Panel
         {
             try
             {
-                var newBlock = (IBlock?)Activator.CreateInstance(_ghostBlockType);
+                var newBlock = (IBlock?)Activator.CreateInstance(
+                    _ghostBlockType,
+                    [
+                        EditorConfiguration.NewBlockWidth,
+                        EditorConfiguration.NewBlockHeight
+                    ]
+                );
                 if (newBlock != null)
                 {
                     // Direct property assignment - no ViewState needed!
-                    newBlock.X = _ghostPosition.X - 100;
-                    newBlock.Y = _ghostPosition.Y - 50;
-                    newBlock.Width = 200;
-                    newBlock.Height = 100;
+                    newBlock.X = _ghostPosition.X - EditorConfiguration.NewBlockXOffset;
+                    newBlock.Y = _ghostPosition.Y - EditorConfiguration.NewBlockYOffset;
 
                     Graph.AddBlock(newBlock);
                 }
@@ -726,8 +729,8 @@ public class GraphRenderPanel : Panel
         // Draw Drag & Drop Ghost
         if (_isDragOver && _ghostBlockType != null)
         {
-            float ghostWidth = 150;
-            float ghostHeight = 80;
+            int ghostWidth = EditorConfiguration.GhostWidth;
+            int ghostHeight = EditorConfiguration.GhostHeight;
 
             float drawX = _ghostPosition.X - ghostWidth / 2;
             float drawY = _ghostPosition.Y - ghostHeight / 2;

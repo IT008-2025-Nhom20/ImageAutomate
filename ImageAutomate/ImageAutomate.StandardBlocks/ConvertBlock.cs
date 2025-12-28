@@ -573,14 +573,16 @@ public class ConvertBlock : IBlock
     // Layout fields
     private double _x;
     private double _y;
-    private int _width = 200;
-    private int _height = 100;
+    private int _width;
+    private int _height;
     private string _title = "Convert";
 
     #endregion
 
-    public ConvertBlock()
+    public ConvertBlock(int width = 200, int height = 100)
     {
+        _width = width;
+        _height = height;
         _jpegOptions.PropertyChanged += Options_OnPropertyChanged;
         _pbmOptions.PropertyChanged += Options_OnPropertyChanged;
         _pngOptions.PropertyChanged += Options_OnPropertyChanged;

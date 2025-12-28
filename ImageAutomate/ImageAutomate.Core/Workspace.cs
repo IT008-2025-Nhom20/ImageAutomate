@@ -60,11 +60,6 @@ public class Workspace
     /// </summary>
     public Dictionary<string, object?> Metadata { get; set; } = [];
 
-    /// <summary>
-    /// Gets or sets whether to include the $schema property in saved files for IntelliSense support.
-    /// </summary>
-    public bool IncludeSchemaReference { get; set; } = true;
-
     public Workspace(PipelineGraph graph)
     {
         Graph = graph ?? throw new ArgumentNullException(nameof(graph));
@@ -103,6 +98,18 @@ public class Workspace
     /// </summary>
     public string ToJson()
     {
+        return ToJson(SystemConfiguration.WorkspaceSchemaUrl);
+    }
+
+    /// <summary>
+    /// Serializes the workspace to JSON string.
+    /// </summary>
+    /// <param name="schemaUrl">
+    /// The schema URL to include in the $schema field. 
+    /// Pass null to omit the schema reference.
+    /// </param>
+    public string ToJson(string? schemaUrl)
+    {
         var dto = new WorkspaceDto
         {
             Version = "1.0",
@@ -113,9 +120,9 @@ public class Workspace
             PanY = PanY
         };
 
-        if (IncludeSchemaReference)
+        if (!string.IsNullOrEmpty(schemaUrl))
         {
-            dto.Schema = "https://raw.githubusercontent.com/IT007-2025-Nhom20/ImageAutomate/project-restructure/docs/workspace-schema.json";
+            dto.Schema = schemaUrl;
         }
 
         if (Graph != null)
@@ -152,6 +159,7 @@ public class Workspace
     /// <summary>
     /// Saves the workspace to a file.
     /// </summary>
+    /// <param name="filePath">The file path to save to.</param>
     public void SaveToFile(string filePath)
     {
         var json = ToJson();

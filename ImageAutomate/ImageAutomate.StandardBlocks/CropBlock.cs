@@ -55,11 +55,17 @@ public class CropBlock : IBlock
     // Layout fields
     private double _layoutX;
     private double _layoutY;
-    private int _layoutWidth = 200;
-    private int _layoutHeight = 100;
+    private int _layoutWidth;
+    private int _layoutHeight;
     private string _title = "Crop";
 
     #endregion
+
+    public CropBlock(int width = 200, int height = 100)
+    {
+        _layoutWidth = width;
+        _layoutHeight = height;
+    }
 
     #region IBlock basic
 
