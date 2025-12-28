@@ -1,4 +1,5 @@
 using ImageAutomate.Core;
+using ImageAutomate.Infrastructure;
 
 namespace ImageAutomate.StandardBlocks;
 
@@ -7,39 +8,24 @@ namespace ImageAutomate.StandardBlocks;
 /// </summary>
 public static class FormatRegistryInitializer
 {
-    private static bool _initialized = false;
-    private static readonly object _lock = new();
-
     /// <summary>
-    /// Registers all built-in format strategies with the registry.
+    /// Registers all built-in format strategies with the singleton registry.
     /// </summary>
-    /// <param name="registry">The format registry to initialize.</param>
-    /// <exception cref="ArgumentNullException">Thrown when registry is null.</exception>
-    public static void InitializeBuiltInFormats(IImageFormatRegistry registry)
+    /// <param name="registry">Optional registry to initialize. If null, uses the shared singleton.</param>
+    public static void InitializeBuiltInFormats(IImageFormatRegistry? registry = null)
     {
-        if (registry == null)
-        {
-            throw new ArgumentNullException(nameof(registry));
-        }
+        // Use provided registry or default to singleton
+        var targetRegistry = registry ?? ImageFormatRegistry.Instance;
 
-        lock (_lock)
-        {
-            //if (_initialized)
-            //{
-            //    return;
-            //}
-
-            registry.RegisterFormat("JPEG", new JpegFormatStrategy());
-            registry.RegisterFormat("PNG", new PngFormatStrategy());
-            registry.RegisterFormat("BMP", new BmpFormatStrategy());
-            registry.RegisterFormat("GIF", new GifFormatStrategy());
-            registry.RegisterFormat("TIFF", new TiffFormatStrategy());
-            registry.RegisterFormat("TGA", new TgaFormatStrategy());
-            registry.RegisterFormat("WebP", new WebPFormatStrategy());
-            registry.RegisterFormat("PBM", new PbmFormatStrategy());
-            registry.RegisterFormat("QOI", new QoiFormatStrategy());
-
-            _initialized = true;
-        }
+        // Register formats - multiple calls are safe (will overwrite/update)
+        targetRegistry.RegisterFormat("JPEG", new JpegFormatStrategy());
+        targetRegistry.RegisterFormat("PNG", new PngFormatStrategy());
+        targetRegistry.RegisterFormat("BMP", new BmpFormatStrategy());
+        targetRegistry.RegisterFormat("GIF", new GifFormatStrategy());
+        targetRegistry.RegisterFormat("TIFF", new TiffFormatStrategy());
+        targetRegistry.RegisterFormat("TGA", new TgaFormatStrategy());
+        targetRegistry.RegisterFormat("WebP", new WebPFormatStrategy());
+        targetRegistry.RegisterFormat("PBM", new PbmFormatStrategy());
+        targetRegistry.RegisterFormat("QOI", new QoiFormatStrategy());
     }
 }

@@ -24,10 +24,33 @@ public class PluginLoader
     private readonly ConcurrentDictionary<object, string> _instanceToPlugin = new();
     private readonly object _lock = new();
 
+    private readonly IRegistryAccessor _registryAccessor;
+    private readonly string _pluginsDirectory;
+
     /// <summary>
     /// Gets a read-only collection of all loaded plugins.
     /// </summary>
     public IReadOnlyCollection<PluginInfo> LoadedPlugins => _plugins.Values.Where(p => p.IsLoaded).ToList();
+
+    /// <summary>
+    /// Initializes a new instance of the PluginLoader.
+    /// </summary>
+    /// <param name="pluginsDirectory">Directory to search for plugins.</param>
+    /// <param name="registryAccessor">Accessor for system registries.</param>
+    public PluginLoader(string pluginsDirectory, IRegistryAccessor registryAccessor)
+    {
+        _pluginsDirectory = pluginsDirectory;
+        _registryAccessor = registryAccessor ?? throw new ArgumentNullException(nameof(registryAccessor));
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the PluginLoader with default registry access.
+    /// </summary>
+    /// <param name="pluginsDirectory">Directory to search for plugins.</param>
+    public PluginLoader(string pluginsDirectory)
+        : this(pluginsDirectory, new RegistryAccessorProxy())
+    {
+    }
 
     /// <summary>
     /// Loads a plugin from a single DLL file.
@@ -510,9 +533,9 @@ public class PluginLoader
 
             if (initializerType != null)
             {
-                var accessor = new RegistryAccessorProxy();
+                // Use the provided registry accessor
                 var initializer = (IPluginInitializer?)Activator.CreateInstance(initializerType);
-                initializer?.Initialize(accessor);
+                initializer?.Initialize(_registryAccessor);
             }
         }
         catch (Exception ex)
@@ -538,12 +561,12 @@ public class PluginLoader
                 return;
             }
 
-            var registryProperty = registryType.GetProperty("Registry",
+            var registryProperty = registryType.GetProperty("Instance",
                 System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public);
             var registry = registryProperty?.GetValue(null);
             if (registry == null)
             {
-                Console.Error.WriteLine("Failed to access SchedulerRegistry.Registry property.");
+                Console.Error.WriteLine("Failed to access SchedulerRegistry.Instance property.");
                 return;
             }
 
@@ -576,6 +599,37 @@ public class PluginLoader
             var typedFactory = factory;
 
             registerMethod.Invoke(registry, new object[] { name, typedFactory });
+        }
+
+        public void RegisterImageFormat(string formatName, IImageFormatStrategy strategy)
+        {
+            // Use reflection to access Infrastructure assembly
+            var registryType = Type.GetType("ImageAutomate.Infrastructure.ImageFormatRegistry, ImageAutomate.Infrastructure");
+            if (registryType == null)
+            {
+                Console.Error.WriteLine("Failed to locate ImageFormatRegistry type.");
+                return;
+            }
+
+            var registryProperty = registryType.GetProperty("Instance",
+                System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public);
+            var registry = registryProperty?.GetValue(null);
+            if (registry == null)
+            {
+                Console.Error.WriteLine("Failed to access ImageFormatRegistry.Instance property.");
+                return;
+            }
+
+            var registerMethod = registry.GetType().GetMethod("RegisterFormat",
+                new[] { typeof(string), typeof(IImageFormatStrategy) });
+
+            if (registerMethod == null)
+            {
+                Console.Error.WriteLine("Failed to find RegisterFormat method.");
+                return;
+            }
+
+            registerMethod.Invoke(registry, new object[] { formatName, strategy });
         }
     }
 }

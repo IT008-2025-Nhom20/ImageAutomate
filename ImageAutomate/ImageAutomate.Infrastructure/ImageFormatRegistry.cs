@@ -7,6 +7,11 @@ namespace ImageAutomate.Infrastructure;
 /// </summary>
 public sealed class ImageFormatRegistry : IImageFormatRegistry
 {
+    /// <summary>
+    /// Gets the shared singleton instance of the registry.
+    /// </summary>
+    public static ImageFormatRegistry Instance { get; } = new();
+
     private readonly Dictionary<string, IImageFormatStrategy> _strategies = new(StringComparer.OrdinalIgnoreCase);
     private readonly object _lock = new();
 
