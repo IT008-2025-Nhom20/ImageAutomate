@@ -1,4 +1,4 @@
-﻿using ImageAutomate.Core;
+using ImageAutomate.Core;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Processing;
 using System.ComponentModel;
@@ -21,6 +21,7 @@ public class VignetteBlock : IBlock
     private double _y;
     private int _width = 200;
     private int _height = 100;
+    private string _title = "Vignette";
 
     #endregion
 
@@ -35,10 +36,24 @@ public class VignetteBlock : IBlock
 
     #region Basic Properties
 
+    [Browsable(false)]
     public string Name => "Vignette";
 
-    public string Title => "Vignette";
+    [Category("Title")]
+    public string Title
+    {
+        get => _title;
+        set
+        {
+            if (_title != value)
+            {
+                _title = value;
+                OnPropertyChanged(nameof(Title));
+            }
+        }
+    }
 
+    [Browsable(false)]
     public string Content => $"Color: {Color}\nStrength: {Strength}";
 
     #endregion
@@ -46,6 +61,7 @@ public class VignetteBlock : IBlock
     #region Layout Properties
 
     /// <inheritdoc />
+    [Category("Layout")]
     public double X
     {
         get => _x;
@@ -60,6 +76,7 @@ public class VignetteBlock : IBlock
     }
 
     /// <inheritdoc />
+    [Category("Layout")]
     public double Y
     {
         get => _y;
@@ -74,6 +91,7 @@ public class VignetteBlock : IBlock
     }
 
     /// <inheritdoc />
+    [Category("Layout")]
     public int Width
     {
         get => _width;
@@ -88,6 +106,7 @@ public class VignetteBlock : IBlock
     }
 
     /// <inheritdoc />
+    [Category("Layout")]
     public int Height
     {
         get => _height;
@@ -140,7 +159,9 @@ public class VignetteBlock : IBlock
 
     #region Sockets
 
+    [Browsable(false)]
     public IReadOnlyList<Socket> Inputs => _inputs;
+    [Browsable(false)]
     public IReadOnlyList<Socket> Outputs => _outputs;
 
     #endregion
@@ -217,4 +238,3 @@ public class VignetteBlock : IBlock
 
     #endregion
 }
-

@@ -1,18 +1,7 @@
-﻿using ImageAutomate.Core;
+using ImageAutomate.Core;
 using ImageAutomate.Infrastructure;
-using SixLabors.ImageSharp.Formats;
-using SixLabors.ImageSharp.Formats.Bmp;
-using SixLabors.ImageSharp.Formats.Gif;
-using SixLabors.ImageSharp.Formats.Jpeg;
-using SixLabors.ImageSharp.Formats.Pbm;
-using SixLabors.ImageSharp.Formats.Png;
-using SixLabors.ImageSharp.Formats.Qoi;
-using SixLabors.ImageSharp.Formats.Tga;
-using SixLabors.ImageSharp.Formats.Tiff;
-using SixLabors.ImageSharp.Formats.Webp;
 using SixLabors.ImageSharp.Processing.Processors.Dithering;
 using SixLabors.ImageSharp.Processing.Processors.Quantization;
-using System.Collections.Immutable;
 using System.ComponentModel;
 
 namespace ImageAutomate.StandardBlocks;
@@ -561,12 +550,8 @@ internal static class EnumMappers
 public class ConvertBlock : IBlock
 {
     #region Fields
-    private static readonly ImageFormatRegistry _formatRegistry = new();
-
-    static ConvertBlock()
-    {
-        FormatRegistryInitializer.InitializeBuiltInFormats(_formatRegistry);
-    }
+    public static IReadOnlyList<string> SupportedFormats
+        => ImageFormatRegistry.Instance.GetRegisteredFormats();
 
     private readonly IReadOnlyList<Socket> _inputs = [new("Convert.In", "Image.Input")];
     private readonly IReadOnlyList<Socket> _outputs = [new("Convert.Out", "Image.Out")];
@@ -590,6 +575,7 @@ public class ConvertBlock : IBlock
     private double _y;
     private int _width = 200;
     private int _height = 100;
+    private string _title = "Convert";
 
     #endregion
 
@@ -608,15 +594,29 @@ public class ConvertBlock : IBlock
 
     #region Basic Properties
 
+    [Browsable(false)]
     public string Name => "Convert";
 
-    public string Title => "Convert";
+    [Category("Title")]
+    public string Title
+    {
+        get => _title;
+        set
+        {
+            if (_title != value)
+            {
+                _title = value;
+                OnPropertyChanged(nameof(Title));
+            }
+        }
+    }
 
+    [Browsable(false)]
     public string Content
     {
         get
         {
-            var strategy = _formatRegistry.GetFormat(TargetFormat);
+            var strategy = ImageFormatRegistry.Instance.GetFormat(TargetFormat);
             var options = GetOptionsForFormat(TargetFormat);
             var optionSummary = strategy?.GetOptionsSummary(options) ?? "Default";
             return $"Format: {TargetFormat}\nRe-encode: {AlwaysEncode}\n{optionSummary}";
@@ -648,6 +648,7 @@ public class ConvertBlock : IBlock
     #region Layout Properties
 
     /// <inheritdoc />
+    [Category("Layout")]
     public double X
     {
         get => _x;
@@ -662,6 +663,7 @@ public class ConvertBlock : IBlock
     }
 
     /// <inheritdoc />
+    [Category("Layout")]
     public double Y
     {
         get => _y;
@@ -676,6 +678,7 @@ public class ConvertBlock : IBlock
     }
 
     /// <inheritdoc />
+    [Category("Layout")]
     public int Width
     {
         get => _width;
@@ -690,6 +693,7 @@ public class ConvertBlock : IBlock
     }
 
     /// <inheritdoc />
+    [Category("Layout")]
     public int Height
     {
         get => _height;
@@ -707,7 +711,9 @@ public class ConvertBlock : IBlock
 
     #region Sockets
 
+    [Browsable(false)]
     public IReadOnlyList<Socket> Inputs => _inputs;
+    [Browsable(false)]
     public IReadOnlyList<Socket> Outputs => _outputs;
 
     #endregion
@@ -716,6 +722,7 @@ public class ConvertBlock : IBlock
 
     [Category("Configuration")]
     [Description("Target image format for conversion")]
+    [TypeConverter(typeof(ImageFormatConverter))]
     public string TargetFormat
     {
         get => _targetFormat;
@@ -1009,6 +1016,17 @@ public class ConvertBlock : IBlock
     }
 
     #endregion
+}
+
+public class ImageFormatConverter : StringConverter
+{
+    public override bool GetStandardValuesSupported(ITypeDescriptorContext? context) => true;
+    public override bool GetStandardValuesExclusive(ITypeDescriptorContext? context) => true;
+
+    public override StandardValuesCollection GetStandardValues(ITypeDescriptorContext? context)
+    {
+        return new StandardValuesCollection((System.Collections.ICollection)ConvertBlock.SupportedFormats);
+    }
 }
 
 #region Encoding Classes

@@ -10,6 +10,7 @@ This block takes incoming image work items and writes them to disk. It handles d
 ### `OutputPath`
 *   **Type**: `string`
 *   **Description**: The directory path where images will be saved.
+*   **Editor**: A folder selection dialog is provided for ease of use.
 *   **Required**: Yes
 
 ### `Overwrite`
@@ -35,7 +36,7 @@ SaveBlock implements the `IShipmentSink` marker interface for terminal blocks.
 ## Behavior
 
 *   **File Naming**: Uses the `FileName` metadata from the input `WorkItem`.
-*   **Format Selection**: Determines output format based on the file extension of the target path (derived from `FileName`). Fallback to PNG if undetermined.
+*   **Format Selection**: Determines output format based on the `Format` and `EncodingOptions` metadata (from `ConvertBlock`), or falls back to file extension.
 *   **Execution**: Saves each incoming image to the disk. Does not emit any output work items (Sink).
 
 ## Error Handling

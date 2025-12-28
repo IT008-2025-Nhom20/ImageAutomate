@@ -48,25 +48,40 @@ public class ResizeBlock : IBlock
     private int? _targetHeight = 100;
     private bool _preserveAspectRatio = true;
     private ResizeResampler _resampler = ResizeResampler.Bicubic;
-    private Color _backgroundColor = Color.Black;
+    private Color _paddingColor = Color.Black;
 
     // Layout fields
     private double _x;
     private double _y;
     private int _width = 200;
     private int _height = 100;
+    private string _title = "Resize";
 
     #endregion
 
     #region IBlock basic
 
     /// <inheritdoc />
+    [Browsable(false)]
     public string Name => "Resize";
 
     /// <inheritdoc />
-    public string Title => "Resize";
+    [Category("Title")]
+    public string Title
+    {
+        get => _title;
+        set
+        {
+            if (_title != value)
+            {
+                _title = value;
+                OnPropertyChanged(nameof(Title));
+            }
+        }
+    }
 
     /// <inheritdoc />
+    [Browsable(false)]
     public string Content => $"Size: {TargetWidth}x{TargetHeight}\nMode: {ResizeMode}";
 
     #endregion
@@ -74,6 +89,7 @@ public class ResizeBlock : IBlock
     #region Layout Properties
 
     /// <inheritdoc />
+    [Category("Layout")]
     public double X
     {
         get => _x;
@@ -88,6 +104,7 @@ public class ResizeBlock : IBlock
     }
 
     /// <inheritdoc />
+    [Category("Layout")]
     public double Y
     {
         get => _y;
@@ -102,6 +119,7 @@ public class ResizeBlock : IBlock
     }
 
     /// <inheritdoc />
+    [Category("Layout")]
     public int Width
     {
         get => _width;
@@ -116,6 +134,7 @@ public class ResizeBlock : IBlock
     }
 
     /// <inheritdoc />
+    [Category("Layout")]
     public int Height
     {
         get => _height;
@@ -134,8 +153,10 @@ public class ResizeBlock : IBlock
     #region Sockets
 
     /// <inheritdoc />
+    [Browsable(false)]
     public IReadOnlyList<Socket> Inputs => _inputs;
     /// <inheritdoc />
+    [Browsable(false)]
     public IReadOnlyList<Socket> Outputs => _outputs;
 
     #endregion
@@ -243,15 +264,15 @@ public class ResizeBlock : IBlock
     /// </summary>
     [Category("Configuration")]
     [Description("Background color used when ResizeMode = Pad.")]
-    public Color BackgroundColor
+    public Color PaddingColor
     {
-        get => _backgroundColor;
+        get => _paddingColor;
         set
         {
-            if (_backgroundColor != value)
+            if (_paddingColor != value)
             {
-                _backgroundColor = value;
-                OnPropertyChanged(nameof(BackgroundColor));
+                _paddingColor = value;
+                OnPropertyChanged(nameof(PaddingColor));
             }
         }
     }
@@ -342,7 +363,7 @@ public class ResizeBlock : IBlock
 
         if (_resizeMode == ResizeModeOption.Pad)
         {
-            options.PadColor = BackgroundColor;
+            options.PadColor = PaddingColor;
         }
 
         return options;

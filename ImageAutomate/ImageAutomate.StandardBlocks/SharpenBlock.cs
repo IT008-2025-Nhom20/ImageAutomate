@@ -1,4 +1,4 @@
-﻿using ImageAutomate.Core;
+using ImageAutomate.Core;
 using SixLabors.ImageSharp.Processing;
 using System.ComponentModel;
 
@@ -20,14 +20,29 @@ public class SharpenBlock : IBlock
     private double _y;
     private int _width = 200;
     private int _height = 100;
+    private string _title = "Sharpen";
     #endregion
 
     #region IBlock basic
 
+    [Browsable(false)]
     public string Name => "Sharpen";
 
-    public string Title => "Sharpen";
+    [Category("Title")]
+    public string Title
+    {
+        get => _title;
+        set
+        {
+            if (_title != value)
+            {
+                _title = value;
+                OnPropertyChanged(nameof(Title));
+            }
+        }
+    }
 
+    [Browsable(false)]
     public string Content => $"Amount: {Amount}";
 
     #endregion
@@ -35,6 +50,7 @@ public class SharpenBlock : IBlock
     #region Layout Properties
 
     /// <inheritdoc />
+    [Category("Layout")]
     public double X
     {
         get => _x;
@@ -49,6 +65,7 @@ public class SharpenBlock : IBlock
     }
 
     /// <inheritdoc />
+    [Category("Layout")]
     public double Y
     {
         get => _y;
@@ -63,6 +80,7 @@ public class SharpenBlock : IBlock
     }
 
     /// <inheritdoc />
+    [Category("Layout")]
     public int Width
     {
         get => _width;
@@ -77,6 +95,7 @@ public class SharpenBlock : IBlock
     }
 
     /// <inheritdoc />
+    [Category("Layout")]
     public int Height
     {
         get => _height;
@@ -94,7 +113,9 @@ public class SharpenBlock : IBlock
 
     #region Sockets
 
+    [Browsable(false)]
     public IReadOnlyList<Socket> Inputs => _inputs;
+    [Browsable(false)]
     public IReadOnlyList<Socket> Outputs => _outputs;
 
     #endregion
@@ -102,13 +123,13 @@ public class SharpenBlock : IBlock
     #region Configuration
 
     [Category("Configuration")]
-    [Description("Sharpen intensity. 0.0 = no sharpening, 1.0 = normal sharpening, >1.0 = stronger. Range: 0.0–3.0.")]
+    [Description("Sharpen intensity. 0.0 = no sharpening, 1.0 = normal sharpening, >1.0 = stronger. Range: 0.0–10.0.")]
     public float Amount
     {
         get => _amount;
         set
         {
-            var clamped = Math.Clamp(value, 0.0f, 3.0f);
+            var clamped = Math.Clamp(value, 0.0f, 10.0f);
             if (Math.Abs(_amount - clamped) > float.Epsilon)
             {
                 _amount = clamped;

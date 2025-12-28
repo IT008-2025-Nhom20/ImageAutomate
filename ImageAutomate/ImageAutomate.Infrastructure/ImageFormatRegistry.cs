@@ -14,6 +14,11 @@ public sealed class ImageFormatRegistry : IImageFormatRegistry
 
     private readonly Dictionary<string, IImageFormatStrategy> _strategies = new(StringComparer.OrdinalIgnoreCase);
     private readonly object _lock = new();
+    private volatile IReadOnlyList<string>? _cachedFormats;
+
+    private ImageFormatRegistry()
+    {
+    }
 
     /// <summary>
     /// Registers a format strategy.
@@ -36,6 +41,7 @@ public sealed class ImageFormatRegistry : IImageFormatRegistry
         lock (_lock)
         {
             _strategies[formatName] = strategy;
+            _cachedFormats = null; // Invalidate cache
         }
     }
 
@@ -48,7 +54,12 @@ public sealed class ImageFormatRegistry : IImageFormatRegistry
     {
         lock (_lock)
         {
-            return _strategies.Remove(formatName);
+            bool removed = _strategies.Remove(formatName);
+            if (removed)
+            {
+                _cachedFormats = null; // Invalidate cache
+            }
+            return removed;
         }
     }
 
@@ -71,9 +82,20 @@ public sealed class ImageFormatRegistry : IImageFormatRegistry
     /// <returns>List of registered format names.</returns>
     public IReadOnlyList<string> GetRegisteredFormats()
     {
+        // Check cache first (double-check locking pattern)
+        if (_cachedFormats != null)
+        {
+            return _cachedFormats;
+        }
+
         lock (_lock)
         {
-            return _strategies.Keys.ToList();
+            // Check again inside lock
+            if (_cachedFormats == null)
+            {
+                _cachedFormats = _strategies.Keys.ToList();
+            }
+            return _cachedFormats;
         }
     }
 

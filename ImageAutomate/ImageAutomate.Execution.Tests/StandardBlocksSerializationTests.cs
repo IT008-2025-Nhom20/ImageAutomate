@@ -73,7 +73,7 @@ public class StandardBlocksSerializationTests
             TargetHeight = 1080,
             PreserveAspectRatio = true,
             Resampler = ResizeResampler.Lanczos3,
-            BackgroundColor = Color.White
+            PaddingColor = Color.White
         };
 
         // Act

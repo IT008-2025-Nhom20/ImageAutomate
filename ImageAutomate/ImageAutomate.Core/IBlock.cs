@@ -25,9 +25,9 @@ public interface IBlock : INotifyPropertyChanged, IDisposable
     /// </summary>
     public string Name { get; }
     /// <summary>
-    /// Gets the display header of this block.
+    /// Gets or sets the display header of this block.
     /// </summary>
-    public string Title { get; }
+    public string Title { get; set; }
     /// <summary>
     /// Gets the display content of this block.
     /// </summary>

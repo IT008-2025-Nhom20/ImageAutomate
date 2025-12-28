@@ -57,17 +57,33 @@ public class CropBlock : IBlock
     private double _layoutY;
     private int _layoutWidth = 200;
     private int _layoutHeight = 100;
+    private string _title = "Crop";
+
     #endregion
 
     #region IBlock basic
 
     /// <inheritdoc />
+    [Browsable(false)]
     public string Name => "Crop";
 
     /// <inheritdoc />
-    public string Title => "Crop";
+    [Category("Title")]
+    public string Title
+    {
+        get => _title;
+        set
+        {
+            if (_title != value)
+            {
+                _title = value;
+                OnPropertyChanged(nameof(Title));
+            }
+        }
+    }
 
     /// <inheritdoc />
+    [Browsable(false)]
     public string Content
     {
         get 
@@ -89,6 +105,7 @@ public class CropBlock : IBlock
     #region Layout Properties
 
     /// <inheritdoc />
+    [Category("Layout")]
     public double X
     {
         get => _layoutX;
@@ -103,6 +120,7 @@ public class CropBlock : IBlock
     }
 
     /// <inheritdoc />
+    [Category("Layout")]
     public double Y
     {
         get => _layoutY;
@@ -117,6 +135,7 @@ public class CropBlock : IBlock
     }
 
     /// <inheritdoc />
+    [Category("Layout")]
     public int Width
     {
         get => _layoutWidth;
@@ -131,6 +150,7 @@ public class CropBlock : IBlock
     }
 
     /// <inheritdoc />
+    [Category("Layout")]
     public int Height
     {
         get => _layoutHeight;
@@ -149,8 +169,10 @@ public class CropBlock : IBlock
     #region Sockets
 
     /// <inheritdoc />
+    [Browsable(false)]
     public IReadOnlyList<Socket> Inputs => _inputs;
     /// <inheritdoc />
+    [Browsable(false)]
     public IReadOnlyList<Socket> Outputs => _outputs;
 
     #endregion

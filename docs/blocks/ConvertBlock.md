@@ -10,7 +10,8 @@ Supports configurable encoder options for each target format.
 ## Configuration Parameters
 
 ### TargetFormat
-Specifies desired output format. Supported values:
+Specifies desired output format.
+Selection is provided via a dropdown list. Supported values:
 - Bmp
 - Gif
 - Jpeg
@@ -41,7 +42,7 @@ Format-specific encoder configuration, exposed based on `TargetFormat`:
 ## Acceptance Criteria
 - Sets `Format` and `EncodingOptions` metadata on output WorkItems.
 - Encoder parameters stored correctly for downstream `SaveBlock`.
-- Image data passed through (cloned for ownership transfer).
+- Image data passed through.
 
 ---
 
@@ -59,11 +60,7 @@ The block sets the following metadata on each WorkItem:
 - `"EncodingOptions"`: The format-specific options object
 
 ### Image Handling
-ConvertBlock creates a **new `WorkItem`** with a **cloned image** and updated metadata.
-This is required because:
-1. `WorkItem.Metadata` is immutable - a new `WorkItem` is needed to carry updated format instructions
-2. The executor disposes input `WorkItems` after block execution
-
+ConvertBlock modifies the `WorkItem` metadata.
 The actual format conversion/encoding is performed by `SaveBlock` using the metadata.
 
 ### Transparency

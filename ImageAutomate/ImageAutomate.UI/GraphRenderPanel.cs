@@ -106,7 +106,7 @@ public class GraphRenderPanel : Panel
     [Category("Graph Events")]
     [Description("Event fired when the selected item changes")]
     [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
-    public event Action<object?, EventArgs> SelectedItemChanged;
+    public event Action<object?, EventArgs>? SelectedItemChanged;
     #endregion
 
     #region Interaction States
