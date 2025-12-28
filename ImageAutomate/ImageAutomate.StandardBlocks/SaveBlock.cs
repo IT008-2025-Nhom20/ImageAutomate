@@ -14,13 +14,6 @@ public class SaveBlock : IBlock, IShipmentSink
 {
     #region Fields
 
-    private static readonly ImageFormatRegistry _formatRegistry = new();
-
-    static SaveBlock()
-    {
-        FormatRegistryInitializer.InitializeBuiltInFormats(_formatRegistry);
-    }
-
     private readonly IReadOnlyList<Socket> _inputs = [new("Save.In", "Image.In")];
     private readonly IReadOnlyList<Socket> _outputs = [];
 
@@ -345,7 +338,7 @@ public class SaveBlock : IBlock, IShipmentSink
     /// <returns>The file name with the updated extension.</returns>
     private static string UpdateFileExtension(string fileName, string formatName)
     {
-        var strategy = _formatRegistry.GetFormat(formatName);
+        var strategy = ImageFormatRegistry.Instance.GetFormat(formatName);
         if (strategy == null)
         {
             return fileName; // Keep original if unknown
@@ -364,11 +357,11 @@ public class SaveBlock : IBlock, IShipmentSink
     /// <exception cref="InvalidOperationException">Thrown when format is not registered.</exception>
     private IImageEncoder CreateEncoder(string formatName, object encodingOptions)
     {
-        var strategy = _formatRegistry.GetFormat(formatName.ToUpper());
+        var strategy = ImageFormatRegistry.Instance.GetFormat(formatName.ToUpper());
         if (strategy == null)
         {
             Debug.WriteLine("Formats registered:");
-            foreach (var format in _formatRegistry.GetRegisteredFormats())
+            foreach (var format in ImageFormatRegistry.Instance.GetRegisteredFormats())
                 Debug.WriteLine(format);
             throw new InvalidOperationException($"Unknown format: {formatName}");
         }

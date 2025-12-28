@@ -550,14 +550,8 @@ internal static class EnumMappers
 public class ConvertBlock : IBlock
 {
     #region Fields
-    private static readonly ImageFormatRegistry _formatRegistry = new();
-
-    public static IReadOnlyList<string> SupportedFormats => _formatRegistry.GetRegisteredFormats();
-
-    static ConvertBlock()
-    {
-        FormatRegistryInitializer.InitializeBuiltInFormats(_formatRegistry);
-    }
+    public static IReadOnlyList<string> SupportedFormats
+        => ImageFormatRegistry.Instance.GetRegisteredFormats();
 
     private readonly IReadOnlyList<Socket> _inputs = [new("Convert.In", "Image.Input")];
     private readonly IReadOnlyList<Socket> _outputs = [new("Convert.Out", "Image.Out")];
@@ -622,7 +616,7 @@ public class ConvertBlock : IBlock
     {
         get
         {
-            var strategy = _formatRegistry.GetFormat(TargetFormat);
+            var strategy = ImageFormatRegistry.Instance.GetFormat(TargetFormat);
             var options = GetOptionsForFormat(TargetFormat);
             var optionSummary = strategy?.GetOptionsSummary(options) ?? "Default";
             return $"Format: {TargetFormat}\nRe-encode: {AlwaysEncode}\n{optionSummary}";
@@ -1031,7 +1025,7 @@ public class ImageFormatConverter : StringConverter
 
     public override StandardValuesCollection GetStandardValues(ITypeDescriptorContext? context)
     {
-        return new StandardValuesCollection(ConvertBlock.SupportedFormats.ToList());
+        return new StandardValuesCollection((System.Collections.ICollection)ConvertBlock.SupportedFormats);
     }
 }
 
