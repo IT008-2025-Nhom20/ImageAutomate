@@ -10,4 +10,10 @@ public class StubGraphValidator : IGraphValidator
         // Always return true to allow testing with Mock blocks
         return true;
     }
+
+    public Task<bool> ValidateAsync(PipelineGraph graph, CancellationToken cancellationToken = default)
+    {
+        // Always return true to allow testing with Mock blocks
+        return Task.FromResult(true);
+    }
 }

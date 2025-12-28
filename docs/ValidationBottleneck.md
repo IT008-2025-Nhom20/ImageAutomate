@@ -55,23 +55,6 @@ While computationally O(Edges + Nodes*Inputs), the implementation constructs a `
 ### 1. Offload Validation to Thread Pool (Recommended Fix)
 The most robust fix is to ensure that *all* of `ExecuteAsync`, including the synchronous preamble (Validation and Initialization), runs off the UI thread.
 
-*   **Implementation in `UsingGraphExecutor.md` (Pattern)**:
-    Wrap the call in `Task.Run`.
-
-*   **Implementation in `GraphExecutor.cs` (Library Fix)**:
-    Force a yield at the start of `ExecuteAsync`.
-
-    ```csharp
-    public async Task ExecuteAsync(...)
-    {
-        // Yield immediately to ensure subsequent synchronous logic runs on thread pool
-        await Task.Yield(); 
-
-        // Phase 1: Static Validation (Now runs on ThreadPool)
-        if (!_validator.Validate(graph)) ...
-    }
-    ```
-
 ### 2. Optimize `GraphValidator` (Secondary)
 While offloading is the primary fix for the *freeze*, we can minorly optimize the validator to reduce allocations.
 

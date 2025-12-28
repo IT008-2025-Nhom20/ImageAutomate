@@ -255,11 +255,18 @@ public class SaveBlock : IBlock, IShipmentSink
         if (!inputs.TryGetValue(_inputs[0].Id, out var inItems))
             throw new ArgumentException($"Input items not found for the expected input socket {_inputs[0].Id}.", nameof(inputs));
 
-        foreach (var workItem in inItems.OfType<WorkItem>())
+        var workItems = inItems.OfType<WorkItem>().ToList();
+
+        var parallelOptions = new ParallelOptions
         {
-            cancellationToken.ThrowIfCancellationRequested();
+            CancellationToken = cancellationToken,
+            MaxDegreeOfParallelism = Math.Min(Environment.ProcessorCount, workItems.Count)
+        };
+
+        Parallel.ForEach(workItems, parallelOptions, workItem =>
+        {
             SaveImage(workItem);
-        }
+        });
 
         // Sink block; does not emit new WorkItem list
         return new Dictionary<Socket, IReadOnlyList<IBasicWorkItem>>();

@@ -77,8 +77,12 @@ public partial class EditorView : UserControl
                 menuItem.Enabled = false;
             }
 
-            // Use ExecuteAsync with default configuration and cancellation token
-            await executor.ExecuteAsync(graph, new ExecutorConfiguration(), CancellationToken.None);
+            // Use Task.Run to ensure the entire ExecuteAsync call runs on ThreadPool thread
+            // This prevents UI freeze during validation (synchronous preamble) and file scanning
+            await Task.Run(async () =>
+            {
+                await executor.ExecuteAsync(graph, new ExecutorConfiguration(), CancellationToken.None);
+            }, CancellationToken.None);
 
             MessageBox.Show("Pipeline execution completed successfully!", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }

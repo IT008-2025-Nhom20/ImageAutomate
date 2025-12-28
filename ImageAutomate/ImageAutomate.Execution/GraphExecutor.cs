@@ -39,36 +39,41 @@ public class GraphExecutor : IGraphExecutor
     {
         configuration ??= new ExecutorConfiguration();
 
-        // Phase 1: Static Validation
-        if (!_validator.Validate(graph))
+        // Phase 1: Static Validation (offloaded to ThreadPool)
+        if (!await _validator.ValidateAsync(graph, cancellationToken))
             throw new PipelineValidationException("Graph validation failed.");
 
-        // Phase 2: Initialization
-        var scheduler = SchedulerFactory.CreateScheduler(configuration.Mode);
-        var context = new ExecutionContext(graph, configuration, scheduler, cancellationToken);
+        ExecutionContext? context = null;
 
-        // Initialize shipment sources and track them as active
-        foreach (var block in graph.Nodes)
+        await Task.Run(() =>
         {
-            if (block is IShipmentSource shipmentSource)
+            // Phase 2: Initialization (runs on ThreadPool, not UI thread)
+            var scheduler = SchedulerFactory.CreateScheduler(configuration.Mode);
+            context = new ExecutionContext(graph, configuration, scheduler, cancellationToken);
+
+            // Initialize shipment sources and track them as active
+            foreach (var block in graph.Nodes)
             {
-                shipmentSource.MaxShipmentSize = configuration.MaxShipmentSize;
-                context.InitializeShipmentSource(shipmentSource); // Scan directories and prepare file lists
-                context.MarkSourceActive(block);
+                if (block is IShipmentSource shipmentSource)
+                {
+                    shipmentSource.MaxShipmentSize = configuration.MaxShipmentSize;
+                    context.InitializeShipmentSource(shipmentSource); // Scan directories and prepare file lists
+                    context.MarkSourceActive(block);
+                }
             }
-        }
 
-        // Initialize active connections after all sources are marked active
-        context.InitializeActiveConnections();
+            // Initialize active connections after all sources are marked active
+            context.InitializeActiveConnections();
 
-        // Let scheduler discover and enqueue source blocks
-        scheduler.Initialize(context);
+            // Let scheduler discover and enqueue source blocks
+            scheduler.Initialize(context);
 
-        // Phase 3: Runtime Loop
-        await ExecuteRuntimeLoopAsync(context);
+            // Phase 3: Runtime Loop (runs on ThreadPool)
+            return ExecuteRuntimeLoopAsync(context);
+        }, cancellationToken);
 
         // Phase 4: Error Propagation
-        if (context.HasExceptions)
+        if (context!.HasExceptions)
         {
             throw new AggregateException(
                 "Pipeline execution failed with one or more errors.",

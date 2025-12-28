@@ -6,10 +6,20 @@ namespace ImageAutomate.Execution
     {
         public bool Validate(PipelineGraph graph)
         {
-            return HasExactlyOneShipmentSource(graph)
-                && HasAtLeastOneShipmentSink(graph)
-                && AllInputSocketsConnected(graph)
-                && IsGraphDAG(graph);
+            return ValidateAsync(graph, CancellationToken.None).GetAwaiter().GetResult();
+        }
+
+        public Task<bool> ValidateAsync(PipelineGraph graph, CancellationToken cancellationToken = default)
+        {
+            return Task.Run(() =>
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                return HasExactlyOneShipmentSource(graph)
+                    && HasAtLeastOneShipmentSink(graph)
+                    && AllInputSocketsConnected(graph)
+                    && IsGraphDAG(graph);
+            }, cancellationToken);
         }
 
         private Dictionary<IBlock, List<IBlock>> BuildAdjacencyList(PipelineGraph graph)
