@@ -163,26 +163,27 @@ public sealed class NodeRenderer : IDisposable
         float diameter = radius * 2;
 
         float left = rect.X;
-        float bottom = rect.Y;
+        float visualTop = rect.Y;
         float right = rect.Right;
-        float top = rect.Bottom;
+        float visualBottom = rect.Bottom;
 
         path.StartFigure();
 
         if (topOnly)
         {
-            path.AddArc(right - diameter, top - diameter, diameter, diameter, 0, 90);
-            path.AddArc(left, top - diameter, diameter, diameter, 90, 90);
-            path.AddLine(left, top - diameter + radius, left, bottom);
-            path.AddLine(left, bottom, right, bottom);
-            path.AddLine(right, bottom, right, top - diameter + radius);
+            // Visual Top Only (Rounded Top, Flat Bottom)
+            path.AddArc(left, visualTop, diameter, diameter, 180, 90); // Top Left
+            path.AddArc(right - diameter, visualTop, diameter, diameter, 270, 90); // Top Right
+            path.AddLine(right, visualTop + radius, right, visualBottom); // Down Right
+            path.AddLine(right, visualBottom, left, visualBottom); // Across Bottom
+            path.AddLine(left, visualBottom, left, visualTop + radius); // Up Left
         }
         else
         {
-            path.AddArc(right - diameter, top - diameter, diameter, diameter, 0, 90);
-            path.AddArc(left, top - diameter, diameter, diameter, 90, 90);
-            path.AddArc(left, bottom, diameter, diameter, 180, 90);
-            path.AddArc(right - diameter, bottom, diameter, diameter, 270, 90);
+            path.AddArc(right - diameter, visualBottom - diameter, diameter, diameter, 0, 90);
+            path.AddArc(left, visualBottom - diameter, diameter, diameter, 90, 90);
+            path.AddArc(left, visualTop, diameter, diameter, 180, 90);
+            path.AddArc(right - diameter, visualTop, diameter, diameter, 270, 90);
         }
 
         path.CloseFigure();

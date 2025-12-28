@@ -68,10 +68,39 @@ public class GraphRenderPanel : Panel
         set
         {
             _renderScale = value;
+            UpdateWorkspaceState();
             Invalidate();
         }
     }
     private float _renderScale = 1.0f;
+
+    [Category("Graph Appearance")]
+    [Description("Horizontal pan offset")]
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    public float PanX
+    {
+        get => _panOffset.X;
+        set
+        {
+            _panOffset.X = value;
+            UpdateWorkspaceState();
+            Invalidate();
+        }
+    }
+
+    [Category("Graph Appearance")]
+    [Description("Vertical pan offset")]
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    public float PanY
+    {
+        get => _panOffset.Y;
+        set
+        {
+            _panOffset.Y = value;
+            UpdateWorkspaceState();
+            Invalidate();
+        }
+    }
 
     [Category("Graph Behavior")]
     [Description("Allows the graph to be panned completely off-screen")]
@@ -95,6 +124,17 @@ public class GraphRenderPanel : Panel
         set
         {
             _workspace = value;
+            if (_workspace != null)
+            {
+                _renderScale = (float)_workspace.Zoom;
+                _panOffset = new PointF((float)_workspace.PanX, (float)_workspace.PanY);
+            }
+            else
+            {
+                // Reset pan and zoom to default when workspace is cleared.
+                _renderScale = 1.0f;
+                _panOffset = PointF.Empty;
+            }
             Invalidate();
         }
     }
@@ -249,6 +289,16 @@ public class GraphRenderPanel : Panel
     #endregion
 
     #region Private Methods
+
+    private void UpdateWorkspaceState()
+    {
+        if (_workspace != null)
+        {
+            _workspace.Zoom = _renderScale;
+            _workspace.PanX = _panOffset.X;
+            _workspace.PanY = _panOffset.Y;
+        }
+    }
 
     private static float DistanceSq(PointF p1, PointF p2)
     {
@@ -506,6 +556,7 @@ public class GraphRenderPanel : Panel
         {
             _panOffset.X += dx;
             _panOffset.Y += dy;
+            UpdateWorkspaceState();
             Invalidate();
         }
         else if (_isDraggingNode && _draggedNode != null)
@@ -551,6 +602,7 @@ public class GraphRenderPanel : Panel
         _panOffset.X = mouseX - (worldX * _renderScale);
         _panOffset.Y = mouseY - (worldY * _renderScale);
 
+        UpdateWorkspaceState();
         Invalidate();
 
         base.OnMouseWheel(e);
