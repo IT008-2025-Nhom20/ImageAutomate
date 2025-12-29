@@ -1,9 +1,10 @@
 ﻿using ImageAutomate.Core;
 using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.PixelFormats;
+
 using SixLabors.ImageSharp.Processing;
 using System.ComponentModel;
-using System.Numerics;
+using SharpColor = SixLabors.ImageSharp.Color;
+using WinColor = System.Drawing.Color;
 
 namespace ImageAutomate.StandardBlocks;
 
@@ -25,8 +26,8 @@ public class BinaryThresholdBlock : IBlock
 
     // Configuration fields
     private float _threshold = 0.5f;
-    private Color _upperColor = Color.White;
-    private Color _lowerColor = Color.Black;
+    private WinColor _upperColor = WinColor.White;
+    private WinColor _lowerColor = WinColor.Black;
     private BinaryThresholdOption _mode = BinaryThresholdOption.Luminance;
 
     private bool _isRelative = true;
@@ -185,7 +186,7 @@ public class BinaryThresholdBlock : IBlock
 
     [Category("Configuration")]
     [Description("The color assigned when the value is >= Threshold.")]
-    public Color UpperColor
+    public WinColor UpperColor
     {
         get => _upperColor;
         set
@@ -200,7 +201,7 @@ public class BinaryThresholdBlock : IBlock
 
     [Category("Configuration")]
     [Description("The color assigned when the value is < Threshold.")]
-    public Color LowerColor
+    public WinColor LowerColor
     {
         get => _lowerColor;
         set
@@ -341,7 +342,10 @@ public class BinaryThresholdBlock : IBlock
             int h = img.Height;
 
             Rectangle region = GetProcessRegion(w, h);
-            sourceItem.Image.Mutate(x => x.BinaryThreshold(Threshold, UpperColor, LowerColor, MappingToBinaryThresholdMode(Mode), region));
+
+            var sharpUpperColor = SharpColor.FromRgba(_upperColor.R, _upperColor.G, _upperColor.B, _upperColor.A);
+            var sharpLowerColor = SharpColor.FromRgba(_upperColor.R, _upperColor.G, _lowerColor.B, _lowerColor.A);
+            sourceItem.Image.Mutate(x => x.BinaryThreshold(Threshold, sharpUpperColor, sharpLowerColor, MappingToBinaryThresholdMode(Mode), region));
 
             outputItems.Add(sourceItem);
         }

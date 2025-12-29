@@ -1,9 +1,10 @@
 ﻿using ImageAutomate.Core;
 using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
 using System.ComponentModel;
-using System.Numerics;
+
+using SharpColor = SixLabors.ImageSharp.Color;
+using WinColor = System.Drawing.Color;
 
 namespace ImageAutomate.StandardBlocks;
 
@@ -18,8 +19,8 @@ public class AdaptiveThresholdBlock : IBlock
 
     // Configuration fields
     private float _thresholdLimit = 0.5f;
-    private Color _upperColor = Color.White;
-    private Color _lowerColor = Color.Black;
+    private WinColor _upperColor = WinColor.White;
+    private WinColor _lowerColor = WinColor.Black;
 
     private bool _isRelative = true;
     private float _rectX = 0.0f;
@@ -160,7 +161,7 @@ public class AdaptiveThresholdBlock : IBlock
 
     [Category("Configuration")]
     [Description("The color assigned to pixels above the local threshold.")]
-    public Color UpperColor
+    public WinColor UpperColor
     {
         get => _upperColor;
         set
@@ -175,7 +176,7 @@ public class AdaptiveThresholdBlock : IBlock
 
     [Category("Configuration")]
     [Description("The color assigned to pixels below the local threshold.")]
-    public Color LowerColor
+    public WinColor LowerColor
     {
         get => _lowerColor;
         set
@@ -315,7 +316,9 @@ public class AdaptiveThresholdBlock : IBlock
             int h = img.Height;
 
             Rectangle region = GetProcessRegion(w, h);
-            sourceItem.Image.Mutate(x => x.AdaptiveThreshold(UpperColor, LowerColor, ThresholdLimit, region));
+            var sharpUpperColor = SharpColor.FromRgba(_upperColor.R, _upperColor.G, _upperColor.B, _upperColor.A);
+            var sharpLowerColor = SharpColor.FromRgba(_upperColor.R, _upperColor.G, _lowerColor.B, _lowerColor.A);
+            sourceItem.Image.Mutate(x => x.AdaptiveThreshold(sharpUpperColor, sharpLowerColor, ThresholdLimit, region));
 
             outputItems.Add(sourceItem);
         }
