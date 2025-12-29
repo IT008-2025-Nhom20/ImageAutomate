@@ -28,90 +28,90 @@
         /// </summary>
         private void InitializeComponent()
         {
-            LabelHeader = new Label();
-            TextBoxSearch = new TextBox();
-            BtnNew = new Button();
-            BtnBrowse = new Button();
-            PanelWorkspaces = new FlowLayoutPanel();
-            LabelEmpty = new Label();
+            HeaderLabel = new Label();
+            SearchTextBox = new TextBox();
+            NewButton = new Button();
+            BrowseButton = new Button();
+            WorkspacesPanel = new FlowLayoutPanel();
+            EmptyLabel = new Label();
             SuspendLayout();
             // 
-            // LabelHeader
+            // HeaderLabel
             // 
-            LabelHeader.AutoSize = true;
-            LabelHeader.Font = new Font("Segoe UI", 18F, FontStyle.Bold);
-            LabelHeader.Location = new Point(20, 20);
-            LabelHeader.Name = "LabelHeader";
-            LabelHeader.Size = new Size(176, 32);
-            LabelHeader.TabIndex = 0;
-            LabelHeader.Text = "My Workspaces";
+            HeaderLabel.AutoSize = true;
+            HeaderLabel.Font = new Font("Segoe UI", 18F, FontStyle.Bold);
+            HeaderLabel.Location = new Point(20, 20);
+            HeaderLabel.Name = "HeaderLabel";
+            HeaderLabel.Size = new Size(193, 32);
+            HeaderLabel.TabIndex = 0;
+            HeaderLabel.Text = "My Workspaces";
             // 
-            // TextBoxSearch
+            // SearchTextBox
             // 
-            TextBoxSearch.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-            TextBoxSearch.Font = new Font("Segoe UI", 10F);
-            TextBoxSearch.Location = new Point(20, 65);
-            TextBoxSearch.Name = "TextBoxSearch";
-            TextBoxSearch.PlaceholderText = "Search workspaces...";
-            TextBoxSearch.Size = new Size(450, 25);
-            TextBoxSearch.TabIndex = 1;
+            SearchTextBox.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+            SearchTextBox.Font = new Font("Segoe UI", 10F);
+            SearchTextBox.Location = new Point(20, 65);
+            SearchTextBox.Name = "SearchTextBox";
+            SearchTextBox.PlaceholderText = "Search workspaces...";
+            SearchTextBox.Size = new Size(450, 25);
+            SearchTextBox.TabIndex = 1;
             // 
-            // BtnNew
+            // NewButton
             // 
-            BtnNew.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            BtnNew.Font = new Font("Segoe UI", 9F);
-            BtnNew.Location = new Point(490, 65);
-            BtnNew.Name = "BtnNew";
-            BtnNew.Size = new Size(110, 25);
-            BtnNew.TabIndex = 2;
-            BtnNew.Text = "Create New";
-            BtnNew.UseVisualStyleBackColor = true;
+            NewButton.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            NewButton.Font = new Font("Segoe UI", 9F);
+            NewButton.Location = new Point(490, 65);
+            NewButton.Name = "NewButton";
+            NewButton.Size = new Size(110, 25);
+            NewButton.TabIndex = 2;
+            NewButton.Text = "Create New";
+            NewButton.UseVisualStyleBackColor = true;
             // 
-            // BtnBrowse
+            // BrowseButton
             // 
-            BtnBrowse.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            BtnBrowse.Font = new Font("Segoe UI", 9F);
-            BtnBrowse.Location = new Point(610, 65);
-            BtnBrowse.Name = "BtnBrowse";
-            BtnBrowse.Size = new Size(110, 25);
-            BtnBrowse.TabIndex = 3;
-            BtnBrowse.Text = "Browse...";
-            BtnBrowse.UseVisualStyleBackColor = true;
+            BrowseButton.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            BrowseButton.Font = new Font("Segoe UI", 9F);
+            BrowseButton.Location = new Point(610, 65);
+            BrowseButton.Name = "BrowseButton";
+            BrowseButton.Size = new Size(110, 25);
+            BrowseButton.TabIndex = 3;
+            BrowseButton.Text = "Browse...";
+            BrowseButton.UseVisualStyleBackColor = true;
             // 
-            // PanelWorkspaces
+            // WorkspacesPanel
             // 
-            PanelWorkspaces.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
-            PanelWorkspaces.AutoScroll = true;
-            PanelWorkspaces.Location = new Point(20, 105);
-            PanelWorkspaces.Name = "PanelWorkspaces";
-            PanelWorkspaces.Padding = new Padding(5);
-            PanelWorkspaces.Size = new Size(700, 475);
-            PanelWorkspaces.TabIndex = 4;
+            WorkspacesPanel.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+            WorkspacesPanel.AutoScroll = true;
+            WorkspacesPanel.Location = new Point(20, 105);
+            WorkspacesPanel.Name = "WorkspacesPanel";
+            WorkspacesPanel.Padding = new Padding(5);
+            WorkspacesPanel.Size = new Size(700, 475);
+            WorkspacesPanel.TabIndex = 4;
             // 
-            // LabelEmpty
+            // EmptyLabel
             // 
-            LabelEmpty.Anchor = AnchorStyles.None;
-            LabelEmpty.AutoSize = true;
-            LabelEmpty.Font = new Font("Segoe UI", 11F);
-            LabelEmpty.ForeColor = SystemColors.GrayText;
-            LabelEmpty.Location = new Point(245, 300);
-            LabelEmpty.Name = "LabelEmpty";
-            LabelEmpty.Size = new Size(250, 20);
-            LabelEmpty.TabIndex = 5;
-            LabelEmpty.Text = "No workspaces found. Create a new one!";
-            LabelEmpty.Visible = false;
+            EmptyLabel.Anchor = AnchorStyles.None;
+            EmptyLabel.AutoSize = true;
+            EmptyLabel.Font = new Font("Segoe UI", 11F);
+            EmptyLabel.ForeColor = SystemColors.GrayText;
+            EmptyLabel.Location = new Point(245, 300);
+            EmptyLabel.Name = "EmptyLabel";
+            EmptyLabel.Size = new Size(278, 20);
+            EmptyLabel.TabIndex = 5;
+            EmptyLabel.Text = "No workspaces found. Create a new one!";
+            EmptyLabel.Visible = false;
             // 
             // WorkspaceView
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
             BackColor = SystemColors.Control;
-            Controls.Add(LabelEmpty);
-            Controls.Add(PanelWorkspaces);
-            Controls.Add(BtnBrowse);
-            Controls.Add(BtnNew);
-            Controls.Add(TextBoxSearch);
-            Controls.Add(LabelHeader);
+            Controls.Add(EmptyLabel);
+            Controls.Add(WorkspacesPanel);
+            Controls.Add(BrowseButton);
+            Controls.Add(NewButton);
+            Controls.Add(SearchTextBox);
+            Controls.Add(HeaderLabel);
             Name = "WorkspaceView";
             Size = new Size(740, 600);
             ResumeLayout(false);
@@ -120,11 +120,11 @@
 
         #endregion
 
-        private Label LabelHeader;
-        private TextBox TextBoxSearch;
-        private Button BtnNew;
-        private Button BtnBrowse;
-        private FlowLayoutPanel PanelWorkspaces;
-        private Label LabelEmpty;
+        private Label HeaderLabel;
+        private TextBox SearchTextBox;
+        private Button NewButton;
+        private Button BrowseButton;
+        private FlowLayoutPanel WorkspacesPanel;
+        private Label EmptyLabel;
     }
 }

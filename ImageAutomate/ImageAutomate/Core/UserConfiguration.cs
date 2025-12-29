@@ -1,4 +1,6 @@
 using System.Drawing;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace ImageAutomate.Core
 {
@@ -8,15 +10,34 @@ namespace ImageAutomate.Core
     /// </summary>
     public static class UserConfiguration
     {
+        private static readonly string ConfigPath = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+            "ImageAutomate",
+            "settings.json");
+
+        private static JsonSerializerOptions jsonOptions = new JsonSerializerOptions
+        {
+            WriteIndented = true,
+            Converters = { new JsonStringEnumConverter() }
+        };
+
+        #region Application Settings
+
+        /// <summary>
+        /// Gets or sets the maximum number of recent workspaces to display.
+        /// Default: 10.
+        /// </summary>
+        public static int MaxRecentWorkspaces { get; set; } = 10;
+
+        #endregion
+
         #region Execution Settings
 
         /// <summary>
         /// Gets or sets the execution mode or custom scheduler name.
-        /// Built-in modes: "SimpleDfs", "Adaptive" (not implemented), "AdaptiveBatched" (not implemented).
-        /// Custom: Use registered scheduler name from plugins.
-        /// Default: "SimpleDfs".
+        /// Default: "simpledfs".
         /// </summary>
-        public static string Mode { get; set; } = "SimpleDfs";
+        public static string Mode { get; set; } = "simpledfs";
 
         /// <summary>
         /// Gets or sets the maximum degree of parallelism (concurrent block executions).
@@ -200,8 +221,11 @@ namespace ImageAutomate.Core
         /// </summary>
         public static void ResetToDefaults()
         {
+            // Application Settings
+            MaxRecentWorkspaces = 10;
+
             // Execution Settings
-            Mode = "SimpleDfs";
+            Mode = "simpledfs";
             MaxDegreeOfParallelism = Environment.ProcessorCount;
             WatchdogTimeoutSeconds = 30;
             EnableGcThrottling = true;
@@ -237,20 +261,171 @@ namespace ImageAutomate.Core
 
         /// <summary>
         /// Saves all configuration values to persistent storage.
-        /// TODO: Implement actual persistence (e.g., JSON file, user settings).
         /// </summary>
         public static void Save()
         {
-            // TODO: Implement persistence
+            try
+            {
+                string? directory = Path.GetDirectoryName(ConfigPath);
+                
+                if (directory == null)
+                {
+                    MessageBox.Show("Failed to determine configuration directory.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
+                
+                if (!Directory.Exists(directory))
+                {
+                    Directory.CreateDirectory(directory);
+                }
+
+                var data = new ConfigurationData
+                {
+                    MaxRecentWorkspaces = MaxRecentWorkspaces,
+                    Mode = Mode,
+                    MaxDegreeOfParallelism = MaxDegreeOfParallelism,
+                    WatchdogTimeoutSeconds = WatchdogTimeoutSeconds,
+                    EnableGcThrottling = EnableGcThrottling,
+                    MaxShipmentSize = MaxShipmentSize,
+                    ProfilingWindowSize = ProfilingWindowSize,
+                    CostEmaAlpha = CostEmaAlpha,
+                    CriticalPathRecomputeInterval = CriticalPathRecomputeInterval,
+                    BatchSize = BatchSize,
+                    CriticalPathBoost = CriticalPathBoost,
+                    SelectedBlockOutlineColor = ColorToHtml(SelectedBlockOutlineColor),
+                    SocketRadius = SocketRadius,
+                    RenderScale = RenderScale,
+                    AllowOutOfScreenPan = AllowOutOfScreenPan,
+                    AutoSnapZoneWidth = AutoSnapZoneWidth,
+                    DefaultNodeColor = ColorToHtml(DefaultNodeColor),
+                    HoveredNodeColor = ColorToHtml(HoveredNodeColor),
+                    TextColor = ColorToHtml(TextColor),
+                    DisabledNodeColor = ColorToHtml(DisabledNodeColor),
+                    SuccessColor = ColorToHtml(SuccessColor),
+                    ErrorColor = ColorToHtml(ErrorColor),
+                    SelectedBlockOutlineThemeColor = ColorToHtml(SelectedBlockOutline.Color),
+                    HoveredBlockOutlineThemeColor = ColorToHtml(HoveredBlockOutline.Color),
+                    BorderOutlineThemeColor = ColorToHtml(BorderOutline.Color),
+                    SocketConnectionThemeColor = ColorToHtml(SocketConnectionColor.Color),
+                    NodeWidth = NodeWidth,
+                    NodeBorderWidth = NodeBorderWidth,
+                    NodeSpacing = NodeSpacing
+                };
+
+                var json = JsonSerializer.Serialize(data, jsonOptions);
+                File.WriteAllText(ConfigPath, json);
+            }
+            catch (Exception ex)
+            {
+                // In a real app we might log this, but for now we suppress it to avoid crashing
+                System.Diagnostics.Debug.WriteLine($"Failed to save settings: {ex.Message}");
+            }
         }
 
         /// <summary>
         /// Loads all configuration values from persistent storage.
-        /// TODO: Implement actual loading (e.g., JSON file, user settings).
         /// </summary>
         public static void Load()
         {
-            // TODO: Implement persistence
+            try
+            {
+                if (!File.Exists(ConfigPath)) return;
+
+                var json = File.ReadAllText(ConfigPath);
+                var data = JsonSerializer.Deserialize<ConfigurationData>(json, jsonOptions);
+
+                if (data != null)
+                {
+                    MaxRecentWorkspaces = data.MaxRecentWorkspaces;
+                    Mode = data.Mode;
+                    MaxDegreeOfParallelism = data.MaxDegreeOfParallelism;
+                    WatchdogTimeoutSeconds = data.WatchdogTimeoutSeconds;
+                    EnableGcThrottling = data.EnableGcThrottling;
+                    MaxShipmentSize = data.MaxShipmentSize;
+                    ProfilingWindowSize = data.ProfilingWindowSize;
+                    CostEmaAlpha = data.CostEmaAlpha;
+                    CriticalPathRecomputeInterval = data.CriticalPathRecomputeInterval;
+                    BatchSize = data.BatchSize;
+                    CriticalPathBoost = data.CriticalPathBoost;
+
+                    SelectedBlockOutlineColor = HtmlToColor(data.SelectedBlockOutlineColor);
+                    SocketRadius = data.SocketRadius;
+                    RenderScale = data.RenderScale;
+                    AllowOutOfScreenPan = data.AllowOutOfScreenPan;
+                    AutoSnapZoneWidth = data.AutoSnapZoneWidth;
+
+                    DefaultNodeColor = HtmlToColor(data.DefaultNodeColor);
+                    HoveredNodeColor = HtmlToColor(data.HoveredNodeColor);
+                    TextColor = HtmlToColor(data.TextColor);
+                    DisabledNodeColor = HtmlToColor(data.DisabledNodeColor);
+                    SuccessColor = HtmlToColor(data.SuccessColor);
+                    ErrorColor = HtmlToColor(data.ErrorColor);
+
+                    SelectedBlockOutline.Color = HtmlToColor(data.SelectedBlockOutlineThemeColor);
+                    HoveredBlockOutline.Color = HtmlToColor(data.HoveredBlockOutlineThemeColor);
+                    BorderOutline.Color = HtmlToColor(data.BorderOutlineThemeColor);
+                    SocketConnectionColor.Color = HtmlToColor(data.SocketConnectionThemeColor);
+
+                    NodeWidth = data.NodeWidth;
+                    NodeBorderWidth = data.NodeBorderWidth;
+                    NodeSpacing = data.NodeSpacing;
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Failed to load settings: {ex.Message}");
+            }
+        }
+
+        private static string ColorToHtml(Color color)
+        {
+            return ColorTranslator.ToHtml(color);
+        }
+
+        private static Color HtmlToColor(string? html)
+        {
+            if (string.IsNullOrEmpty(html)) return Color.Black;
+            try
+            {
+                return ColorTranslator.FromHtml(html);
+            }
+            catch
+            {
+                return Color.Black;
+            }
+        }
+
+        private class ConfigurationData
+        {
+            public int MaxRecentWorkspaces { get; set; } = 10;
+            public string Mode { get; set; } = "SimpleDfs";
+            public int MaxDegreeOfParallelism { get; set; }
+            public int WatchdogTimeoutSeconds { get; set; }
+            public bool EnableGcThrottling { get; set; }
+            public int MaxShipmentSize { get; set; }
+            public int ProfilingWindowSize { get; set; }
+            public double CostEmaAlpha { get; set; }
+            public int CriticalPathRecomputeInterval { get; set; }
+            public int BatchSize { get; set; }
+            public double CriticalPathBoost { get; set; }
+            public string? SelectedBlockOutlineColor { get; set; }
+            public int SocketRadius { get; set; }
+            public float RenderScale { get; set; }
+            public bool AllowOutOfScreenPan { get; set; }
+            public int AutoSnapZoneWidth { get; set; }
+            public string? DefaultNodeColor { get; set; }
+            public string? HoveredNodeColor { get; set; }
+            public string? TextColor { get; set; }
+            public string? DisabledNodeColor { get; set; }
+            public string? SuccessColor { get; set; }
+            public string? ErrorColor { get; set; }
+            public string? SelectedBlockOutlineThemeColor { get; set; }
+            public string? HoveredBlockOutlineThemeColor { get; set; }
+            public string? BorderOutlineThemeColor { get; set; }
+            public string? SocketConnectionThemeColor { get; set; }
+            public int NodeWidth { get; set; }
+            public int NodeBorderWidth { get; set; }
+            public int NodeSpacing { get; set; }
         }
     }
 

@@ -9,6 +9,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+
 using ImageAutomate.Core;
 using ImageAutomate.Data;
 using ImageAutomate.Models;
@@ -19,34 +20,34 @@ namespace ImageAutomate.Views.DashboardViews
 {
     public partial class WorkspaceView : UserControl
     {
-        private readonly WorkspaceService _workspaceService;
+        private readonly WorkspaceService _workspaceService = WorkspaceService.Instance;
         private string? _lastSearchQuery;
 
-        public event EventHandler<Workspace>? WorkspaceOpened;
+        // Event to request the editor.
+        public event EventHandler<string?>? OpenEditorRequested;
 
         public WorkspaceView()
         {
             InitializeComponent();
-            
+
             // Initialize service with CSV data context
             var dataContext = new CsvWorkspaceDataContext();
-            _workspaceService = new WorkspaceService(dataContext);
 
             // Wire up events
-            TextBoxSearch.TextChanged += TextBoxSearch_TextChanged;
-            BtnNew.Click += BtnNew_Click;
-            BtnBrowse.Click += BtnBrowse_Click;
+            SearchTextBox.TextChanged += TextBoxSearch_TextChanged;
+            NewButton.Click += BtnNew_Click;
+            BrowseButton.Click += BtnBrowse_Click;
 
             // Initial load
             LoadWorkspaces();
-            
+
             Debug.WriteLine("Workspace view initialized.");
         }
 
         private void LoadWorkspaces(string? searchQuery = null)
         {
-            PanelWorkspaces.SuspendLayout();
-            PanelWorkspaces.Controls.Clear();
+            WorkspacesPanel.SuspendLayout();
+            WorkspacesPanel.Controls.Clear();
 
             List<WorkspaceInfo> workspaces;
             if (string.IsNullOrWhiteSpace(searchQuery))
@@ -60,23 +61,23 @@ namespace ImageAutomate.Views.DashboardViews
 
             if (workspaces.Count == 0)
             {
-                LabelEmpty.Visible = true;
-                LabelEmpty.Text = string.IsNullOrWhiteSpace(searchQuery) 
-                    ? "No workspaces found. Create a new one!" 
+                EmptyLabel.Visible = true;
+                EmptyLabel.Text = string.IsNullOrWhiteSpace(searchQuery)
+                    ? "No workspaces found. Create a new one!"
                     : "No workspaces match your search.";
             }
             else
             {
-                LabelEmpty.Visible = false;
+                EmptyLabel.Visible = false;
 
                 foreach (var workspaceInfo in workspaces)
                 {
                     var card = CreateWorkspaceCard(workspaceInfo);
-                    PanelWorkspaces.Controls.Add(card);
+                    WorkspacesPanel.Controls.Add(card);
                 }
             }
 
-            PanelWorkspaces.ResumeLayout();
+            WorkspacesPanel.ResumeLayout();
         }
 
         private ImageCard CreateWorkspaceCard(WorkspaceInfo workspaceInfo)
@@ -94,7 +95,7 @@ namespace ImageAutomate.Views.DashboardViews
 
             // Add context menu for additional actions
             var contextMenu = new ContextMenuStrip();
-            
+
             var openItem = new ToolStripMenuItem("Open");
             openItem.Click += (s, e) => OpenWorkspace(workspaceInfo);
             contextMenu.Items.Add(openItem);
@@ -127,8 +128,8 @@ namespace ImageAutomate.Views.DashboardViews
                     {
                         var text = "No Preview";
                         var size = g.MeasureString(text, font);
-                        g.DrawString(text, font, Brushes.DarkGray, 
-                            (placeholder.Width - size.Width) / 2, 
+                        g.DrawString(text, font, Brushes.DarkGray,
+                            (placeholder.Width - size.Width) / 2,
                             (placeholder.Height - size.Height) / 2);
                     }
                 }
@@ -156,7 +157,7 @@ namespace ImageAutomate.Views.DashboardViews
                         "File Not Found",
                         MessageBoxButtons.OK,
                         MessageBoxIcon.Error);
-                    
+
                     // Remove from list
                     _workspaceService.RemoveWorkspace(workspaceInfo.FilePath);
                     LoadWorkspaces(_lastSearchQuery);
@@ -164,12 +165,13 @@ namespace ImageAutomate.Views.DashboardViews
                 }
 
                 var workspace = Workspace.LoadFromFile(workspaceInfo.FilePath);
-                
+
                 // Update last opened time
                 _workspaceService.UpdateLastOpened(workspaceInfo.FilePath);
 
                 // Raise event to notify parent (DashboardView) to switch to EditorView
-                WorkspaceOpened?.Invoke(this, workspace);
+                // We pass the file path instead of the loaded object, letting the Editor load it fresh.
+                OpenEditorRequested?.Invoke(this, workspaceInfo.FilePath);
 
                 Debug.WriteLine($"Opened workspace: {workspaceInfo.Name}");
             }
@@ -180,7 +182,7 @@ namespace ImageAutomate.Views.DashboardViews
                     "Error",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Error);
-                
+
                 Debug.WriteLine($"Error opening workspace: {ex}");
             }
         }
@@ -210,7 +212,7 @@ namespace ImageAutomate.Views.DashboardViews
 
         private void TextBoxSearch_TextChanged(object? sender, EventArgs e)
         {
-            _lastSearchQuery = TextBoxSearch.Text;
+            _lastSearchQuery = SearchTextBox.Text;
             LoadWorkspaces(_lastSearchQuery);
         }
 
@@ -244,7 +246,7 @@ namespace ImageAutomate.Views.DashboardViews
                     LoadWorkspaces(_lastSearchQuery);
 
                     // Open the new workspace
-                    WorkspaceOpened?.Invoke(this, workspace);
+                    OpenEditorRequested?.Invoke(this, dialog.FileName);
                 }
                 catch (Exception ex)
                 {
@@ -278,7 +280,7 @@ namespace ImageAutomate.Views.DashboardViews
                     LoadWorkspaces(_lastSearchQuery);
 
                     // Open the workspace
-                    WorkspaceOpened?.Invoke(this, workspace);
+                    OpenEditorRequested?.Invoke(this, dialog.FileName);
                 }
                 catch (Exception ex)
                 {

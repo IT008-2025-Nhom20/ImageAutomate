@@ -28,31 +28,31 @@
         /// </summary>
         private void InitializeComponent()
         {
-            label1 = new Label();
+            PlaceholderLabel = new Label();
             SuspendLayout();
             // 
-            // label1
+            // PlaceholderLabel
             // 
-            label1.AutoSize = true;
-            label1.Location = new Point(337, 293);
-            label1.Name = "label1";
-            label1.Size = new Size(66, 15);
-            label1.TabIndex = 1;
-            label1.Text = "PluginView";
+            PlaceholderLabel.Dock = DockStyle.Fill;
+            PlaceholderLabel.Location = new Point(0, 0);
+            PlaceholderLabel.Name = "PlaceholderLabel";
+            PlaceholderLabel.Size = new Size(740, 600);
+            PlaceholderLabel.TabIndex = 1;
+            PlaceholderLabel.Text = "PluginView";
+            PlaceholderLabel.TextAlign = ContentAlignment.MiddleCenter;
             // 
             // PluginsView
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
-            Controls.Add(label1);
+            Controls.Add(PlaceholderLabel);
             Name = "PluginsView";
             Size = new Size(740, 600);
             ResumeLayout(false);
-            PerformLayout();
         }
 
         #endregion
 
-        private Label label1;
+        private Label PlaceholderLabel;
     }
 }

@@ -1,8 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Text;
 using ImageAutomate.Models;
 using nietras.SeparatedValues;
 
@@ -16,7 +11,7 @@ namespace ImageAutomate.Data
     {
         private readonly string _csvFilePath;
         private readonly List<WorkspaceInfo> _workspaces;
-        private readonly object _lock = new();
+        private readonly Lock _lock = new();
 
         /// <summary>
         /// Gets the default CSV file path in %APPDATA%/ImageAutomate/workspaces.csv
@@ -27,7 +22,6 @@ namespace ImageAutomate.Data
             {
                 var appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
                 var appFolder = Path.Combine(appDataPath, "ImageAutomate");
-                Directory.CreateDirectory(appFolder);
                 return Path.Combine(appFolder, "workspaces.csv");
             }
         }
@@ -38,6 +32,13 @@ namespace ImageAutomate.Data
 
         public CsvWorkspaceDataContext(string csvFilePath)
         {
+            // Ensure directory exists once during instantiation
+            var directory = Path.GetDirectoryName(csvFilePath);
+            if (!string.IsNullOrEmpty(directory))
+            {
+                Directory.CreateDirectory(directory);
+            }
+
             _csvFilePath = csvFilePath;
             _workspaces = new List<WorkspaceInfo>();
             LoadFromFile();
@@ -141,26 +142,21 @@ namespace ImageAutomate.Data
         {
             try
             {
+                // Sep automatically writes the header based on the columns defined in the first row.
                 using var writer = Sep.Writer().ToFile(_csvFilePath);
-                using var writeRow = writer.NewRow();
 
-                // Write header
-                writeRow["Name"].Set("Name");
-                writeRow["FilePath"].Set("FilePath");
-                writeRow["LastModified"].Set("LastModified");
-                writeRow["LastOpened"].Set("LastOpened");
-                writeRow["ThumbnailPath"].Set("ThumbnailPath");
-                writeRow["Description"].Set("Description");
-
-                // Write data rows
                 foreach (var workspace in _workspaces)
                 {
-                    writeRow["Name"].Set(workspace.Name);
-                    writeRow["FilePath"].Set(workspace.FilePath);
-                    writeRow["LastModified"].Set(workspace.LastModified.ToString("o")); // ISO 8601 format
-                    writeRow["LastOpened"].Set(workspace.LastOpened.ToString("o"));
-                    writeRow["ThumbnailPath"].Set(workspace.ThumbnailPath ?? string.Empty);
-                    writeRow["Description"].Set(workspace.Description ?? string.Empty);
+                    // MUST create a new row context for every iteration.
+                    // Disposing 'row' (at the end of this bracket) triggers the write.
+                    using var row = writer.NewRow();
+
+                    row["Name"].Set(workspace.Name);
+                    row["FilePath"].Set(workspace.FilePath);
+                    row["LastModified"].Set(workspace.LastModified.ToString("o"));
+                    row["LastOpened"].Set(workspace.LastOpened.ToString("o"));
+                    row["ThumbnailPath"].Set(workspace.ThumbnailPath ?? string.Empty);
+                    row["Description"].Set(workspace.Description ?? string.Empty);
                 }
             }
             catch (Exception ex)

@@ -28,23 +28,23 @@
         /// </summary>
         private void InitializeComponent()
         {
-            dashboardView1 = new DashboardView();
+            Dashboard = new DashboardView();
             SuspendLayout();
             // 
-            // dashboardView1
+            // Dashboard
             // 
-            dashboardView1.Dock = DockStyle.Fill;
-            dashboardView1.Location = new Point(0, 0);
-            dashboardView1.Name = "dashboardView1";
-            dashboardView1.Size = new Size(984, 561);
-            dashboardView1.TabIndex = 0;
+            Dashboard.Dock = DockStyle.Fill;
+            Dashboard.Location = new Point(0, 0);
+            Dashboard.Name = "Dashboard";
+            Dashboard.Size = new Size(984, 561);
+            Dashboard.TabIndex = 0;
             // 
             // Main
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(984, 561);
-            Controls.Add(dashboardView1);
+            Controls.Add(Dashboard);
             Name = "Main";
             Text = "Main";
             ResumeLayout(false);
@@ -52,6 +52,6 @@
 
         #endregion
 
-        private DashboardView dashboardView1;
+        private DashboardView Dashboard;
     }
 }

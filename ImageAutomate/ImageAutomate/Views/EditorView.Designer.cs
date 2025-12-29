@@ -134,6 +134,7 @@
             MainSplit.Size = new Size(800, 576);
             MainSplit.SplitterDistance = 132;
             MainSplit.TabIndex = 1;
+            MainSplit.TabStop = false;
             // 
             // Toolbox
             // 
@@ -161,6 +162,7 @@
             GraphPanelPropertyGridSplit.Size = new Size(664, 576);
             GraphPanelPropertyGridSplit.SplitterDistance = 489;
             GraphPanelPropertyGridSplit.TabIndex = 0;
+            GraphPanelPropertyGridSplit.TabStop = false;
             // 
             // GraphPanel
             // 
@@ -170,7 +172,8 @@
             GraphPanel.Location = new Point(0, 0);
             GraphPanel.Name = "GraphPanel";
             GraphPanel.Size = new Size(489, 576);
-            GraphPanel.TabIndex = 1;
+            GraphPanel.TabIndex = 2;
+            GraphPanel.TabStop = true;
             GraphPanel.SelectedItemChanged += OnGraphSelectedItemChange;
             // 
             // BlockPropertyGrid
@@ -181,6 +184,7 @@
             BlockPropertyGrid.Name = "BlockPropertyGrid";
             BlockPropertyGrid.Size = new Size(171, 576);
             BlockPropertyGrid.TabIndex = 0;
+            BlockPropertyGrid.TabStop = false;
             // 
             // EditorView
             // 

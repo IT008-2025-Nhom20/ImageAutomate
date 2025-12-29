@@ -1,7 +1,5 @@
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
+using System.Diagnostics;
+
 using ImageAutomate.Data;
 using ImageAutomate.Models;
 
@@ -13,8 +11,11 @@ namespace ImageAutomate.Services
     public class WorkspaceService
     {
         private readonly IWorkspaceDataContext _dataContext;
+        private static WorkspaceService? _instance;
 
-        public WorkspaceService(IWorkspaceDataContext dataContext)
+        public static WorkspaceService Instance => _instance ??= new WorkspaceService(new CsvWorkspaceDataContext());
+
+        private WorkspaceService(IWorkspaceDataContext dataContext)
         {
             _dataContext = dataContext ?? throw new ArgumentNullException(nameof(dataContext));
         }
@@ -65,6 +66,7 @@ namespace ImageAutomate.Services
 
             if (existing != null)
             {
+                Debug.WriteLine($"Updating existing workspace entry for: {filePath}");
                 existing.Name = name ?? existing.Name;
                 existing.LastModified = fileInfo.LastWriteTime;
                 existing.LastOpened = DateTime.Now;

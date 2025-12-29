@@ -41,6 +41,7 @@
             // Sidebar
             // 
             Sidebar.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left;
+            Sidebar.BorderStyle = BorderStyle.FixedSingle;
             Sidebar.Controls.Add(BtnSettings);
             Sidebar.Controls.Add(BtnPlugins);
             Sidebar.Controls.Add(BtnWorkspaces);
@@ -58,7 +59,7 @@
             BtnSettings.ExpandedText = "Settings";
             BtnSettings.Location = new Point(0, 252);
             BtnSettings.Name = "BtnSettings";
-            BtnSettings.Size = new Size(72, 60);
+            BtnSettings.Size = new Size(70, 60);
             BtnSettings.TabIndex = 4;
             BtnSettings.Text = "S";
             BtnSettings.UseVisualStyleBackColor = true;
@@ -71,7 +72,7 @@
             BtnPlugins.ExpandedText = "Plugins";
             BtnPlugins.Location = new Point(0, 192);
             BtnPlugins.Name = "BtnPlugins";
-            BtnPlugins.Size = new Size(72, 60);
+            BtnPlugins.Size = new Size(70, 60);
             BtnPlugins.TabIndex = 3;
             BtnPlugins.Text = "P";
             BtnPlugins.UseVisualStyleBackColor = true;
@@ -84,7 +85,7 @@
             BtnWorkspaces.ExpandedText = "Workspaces";
             BtnWorkspaces.Location = new Point(0, 132);
             BtnWorkspaces.Name = "BtnWorkspaces";
-            BtnWorkspaces.Size = new Size(72, 60);
+            BtnWorkspaces.Size = new Size(70, 60);
             BtnWorkspaces.TabIndex = 2;
             BtnWorkspaces.Text = "Ws";
             BtnWorkspaces.UseVisualStyleBackColor = true;
@@ -97,7 +98,7 @@
             BtnWelcome.ExpandedText = "Welcome";
             BtnWelcome.Location = new Point(0, 72);
             BtnWelcome.Name = "BtnWelcome";
-            BtnWelcome.Size = new Size(72, 60);
+            BtnWelcome.Size = new Size(70, 60);
             BtnWelcome.TabIndex = 1;
             BtnWelcome.Text = "W";
             BtnWelcome.UseVisualStyleBackColor = true;
@@ -105,11 +106,13 @@
             // 
             // LabelMenu
             // 
+            LabelMenu.CollapsedText = "M";
             LabelMenu.Dock = DockStyle.Top;
+            LabelMenu.ExpandedText = "Menu";
             LabelMenu.Font = new Font("Segoe UI", 15.75F, FontStyle.Regular, GraphicsUnit.Point, 0);
             LabelMenu.Location = new Point(0, 0);
             LabelMenu.Name = "LabelMenu";
-            LabelMenu.Size = new Size(72, 72);
+            LabelMenu.Size = new Size(70, 72);
             LabelMenu.TabIndex = 0;
             LabelMenu.Text = "Menu";
             LabelMenu.TextAlign = ContentAlignment.MiddleCenter;
@@ -117,6 +120,7 @@
             // ContentPanel
             // 
             ContentPanel.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+            ContentPanel.BorderStyle = BorderStyle.FixedSingle;
             ContentPanel.Location = new Point(72, 0);
             ContentPanel.Name = "ContentPanel";
             ContentPanel.Size = new Size(728, 600);

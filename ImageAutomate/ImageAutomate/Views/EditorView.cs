@@ -1,5 +1,4 @@
 ﻿using System.Diagnostics;
-
 using ImageAutomate.Core;
 using ImageAutomate.Execution;
 using ImageAutomate.StandardBlocks;
@@ -11,9 +10,14 @@ namespace ImageAutomate.Views;
 public partial class EditorView : UserControl
 {
     private PipelineGraph graph = new();
+
+    public event EventHandler? CloseRequested;
+
     public EditorView()
     {
         InitializeComponent();
+
+        this.SetStyle(ControlStyles.Selectable, true);
 
         var workspace = new Workspace(graph);
         GraphPanel.Workspace = workspace;
@@ -170,6 +174,7 @@ public partial class EditorView : UserControl
         {
             try
             {
+                GraphPanel.Workspace.Name = Path.GetFileNameWithoutExtension(dialog.FileName);
                 GraphPanel.Workspace.SaveToFile(dialog.FileName);
                 MessageBox.Show("Workspace saved successfully!", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
@@ -182,20 +187,29 @@ public partial class EditorView : UserControl
 
     private void OnCloseMenuItemClick(object sender, EventArgs e)
     {
+        // We let the shell (Main) handle the actual closing/hiding of the view.
+        // We just fire the event. 
+        // Note: Ideally we should check for unsaved changes here before firing.
+        // For now, we'll keep it simple as per requirements.
+
         var result = MessageBox.Show(
-            "Close the current workspace? Any unsaved changes will be lost.",
+            "Close the current workspace and return to dashboard? Any unsaved changes will be lost.",
             "Close Workspace",
             MessageBoxButtons.YesNo,
-            MessageBoxIcon.Warning);
+            MessageBoxIcon.Question);
 
         if (result == DialogResult.Yes)
         {
-            // Clear the graph and reset the workspace
+            // Clear the graph to ensure next open is fresh? 
+            // Or we can rely on LoadWorkspace replacing it.
+            // Clearing it is safer to avoid showing old data if re-opened without a file.
             graph = new PipelineGraph();
             var workspace = new Workspace(graph);
             GraphPanel.Workspace = workspace;
             GraphPanel.Invalidate();
             BlockPropertyGrid.SelectedObject = null;
+
+            CloseRequested?.Invoke(this, EventArgs.Empty);
         }
     }
 
@@ -224,5 +238,38 @@ public partial class EditorView : UserControl
             "Help",
             MessageBoxButtons.OK,
             MessageBoxIcon.Information);
+    }
+
+    /// <summary>
+    /// Loads a workspace from the specified file path.
+    /// </summary>
+    public void LoadWorkspace(string filePath)
+    {
+        try
+        {
+            var workspace = Workspace.LoadFromFile(filePath);
+            graph = workspace.Graph;
+            GraphPanel.Workspace = workspace;
+            GraphPanel.Invalidate();
+
+            // Add to recent? It is already added by the caller (WelcomeView/WorkspaceView)
+            // But if opened via File->Open in Editor, we should probably add it.
+            // For this specific method, it's called by Main when switching views.
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Failed to load workspace: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+    }
+
+    /// <summary>
+    /// Resets the editor to a blank state.
+    /// </summary>
+    public void CreateNewWorkspace()
+    {
+        graph = new PipelineGraph();
+        var workspace = new Workspace(graph);
+        GraphPanel.Workspace = workspace;
+        GraphPanel.Invalidate();
     }
 }

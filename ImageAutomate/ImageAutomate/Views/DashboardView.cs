@@ -21,41 +21,48 @@ namespace ImageAutomate
         private Lazy<WelcomeView> welcomeView;
         UserControl? currentView;
 
+        // Event to request the editor.
+        public event EventHandler<string?>? OpenEditorRequested;
+
         public DashboardView()
         {
             InitializeComponent();
 
-            workspaceView = new Lazy<WorkspaceView>(() => new WorkspaceView());
+            workspaceView = new Lazy<WorkspaceView>(() => {
+                var v = new WorkspaceView();
+                v.OpenEditorRequested += WelcomeView_OpenEditorRequested; // Reuse same handler
+                return v;
+            });
+
             pluginView = new Lazy<PluginsView>(() => new PluginsView());
+
             settingsView = new Lazy<SettingsView>(() => new SettingsView());
-            welcomeView = new Lazy<WelcomeView>(() => new WelcomeView());
+
+            welcomeView = new Lazy<WelcomeView>(() => {
+                var v = new WelcomeView();
+                v.OpenEditorRequested += WelcomeView_OpenEditorRequested;
+                return v;
+            });
         }
 
-        private void Sidebar_NavigationRequested(object? sender, string viewName)
+        private void WelcomeView_OpenEditorRequested(object? sender, string? filePath)
         {
-            switch (viewName)
-            {
-                case "Welcome": SwitchToView(GetWelcomeView()); break;
-                case "Workspaces": SwitchToView(GetWorkspacesView()); break;
-                case "Plugins": SwitchToView(GetPluginView()); break;
-                case "Settings": SwitchToView(GetSettingsView()); break;
-            }
+            OpenEditorRequested?.Invoke(this, filePath);
         }
 
-        private void SwitchToEditor()
+        public WelcomeView GetWelcomeView()
         {
-            //if (editorView == null) editorView = new EditorView();
-            //SwitchToView(editorView);
+            var view = welcomeView.Value;
+            // Refresh recent list when showing
+            view.RefreshRecentWorkspaces();
+            return view;
         }
 
-        private WelcomeView GetWelcomeView()
+        public WorkspaceView GetWorkspacesView()
         {
-            return welcomeView.Value;
-        }
-
-        private WorkspaceView GetWorkspacesView()
-        {
-            return workspaceView.Value;
+            var view = workspaceView.Value;
+            view.RefreshWorkspaces();
+            return view;
         }
 
         private PluginsView GetPluginView()
@@ -70,7 +77,9 @@ namespace ImageAutomate
 
         private void SwitchToView(UserControl view)
         {
-            ContentPanel.Controls.Remove(currentView);
+            if (ContentPanel.Controls.Contains(view)) return;
+
+            ContentPanel.Controls.Clear();
             currentView = view;
             view.Dock = DockStyle.Fill;
             ContentPanel.Controls.Add(view);

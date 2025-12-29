@@ -1,5 +1,3 @@
-using System;
-
 namespace ImageAutomate.Models
 {
     /// <summary>

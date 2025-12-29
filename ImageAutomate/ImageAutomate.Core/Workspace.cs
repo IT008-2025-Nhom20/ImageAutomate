@@ -4,6 +4,7 @@
  * Serializable container for a complete workspace including graph and view state.
  */
 
+using System.Diagnostics;
 using System.Text.Json;
 using ImageAutomate.Core.Serialization;
 
@@ -162,6 +163,7 @@ public class Workspace
     /// <param name="filePath">The file path to save to.</param>
     public void SaveToFile(string filePath)
     {
+        //Debug.WriteLine($"Saving workspace '{Name}' to file: {filePath}");
         var json = ToJson();
         File.WriteAllText(filePath, json);
     }
