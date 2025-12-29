@@ -84,7 +84,7 @@ public class GraphExecutor : IGraphExecutor
     /// <summary>
     /// Main execution loop: dispatch blocks, execute, and signal dependencies.
     /// </summary>
-    private async Task ExecuteRuntimeLoopAsync(ExecutionContext context)
+    private static async Task ExecuteRuntimeLoopAsync(ExecutionContext context)
     {
         var watchdogTimer = Stopwatch.StartNew();
         var activeTasks = new List<Task>();
@@ -182,7 +182,7 @@ public class GraphExecutor : IGraphExecutor
     /// <summary>
     /// Executes a single block and handles result propagation.
     /// </summary>
-    private void ExecuteBlock(IBlock block, ExecutionContext context)
+    private static void ExecuteBlock(IBlock block, ExecutionContext context)
     {
         IDictionary<Socket, IReadOnlyList<IBasicWorkItem>>? inputs = null;
         IReadOnlyDictionary<Socket, IReadOnlyList<IBasicWorkItem>>? outputs = null;
@@ -265,7 +265,7 @@ public class GraphExecutor : IGraphExecutor
     /// <summary>
     /// Gathers inputs for a block from upstream warehouses (implements JIT cloning).
     /// </summary>
-    private IDictionary<Socket, IReadOnlyList<IBasicWorkItem>> GatherInputs(IBlock block, ExecutionContext context)
+    private static Dictionary<Socket, IReadOnlyList<IBasicWorkItem>> GatherInputs(IBlock block, ExecutionContext context)
     {
         var inputs = new Dictionary<Socket, List<IBasicWorkItem>>();
 
@@ -286,11 +286,10 @@ public class GraphExecutor : IGraphExecutor
                 // Map source socket to target socket, merging items if multiple connections to same socket
                 if (warehouseOutputs.TryGetValue(connection.SourceSocket, out var items))
                 {
-                    if (!inputs.ContainsKey(targetSocket))
+                    if (inputs.TryGetValue(targetSocket, out var existingItems))
                     {
-                        inputs[targetSocket] = new List<IBasicWorkItem>();
+                        existingItems.AddRange(items);
                     }
-                    inputs[targetSocket].AddRange(items);
                 }
             }
         }
@@ -304,7 +303,7 @@ public class GraphExecutor : IGraphExecutor
     /// <summary>
     /// Commits block outputs to its warehouse.
     /// </summary>
-    private void ExportOutputs(
+    private static void ExportOutputs(
         IBlock block,
         IReadOnlyDictionary<Socket, IReadOnlyList<IBasicWorkItem>> outputs,
         ExecutionContext context)
@@ -322,7 +321,7 @@ public class GraphExecutor : IGraphExecutor
     /// </summary>
     /// <param name="inputs">The input work items to potentially dispose.</param>
     /// <param name="outputs">The output work items to exclude from disposal (may contain same objects as inputs).</param>
-    private void DisposeInputs(
+    private static void DisposeInputs(
         IDictionary<Socket, IReadOnlyList<IBasicWorkItem>> inputs,
         IReadOnlyDictionary<Socket, IReadOnlyList<IBasicWorkItem>>? outputs)
     {
@@ -358,7 +357,7 @@ public class GraphExecutor : IGraphExecutor
     /// NOTE: This is only called for failures, not for natural source exhaustion.
     /// Exhausted sources let their final batch flow through naturally.
     /// </remarks>
-    private void BlockDownstreamOnFailure(IBlock failedBlock, ExecutionContext context)
+    private static void BlockDownstreamOnFailure(IBlock failedBlock, ExecutionContext context)
     {
         // BFS to find and block all downstream blocks that can't execute
         var visited = new HashSet<IBlock>();
@@ -413,7 +412,7 @@ public class GraphExecutor : IGraphExecutor
     /// <summary>
     /// Handles block execution failure: marks blocked, propagates downstream.
     /// </summary>
-    private void HandleBlockFailure(IBlock block, Exception exception, ExecutionContext context)
+    private static void HandleBlockFailure(IBlock block, Exception exception, ExecutionContext context)
     {
         // Mark as failed (failed blocks are "poisonous" - they behave like blocked
         // blocks but retain their Failed state for diagnostics)
@@ -435,7 +434,7 @@ public class GraphExecutor : IGraphExecutor
     /// </summary>
     /// <param name="context">The execution context.</param>
     /// <param name="activeTasks">List of active tasks to cancel.</param>
-    private async Task CleanupOnCancellation(ExecutionContext context, List<Task> activeTasks)
+    private static async Task CleanupOnCancellation(ExecutionContext context, List<Task> activeTasks)
     {
         // Note: Warehouses are cleared on next cycle reset or by context cleanup
         // The main concern here is to let active tasks complete gracefully

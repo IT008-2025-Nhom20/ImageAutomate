@@ -499,6 +499,7 @@ public sealed class ExecutionContext
     /// </summary>
     public void ForEachActiveSource(Action<IBlock> action)
     {
+        ArgumentNullException.ThrowIfNull(action);
         lock (_activeSourcesLock)
         {
             foreach (var source in _activeSources)
@@ -647,6 +648,7 @@ public sealed class ExecutionContext
     /// </summary>
     public void InitializeShipmentSource(IShipmentSource source)
     {
+        ArgumentNullException.ThrowIfNull(source);
         // Delegate to the source to scan and return targets
         var targets = source.GetShipmentTargets();
         _sourceFileLists[source] = targets.ToList();
@@ -658,6 +660,7 @@ public sealed class ExecutionContext
     /// </summary>
     public void PrepareShipment(IShipmentSource source)
     {
+        ArgumentNullException.ThrowIfNull(source);
         if (_sourceFileLists.TryGetValue(source, out var fileList))
         {
             int batchSize = Math.Min(source.MaxShipmentSize, fileList.Count);
@@ -678,6 +681,7 @@ public sealed class ExecutionContext
     /// </summary>
     public bool ConsumeShipment(IShipmentSource source, int processedCount)
     {
+        ArgumentNullException.ThrowIfNull(source);
         if (_sourceFileLists.TryGetValue(source, out var fileList))
         {
             // Destructively remove processed items

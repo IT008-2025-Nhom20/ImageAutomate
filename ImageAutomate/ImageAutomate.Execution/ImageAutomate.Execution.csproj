@@ -6,8 +6,19 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+	<PropertyGroup>
+		<EnableNETAnalyzers>true</EnableNETAnalyzers>
+		<AnalysisLevel>latest-all</AnalysisLevel>
+
+		<TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+	</PropertyGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\ImageAutomate.Core\ImageAutomate.Core.csproj" />
     <ProjectReference Include="..\ImageAutomate.StandardBlocks\ImageAutomate.StandardBlocks.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis.Metrics" Version="4.14.0" />
   </ItemGroup>
 </Project>

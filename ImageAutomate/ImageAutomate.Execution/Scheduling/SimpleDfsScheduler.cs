@@ -36,6 +36,7 @@ public sealed class SimpleDfsScheduler : IScheduler
     /// <inheritdoc />
     public void Initialize(ExecutionContext context)
     {
+        ArgumentNullException.ThrowIfNull(context);
         // Find and enqueue all source blocks (IShipmentSource with in-degree 0)
         foreach (var block in context.Graph.Nodes)
         {
@@ -50,6 +51,7 @@ public sealed class SimpleDfsScheduler : IScheduler
     /// <inheritdoc />
     public IBlock? TryDequeue(ExecutionContext context)
     {
+        ArgumentNullException.ThrowIfNull(context);
         lock (_lock)
         {
             while (_queue.Count > 0)
@@ -71,12 +73,16 @@ public sealed class SimpleDfsScheduler : IScheduler
     /// <inheritdoc />
     public void NotifyCompleted(IBlock completedBlock, ExecutionContext context)
     {
+        ArgumentNullException.ThrowIfNull(completedBlock);
+        ArgumentNullException.ThrowIfNull(context);
         SignalDownstreamBarriers(completedBlock, context);
     }
 
     /// <inheritdoc />
     public void NotifyBlocked(IBlock blockedBlock, ExecutionContext context)
     {
+        ArgumentNullException.ThrowIfNull(blockedBlock);
+        ArgumentNullException.ThrowIfNull(context);
         // Decrement warehouse counters for upstream blocks (cleanup)
         if (context.UpstreamBlocks.TryGetValue(blockedBlock, out var upstreamBlocks))
         {
@@ -99,6 +105,7 @@ public sealed class SimpleDfsScheduler : IScheduler
     /// <inheritdoc />
     public void BeginNextShipmentCycle(ExecutionContext context)
     {
+        ArgumentNullException.ThrowIfNull(context);
         context.ForEachActiveSource(source =>
         {
             if (!context.IsBlocked(source))
@@ -161,13 +168,13 @@ public sealed class SimpleDfsScheduler : IScheduler
     /// <summary>
     /// Calculates greedy priority based purely on completion pressure.
     /// </summary>
-    private float CalculatePriority(IBlock block, ExecutionContext context)
+    private static float CalculatePriority(IBlock block, ExecutionContext context)
         => -CalculateCompletionPressure(block, context);
 
     /// <summary>
     /// Calculates Completion Pressure priority for a block.
     /// </summary>
-    private float CalculateCompletionPressure(IBlock block, ExecutionContext context)
+    private static float CalculateCompletionPressure(IBlock block, ExecutionContext context)
     {
         float totalPressure = 0;
 

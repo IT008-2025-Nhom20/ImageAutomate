@@ -28,13 +28,10 @@ public sealed class SchedulerRegistry
     /// <param name="factory">Function that creates a new scheduler instance.</param>
     public void RegisterScheduler(string name, Func<IScheduler> factory)
     {
+        ArgumentNullException.ThrowIfNull(factory, nameof(factory));
         if (string.IsNullOrEmpty(name))
         {
             throw new ArgumentException("Scheduler name cannot be null or empty.", nameof(name));
-        }
-        if (factory == null)
-        {
-            throw new ArgumentNullException(nameof(factory));
         }
 
         _factories[name] = factory;

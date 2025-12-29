@@ -11,10 +11,8 @@ namespace ImageAutomate.Execution;
 /// Example: "file1.jpg", "file2.jpg", "file10.jpg" sorts correctly
 /// instead of "file1.jpg", "file10.jpg", "file2.jpg" (lexicographic).
 /// </remarks>
-internal class NaturalStringComparer : IComparer<string>
+internal sealed class NaturalStringComparer : IComparer<string>
 {
-    private static readonly Regex NumberRegex = new(@"(\d+)", RegexOptions.Compiled);
-
     public int Compare(string? x, string? y)
     {
         // TODO: Implement natural string comparison

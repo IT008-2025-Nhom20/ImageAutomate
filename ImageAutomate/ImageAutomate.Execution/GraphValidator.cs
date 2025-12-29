@@ -22,7 +22,7 @@ namespace ImageAutomate.Execution
             }, cancellationToken);
         }
 
-        private Dictionary<IBlock, List<IBlock>> BuildAdjacencyList(PipelineGraph graph)
+        private static Dictionary<IBlock, List<IBlock>> BuildAdjacencyList(PipelineGraph graph)
         {
             var adjacencyList = new Dictionary<IBlock, List<IBlock>>();
 
@@ -35,7 +35,7 @@ namespace ImageAutomate.Execution
             return adjacencyList;
         }
 
-        private bool IsGraphDAG(PipelineGraph graph)
+        private static bool IsGraphDAG(PipelineGraph graph)
         {
             var adjacencyList = BuildAdjacencyList(graph);
             var inDegree = graph.Nodes.ToDictionary(block => block, _ => 0);
@@ -72,17 +72,17 @@ namespace ImageAutomate.Execution
             return count == graph.Nodes.Count;
         }
 
-        private bool HasExactlyOneShipmentSource(PipelineGraph graph)
+        private static bool HasExactlyOneShipmentSource(PipelineGraph graph)
         {
             return graph.Nodes.OfType<IShipmentSource>().Take(2).Count() == 1;
         }
 
-        private bool HasAtLeastOneShipmentSink(PipelineGraph graph)
+        private static bool HasAtLeastOneShipmentSink(PipelineGraph graph)
         {
             return graph.Nodes.OfType<IShipmentSink>().Any();
         }
 
-        private bool AllInputSocketsConnected(PipelineGraph graph)
+        private static bool AllInputSocketsConnected(PipelineGraph graph)
         {
             var connectedTargets = graph.Edges
                 .Select(c => c.TargetSocket)
