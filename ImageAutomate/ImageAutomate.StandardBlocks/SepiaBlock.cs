@@ -147,7 +147,6 @@ public class SepiaBlock : IBlock
             {
                 _amount = clamped;
                 OnPropertyChanged(nameof(Amount));
-                OnPropertyChanged(nameof(Content));
             }
         }
     }

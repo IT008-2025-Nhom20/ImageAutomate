@@ -158,7 +158,6 @@ public class SwizzleBlock : IBlock
             {
                 _mode = value;
                 OnPropertyChanged(nameof(Mode));
-                OnPropertyChanged(nameof(Content));
             }
         }
     }

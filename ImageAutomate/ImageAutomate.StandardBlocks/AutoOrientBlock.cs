@@ -23,7 +23,7 @@ public class AutoOrientBlock : IBlock
     #endregion
 
     public AutoOrientBlock()
-        : this(200, 100) // Compact size since there are no controls
+        : this(200, 100) 
     {
     }
 

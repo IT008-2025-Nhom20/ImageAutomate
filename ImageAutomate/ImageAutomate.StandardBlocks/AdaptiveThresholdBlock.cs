@@ -148,7 +148,6 @@ public class AdaptiveThresholdBlock : IBlock
             {
                 _thresholdLimit = clamped;
                 OnPropertyChanged(nameof(ThresholdLimit));
-                OnPropertyChanged(nameof(Content));
             }
         }
     }

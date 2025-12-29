@@ -148,7 +148,6 @@ public class BoxBlurBlock : IBlock
             {
                 _radius = clamped;
                 OnPropertyChanged(nameof(Radius));
-                OnPropertyChanged(nameof(Content));
             }
         }
     }

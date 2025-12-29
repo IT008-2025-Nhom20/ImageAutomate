@@ -147,7 +147,6 @@ public class BackgroundColorBlock : IBlock
             {
                 _color = value;
                 OnPropertyChanged(nameof(Color));
-                OnPropertyChanged(nameof(Content));
             }
         }
     }

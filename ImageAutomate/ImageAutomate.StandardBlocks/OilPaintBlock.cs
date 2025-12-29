@@ -149,7 +149,6 @@ public class OilPaintBlock : IBlock
             {
                 _level = clamped;
                 OnPropertyChanged(nameof(Level));
-                OnPropertyChanged(nameof(Content));
             }
         }
     }
@@ -167,7 +166,6 @@ public class OilPaintBlock : IBlock
             {
                 _brushSize = clamped;
                 OnPropertyChanged(nameof(BrushSize));
-                OnPropertyChanged(nameof(Content));
             }
         }
     }

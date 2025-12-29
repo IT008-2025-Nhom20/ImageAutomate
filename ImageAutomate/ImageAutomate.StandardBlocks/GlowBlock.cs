@@ -147,7 +147,6 @@ public class GlowBlock : IBlock
             {
                 _glowColor = value;
                 OnPropertyChanged(nameof(GlowColor));
-                OnPropertyChanged(nameof(Content));
             }
         }
     }

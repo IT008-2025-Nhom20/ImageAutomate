@@ -147,7 +147,6 @@ public class RotateFlipBlock : IBlock
             {
                 _rotateMode = value;
                 OnPropertyChanged(nameof(RotateMode));
-                OnPropertyChanged(nameof(Content));
             }
         }
     }
@@ -163,7 +162,6 @@ public class RotateFlipBlock : IBlock
             {
                 _flipMode = value;
                 OnPropertyChanged(nameof(FlipMode));
-                OnPropertyChanged(nameof(Content));
             }
         }
     }

@@ -59,7 +59,7 @@ public class MedianBlurBlock : IBlock
     }
 
     [Browsable(false)]
-    public string Content => $"Radius: {Radius}, Alpha: {(PreserveAlpha ? "Keep" : "Blur")}";
+    public string Content => $"Radius: {Radius}, Alpha: {PreserveAlpha}";
 
     #endregion
 
@@ -150,7 +150,6 @@ public class MedianBlurBlock : IBlock
             {
                 _radius = clamped;
                 OnPropertyChanged(nameof(Radius));
-                OnPropertyChanged(nameof(Content));
             }
         }
     }
@@ -166,7 +165,6 @@ public class MedianBlurBlock : IBlock
             {
                 _preserveAlpha = value;
                 OnPropertyChanged(nameof(PreserveAlpha));
-                OnPropertyChanged(nameof(Content));
             }
         }
     }

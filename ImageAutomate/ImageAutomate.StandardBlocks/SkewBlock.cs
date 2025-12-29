@@ -147,7 +147,6 @@ public class SkewBlock : IBlock
             {
                 _degreesX = value;
                 OnPropertyChanged(nameof(DegreesX));
-                OnPropertyChanged(nameof(Content));
             }
         }
     }
@@ -163,7 +162,6 @@ public class SkewBlock : IBlock
             {
                 _degreesY = value;
                 OnPropertyChanged(nameof(DegreesY));
-                OnPropertyChanged(nameof(Content));
             }
         }
     }

@@ -172,7 +172,6 @@ public class BinaryThresholdBlock : IBlock
             {
                 _mode = value;
                 OnPropertyChanged(nameof(Mode));
-                OnPropertyChanged(nameof(Content));
             }
         }
     }

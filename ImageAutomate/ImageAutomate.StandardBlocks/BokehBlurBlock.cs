@@ -185,7 +185,6 @@ public class BokehBlurBlock : IBlock
             {
                 _gamma = clamped;
                 OnPropertyChanged(nameof(Gamma));
-                OnPropertyChanged(nameof(Content));
             }
         }
     }

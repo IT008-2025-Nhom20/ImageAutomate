@@ -147,7 +147,6 @@ public class EntropyCropBlock : IBlock
             {
                 _threshold = clamped;
                 OnPropertyChanged(nameof(Threshold));
-                OnPropertyChanged(nameof(Content));
             }
         }
     }
