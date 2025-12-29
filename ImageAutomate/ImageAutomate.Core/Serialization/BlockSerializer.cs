@@ -5,6 +5,7 @@
  */
 
 using System.ComponentModel;
+using System.Globalization;
 using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -16,24 +17,22 @@ namespace ImageAutomate.Core.Serialization;
 /// </summary>
 public static class BlockSerializer
 {
+    private static readonly JsonSerializerOptions _serializerOptions = new JsonSerializerOptions
+    {
+        IncludeFields = true,
+        WriteIndented = false
+    };
+
     /// <summary>
     /// Serializes an IBlock to a BlockDto.
     /// Layout properties (X, Y, Width, Height) are serialized as regular properties.
     /// </summary>
     public static BlockDto Serialize(IBlock block)
     {
-        var dto = new BlockDto
-        {
-            BlockType = block.GetType().Name,
-            AssemblyQualifiedName = block.GetType().AssemblyQualifiedName ?? block.GetType().FullName ?? block.GetType().Name,
-        };
+        ArgumentNullException.ThrowIfNull(block);
 
-        // Serialize sockets
-        dto.Inputs = block.Inputs.Select(s => new SocketDto(s)).ToList();
-        dto.Outputs = block.Outputs.Select(s => new SocketDto(s)).ToList();
-
-        // Serialize properties (including layout: X, Y, Width, Height)
         var properties = block.GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance);
+        Dictionary<string, object?> propertyDict = [];
         foreach (var prop in properties)
         {
             // Skip properties that are part of IBlock interface (except layout properties)
@@ -63,7 +62,7 @@ public static class BlockSerializer
             try
             {
                 var value = prop.GetValue(block);
-                dto.Properties[prop.Name] = SerializePropertyValue(value, prop.PropertyType);
+                propertyDict[prop.Name] = SerializePropertyValue(value, prop.PropertyType);
             }
             catch (Exception ex)
             {
@@ -71,7 +70,14 @@ public static class BlockSerializer
             }
         }
 
-        return dto;
+        // Serialize properties (including layout: X, Y, Width, Height)
+        return new BlockDto(
+            block.GetType().Name,
+            block.GetType().AssemblyQualifiedName ?? block.GetType().FullName ?? block.GetType().Name,
+            propertyDict,
+            block.Inputs.Select(s => new SocketDto(s)).ToList(),
+            block.Outputs.Select(s => new SocketDto(s)).ToList()
+        );
     }
 
     /// <summary>
@@ -79,6 +85,7 @@ public static class BlockSerializer
     /// </summary>
     public static IBlock Deserialize(BlockDto dto)
     {
+        ArgumentNullException.ThrowIfNull(dto);
         // Get the type from the assembly qualified name
         var type = Type.GetType(dto.AssemblyQualifiedName);
         if (type == null)
@@ -134,11 +141,7 @@ public static class BlockSerializer
         }
 
         // For complex objects, serialize to JSON
-        var json = JsonSerializer.Serialize(value, new JsonSerializerOptions
-        {
-            IncludeFields = true,
-            WriteIndented = false
-        });
+        var json = JsonSerializer.Serialize(value, _serializerOptions);
         return JsonNode.Parse(json);
     }
 
@@ -181,13 +184,13 @@ public static class BlockSerializer
         // Try direct conversion for primitive types
         if (targetType.IsPrimitive || targetType == typeof(string) || targetType == typeof(decimal))
         {
-            return Convert.ChangeType(value, targetType);
+            return Convert.ChangeType(value, targetType, CultureInfo.InvariantCulture);
         }
 
         // Handle nullable primitives
         if (underlyingType != null && (underlyingType.IsPrimitive || underlyingType == typeof(string) || underlyingType == typeof(decimal)))
         {
-            return Convert.ChangeType(value, underlyingType);
+            return Convert.ChangeType(value, underlyingType, CultureInfo.InvariantCulture);
         }
 
         // For complex types, try JSON deserialization

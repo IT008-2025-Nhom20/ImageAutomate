@@ -12,6 +12,10 @@ public class PluginException : Exception
 {
     public PluginException(string message) : base(message) { }
     public PluginException(string message, Exception innerException) : base(message, innerException) { }
+
+    public PluginException()
+    {
+    }
 }
 
 /// <summary>
@@ -338,7 +342,7 @@ public class PluginLoader
     /// <param name="pluginName">Name of the plugin that created the instance.</param>
     public void RegisterInstance(object instance, string pluginName)
     {
-        if (instance == null) throw new ArgumentNullException(nameof(instance));
+        ArgumentNullException.ThrowIfNull(instance);
 
         lock (_lock)
         {
@@ -590,7 +594,7 @@ public class PluginLoader
             );
         }
 
-        private void CallRegistryMethod(string fullRegistryTypeName, string methodName, Type[] parameterTypes, object[] parameters)
+        private static void CallRegistryMethod(string fullRegistryTypeName, string methodName, Type[] parameterTypes, object[] parameters)
         {
             var registryType = Type.GetType(fullRegistryTypeName);
             if (registryType == null)

@@ -93,6 +93,10 @@ public class PipelineGraph
     /// </summary>
     public void AddEdge(IBlock source, Socket sourceSocket, IBlock target, Socket targetSocket)
     {
+        ArgumentNullException.ThrowIfNull(source);
+        ArgumentNullException.ThrowIfNull(target);
+        ArgumentNullException.ThrowIfNull(sourceSocket);
+        ArgumentNullException.ThrowIfNull(targetSocket);
         if (!Nodes.Contains(source))
             throw new ArgumentException($"Source block '{source.Title}' not found in graph");
         if (!Nodes.Contains(target))
@@ -111,6 +115,8 @@ public class PipelineGraph
     /// <exception cref="ArgumentException">when socket ID not found on their respective block</exception>
     public void AddEdge(IBlock source, string sourceSocketId, IBlock target, string targetSocketId)
     {
+        ArgumentNullException.ThrowIfNull(source);
+        ArgumentNullException.ThrowIfNull(target);
         var srcSocket = source.Outputs.FirstOrDefault(s => s.Id == sourceSocketId)
             ?? throw new ArgumentException($"Socket ID '{sourceSocketId}' not found on source '{source.Title}'");
         var tgtSocket = target.Inputs.FirstOrDefault(s => s.Id == targetSocketId)
@@ -124,9 +130,8 @@ public class PipelineGraph
     /// </summary>
     public void RemoveEdge(Connection edge)
     {
-        if (_edges.Contains(edge))
+        if (_edges.Remove(edge))
         {
-            _edges.Remove(edge);
             if (SelectedItem is Connection conn && conn == edge)
                 SelectedItem = null;
         }
@@ -179,12 +184,14 @@ public class PipelineGraph
     /// </summary>
     internal PipelineGraphDto ToDto()
     {
-        var dto = new PipelineGraphDto();
-
+        List<BlockDto> blocks = [];
+        List<ConnectionDto> connections = [];
+        int? centerBlockIndex = null;
+        
         // Serialize blocks (layout is now part of block properties)
         foreach (var block in _nodes)
         {
-            dto.Blocks.Add(BlockSerializer.Serialize(block));
+            blocks.Add(BlockSerializer.Serialize(block));
         }
 
         // Serialize connections (using block indices)
@@ -196,7 +203,7 @@ public class PipelineGraph
             if (sourceIndex < 0 || targetIndex < 0)
                 continue;
 
-            dto.Connections.Add(new ConnectionDto
+            connections.Add(new ConnectionDto
             {
                 SourceBlockIndex = sourceIndex,
                 SourceSocketId = connection.SourceSocket.Id,
@@ -208,10 +215,10 @@ public class PipelineGraph
         // Serialize selected block
         if (SelectedBlock != null)
         {
-            dto.CenterBlockIndex = _nodes.IndexOf(SelectedBlock);
+            centerBlockIndex = _nodes.IndexOf(SelectedBlock);
         }
 
-        return dto;
+        return new PipelineGraphDto(blocks, connections, centerBlockIndex);
     }
 
     /// <summary>

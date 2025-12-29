@@ -4,7 +4,6 @@
  * Serializable container for a complete workspace including graph and view state.
  */
 
-using System.Diagnostics;
 using System.Text.Json;
 using ImageAutomate.Core.Serialization;
 
@@ -26,7 +25,18 @@ public class Workspace
     /// <summary>
     /// Gets or sets the workspace name.
     /// </summary>
-    public string Name { get; set; } = "Untitled Workspace";
+    public string Name { get; set; }
+
+    /// <summary>
+    /// Gets the file path where this workspace was saved to or loaded from.
+    /// Null if the workspace has never been saved.
+    /// </summary>
+    public string? FilePath { get; private set; }
+
+    /// <summary>
+    /// Gets a value indicating whether this workspace has been saved to disk.
+    /// </summary>
+    public bool IsSaved => !string.IsNullOrEmpty(FilePath) && File.Exists(FilePath);
 
     /// <summary>
     /// Gets or sets the pipeline graph.
@@ -49,27 +59,37 @@ public class Workspace
     /// <summary>
     /// Gets or sets the horizontal pan offset.
     /// </summary>
-    public double PanX { get; set; } = 0.0;
+    public double PanX { get; set; }
 
     /// <summary>
     /// Gets or sets the vertical pan offset.
     /// </summary>
-    public double PanY { get; set; } = 0.0;
+    public double PanY { get; set; }
 
     /// <summary>
     /// Gets or sets custom metadata for the workspace.
     /// </summary>
-    public Dictionary<string, object?> Metadata { get; set; } = [];
+    public Dictionary<string, object?> Metadata { get; }
 
     public Workspace(PipelineGraph graph)
     {
+        Name = "Untitled Workspace";
         Graph = graph ?? throw new ArgumentNullException(nameof(graph));
+        Metadata = [];
     }
 
     public Workspace(PipelineGraph graph, string name)
     {
         Graph = graph ?? throw new ArgumentNullException(nameof(graph));
         Name = name ?? throw new ArgumentNullException(nameof(name));
+        Metadata = [];
+    }
+
+    public Workspace(PipelineGraph graph, string name, Dictionary<string, object?> metadata)
+    {
+        Name = name ?? throw new ArgumentNullException(nameof(name));
+        Graph = new PipelineGraph();
+        Metadata = metadata;
     }
 
     /// <summary>
@@ -109,27 +129,18 @@ public class Workspace
     /// The schema URL to include in the $schema field. 
     /// Pass null to omit the schema reference.
     /// </param>
-    public string ToJson(string? schemaUrl)
+    public string ToJson(Uri? schemaUrl)
     {
-        var dto = new WorkspaceDto
-        {
-            Version = "1.0",
-            Name = Name,
-            Metadata = Metadata,
-            Zoom = Zoom,
-            PanX = PanX,
-            PanY = PanY
-        };
-
-        if (!string.IsNullOrEmpty(schemaUrl))
-        {
-            dto.Schema = schemaUrl;
-        }
-
-        if (Graph != null)
-        {
-            dto.Graph = Graph.ToDto();
-        }
+        var dto = new WorkspaceDto(
+            schema: schemaUrl,
+            version: "1.0",
+            name: Name,
+            graph: Graph.ToDto(),
+            zoom: Zoom,
+            panX: PanX,
+            panY: PanY,
+            metadata: Metadata
+        );
 
         return JsonSerializer.Serialize(dto, _serializerOptions);
     }
@@ -146,9 +157,9 @@ public class Workspace
             ? PipelineGraph.FromDto(dto.Graph)
             : new PipelineGraph();
 
-        var workspace = new Workspace(graph, dto.Name ?? "Untitled Workspace")
+        var workspace = new Workspace(
+            graph, dto.Name ?? "Untitled Workspace", dto.Metadata)
         {
-            Metadata = dto.Metadata ?? [],
             Zoom = dto.Zoom,
             PanX = dto.PanX,
             PanY = dto.PanY
@@ -163,9 +174,9 @@ public class Workspace
     /// <param name="filePath">The file path to save to.</param>
     public void SaveToFile(string filePath)
     {
-        //Debug.WriteLine($"Saving workspace '{Name}' to file: {filePath}");
         var json = ToJson();
         File.WriteAllText(filePath, json);
+        FilePath = filePath;
     }
 
     /// <summary>
@@ -177,6 +188,8 @@ public class Workspace
             throw new FileNotFoundException($"Workspace file not found: {filePath}", filePath);
 
         var json = File.ReadAllText(filePath);
-        return FromJson(json);
+        var workspace = FromJson(json);
+        workspace.FilePath = filePath;
+        return workspace;
     }
 }

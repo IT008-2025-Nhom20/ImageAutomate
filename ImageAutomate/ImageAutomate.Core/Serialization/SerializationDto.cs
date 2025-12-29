@@ -23,6 +23,7 @@ public class SocketDto
 
     public SocketDto(Socket socket)
     {
+        ArgumentNullException.ThrowIfNull(socket);
         Id = socket.Id;
         Name = socket.Name;
     }
@@ -40,19 +41,33 @@ public class SocketDto
 public class BlockDto
 {
     [JsonPropertyName("blockType")]
-    public string BlockType { get; set; } = string.Empty;
+    public string BlockType { get; set; }
 
     [JsonPropertyName("assemblyQualifiedName")]
-    public string AssemblyQualifiedName { get; set; } = string.Empty;
+    public string AssemblyQualifiedName { get; set; }
 
     [JsonPropertyName("properties")]
-    public Dictionary<string, object?> Properties { get; set; } = new();
+    public Dictionary<string, object?> Properties { get; }
 
     [JsonPropertyName("inputs")]
-    public List<SocketDto> Inputs { get; set; } = new();
+    public IReadOnlyList<SocketDto> Inputs { get; }
 
     [JsonPropertyName("outputs")]
-    public List<SocketDto> Outputs { get; set; } = new();
+    public IReadOnlyList<SocketDto> Outputs { get; }
+
+    public BlockDto()
+        : this(string.Empty, string.Empty, [], [], [])
+    {
+    }
+
+    public BlockDto(string blockType, string assemblyQualifiedName, Dictionary<string, object?> properties, IReadOnlyList<SocketDto> inputs, IReadOnlyList<SocketDto> outputs)
+    {
+        BlockType = blockType;
+        AssemblyQualifiedName = assemblyQualifiedName;
+        Properties = properties;
+        Inputs = inputs;
+        Outputs = outputs;
+    }
 }
 
 /// <summary>
@@ -79,13 +94,20 @@ public class ConnectionDto
 public class PipelineGraphDto
 {
     [JsonPropertyName("blocks")]
-    public List<BlockDto> Blocks { get; set; } = new();
+    public IReadOnlyList<BlockDto> Blocks { get; }
 
     [JsonPropertyName("connections")]
-    public List<ConnectionDto> Connections { get; set; } = new();
+    public IReadOnlyList<ConnectionDto> Connections { get; }
 
     [JsonPropertyName("centerBlockIndex")]
     public int? CenterBlockIndex { get; set; }
+
+    public PipelineGraphDto(IReadOnlyList<BlockDto> blocks, IReadOnlyList<ConnectionDto> connections, int? centerBlockIndex)
+    {
+        Blocks = blocks;
+        Connections = connections;
+        CenterBlockIndex = centerBlockIndex;
+    }
 }
 
 /// <summary>
@@ -94,7 +116,7 @@ public class PipelineGraphDto
 public class WorkspaceDto
 {
     [JsonPropertyName("$schema")]
-    public string? Schema { get; set; }
+    public Uri? Schema { get; set; }
 
     [JsonPropertyName("version")]
     public string Version { get; set; } = "1.0";
@@ -115,5 +137,22 @@ public class WorkspaceDto
     public double PanY { get; set; } = 0.0;
 
     [JsonPropertyName("metadata")]
-    public Dictionary<string, object?> Metadata { get; set; } = new();
+    public Dictionary<string, object?> Metadata { get; } = [];
+
+    public WorkspaceDto(Uri? schema, string version, string name, PipelineGraphDto? graph, double zoom, double panX, double panY, Dictionary<string, object?> metadata)
+    {
+        Schema = schema;
+        Version = version;
+        Name = name;
+        Graph = graph;
+        Zoom = zoom;
+        PanX = panX;
+        PanY = panY;
+        Metadata = metadata;
+    }
+
+    public WorkspaceDto(string version, string name, PipelineGraphDto? graph, double zoom, double panX, double panY, Dictionary<string, object?> metadata)
+        : this(null, version, name, graph, zoom, panX, panY, metadata)
+    {
+    }
 }
