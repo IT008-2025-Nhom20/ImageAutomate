@@ -320,16 +320,13 @@ public class SerializationTests
     public void Workspace_WithMetadata_PreservesMetadata()
     {
         // Arrange
-        var workspace = new Workspace(new())
+        var metadata = new Dictionary<string, object?>
         {
-            Name = "Metadata Test",
-            Metadata = new Dictionary<string, object?>
-            {
-                { "Author", "Test User" },
-                { "CreatedDate", "2024-01-01" },
-                { "Version", 1 }
-            }
+            { "Author", "Test User" },
+            { "CreatedDate", "2024-01-01" },
+            { "Version", 1 }
         };
+        var workspace = new Workspace(new(), "Metadata Test", metadata);
 
         // Act
         var json = workspace.ToJson();

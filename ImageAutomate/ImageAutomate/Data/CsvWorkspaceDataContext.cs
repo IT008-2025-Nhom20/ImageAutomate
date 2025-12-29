@@ -1,3 +1,4 @@
+using System.Globalization;
 using ImageAutomate.Models;
 using nietras.SeparatedValues;
 
@@ -7,11 +8,12 @@ namespace ImageAutomate.Data
     /// CSV-based implementation of workspace data storage using SEP library.
     /// Stores workspace metadata in %APPDATA%/ImageAutomate/workspaces.csv
     /// </summary>
-    public class CsvWorkspaceDataContext : IWorkspaceDataContext
+    internal sealed class CsvWorkspaceDataContext : IWorkspaceDataContext, IDisposable
     {
         private readonly string _csvFilePath;
-        private readonly List<WorkspaceInfo> _workspaces;
         private readonly Lock _lock = new();
+        private List<WorkspaceInfo>? _workspaces;
+        private bool _disposed;
 
         /// <summary>
         /// Gets the default CSV file path in %APPDATA%/ImageAutomate/workspaces.csv
@@ -32,67 +34,88 @@ namespace ImageAutomate.Data
 
         public CsvWorkspaceDataContext(string csvFilePath)
         {
-            // Ensure directory exists once during instantiation
-            var directory = Path.GetDirectoryName(csvFilePath);
-            if (!string.IsNullOrEmpty(directory))
-            {
-                Directory.CreateDirectory(directory);
-            }
-
             _csvFilePath = csvFilePath;
-            _workspaces = new List<WorkspaceInfo>();
-            LoadFromFile();
+        }
+
+        /// <summary>
+        /// Ensures the workspaces are loaded from disk (lazy loading).
+        /// </summary>
+        private void EnsureLoaded()
+        {
+            if (_workspaces != null)
+                return;
+
+            lock (_lock)
+            {
+                // Double-check after acquiring lock
+                _workspaces ??= new List<WorkspaceInfo>();
+
+                // Ensure directory exists
+                var directory = Path.GetDirectoryName(_csvFilePath);
+                if (!string.IsNullOrEmpty(directory))
+                {
+                    Directory.CreateDirectory(directory);
+                }
+
+                LoadFromFile();
+            }
         }
 
         public List<WorkspaceInfo> GetAll()
         {
+            EnsureLoaded();
             lock (_lock)
             {
-                return new List<WorkspaceInfo>(_workspaces);
+                return new List<WorkspaceInfo>(_workspaces!);
             }
         }
 
         public void Add(WorkspaceInfo workspace)
         {
+            EnsureLoaded();
             lock (_lock)
             {
                 // Remove existing entry with same path
-                _workspaces.RemoveAll(w => w.FilePath.Equals(workspace.FilePath, StringComparison.OrdinalIgnoreCase));
+                _workspaces!.RemoveAll(w => w.FilePath.Equals(workspace.FilePath, StringComparison.OrdinalIgnoreCase));
                 _workspaces.Add(workspace);
             }
         }
 
         public void Update(WorkspaceInfo workspace)
         {
+            EnsureLoaded();
             lock (_lock)
             {
-                var existing = _workspaces.FirstOrDefault(w => w.FilePath.Equals(workspace.FilePath, StringComparison.OrdinalIgnoreCase));
+                var existing = _workspaces!.FirstOrDefault(w => w.FilePath.Equals(workspace.FilePath, StringComparison.OrdinalIgnoreCase));
                 if (existing != null)
                 {
-                    _workspaces.Remove(existing);
+                    _workspaces!.Remove(existing);
                 }
-                _workspaces.Add(workspace);
+                _workspaces!.Add(workspace);
             }
         }
 
         public void Remove(string filePath)
         {
+            EnsureLoaded();
             lock (_lock)
             {
-                _workspaces.RemoveAll(w => w.FilePath.Equals(filePath, StringComparison.OrdinalIgnoreCase));
+                _workspaces!.RemoveAll(w => w.FilePath.Equals(filePath, StringComparison.OrdinalIgnoreCase));
             }
         }
 
         public WorkspaceInfo? FindByPath(string filePath)
         {
+            EnsureLoaded();
             lock (_lock)
             {
-                return _workspaces.FirstOrDefault(w => w.FilePath.Equals(filePath, StringComparison.OrdinalIgnoreCase));
+                return _workspaces!.FirstOrDefault(w => w.FilePath.Equals(filePath, StringComparison.OrdinalIgnoreCase));
             }
         }
 
         public void SaveChanges()
         {
+            EnsureLoaded();
             lock (_lock)
             {
                 SaveToFile();
@@ -115,8 +138,8 @@ namespace ImageAutomate.Data
                     {
                         Name = row["Name"].ToString(),
                         FilePath = row["FilePath"].ToString(),
-                        LastModified = DateTime.Parse(row["LastModified"].ToString()),
-                        LastOpened = DateTime.Parse(row["LastOpened"].ToString()),
+                        LastModified = DateTime.Parse(row["LastModified"].ToString(), CultureInfo.InvariantCulture),
+                        LastOpened = DateTime.Parse(row["LastOpened"].ToString(), CultureInfo.InvariantCulture),
                         ThumbnailPath = row["ThumbnailPath"].ToString(),
                         Description = row["Description"].ToString()
                     };
@@ -127,14 +150,14 @@ namespace ImageAutomate.Data
                     if (string.IsNullOrWhiteSpace(workspace.Description))
                         workspace.Description = null;
 
-                    _workspaces.Add(workspace);
+                    _workspaces!.Add(workspace);
                 }
             }
             catch (Exception ex)
             {
                 // If CSV is corrupted, start fresh
                 System.Diagnostics.Debug.WriteLine($"Failed to load workspaces CSV: {ex.Message}");
-                _workspaces.Clear();
+                _workspaces!.Clear();
             }
         }
 
@@ -142,19 +165,23 @@ namespace ImageAutomate.Data
         {
             try
             {
-                // Sep automatically writes the header based on the columns defined in the first row.
+                // Ensure directory exists before saving
+                var directory = Path.GetDirectoryName(_csvFilePath);
+                if (!string.IsNullOrEmpty(directory))
+                {
+                    Directory.CreateDirectory(directory);
+                }
+
                 using var writer = Sep.Writer().ToFile(_csvFilePath);
 
-                foreach (var workspace in _workspaces)
+                foreach (var workspace in _workspaces!)
                 {
-                    // MUST create a new row context for every iteration.
-                    // Disposing 'row' (at the end of this bracket) triggers the write.
                     using var row = writer.NewRow();
 
                     row["Name"].Set(workspace.Name);
                     row["FilePath"].Set(workspace.FilePath);
-                    row["LastModified"].Set(workspace.LastModified.ToString("o"));
-                    row["LastOpened"].Set(workspace.LastOpened.ToString("o"));
+                    row["LastModified"].Set(workspace.LastModified.ToString("o", CultureInfo.InvariantCulture));
+                    row["LastOpened"].Set(workspace.LastOpened.ToString("o", CultureInfo.InvariantCulture));
                     row["ThumbnailPath"].Set(workspace.ThumbnailPath ?? string.Empty);
                     row["Description"].Set(workspace.Description ?? string.Empty);
                 }
@@ -164,6 +191,15 @@ namespace ImageAutomate.Data
                 System.Diagnostics.Debug.WriteLine($"Failed to save workspaces CSV: {ex.Message}");
                 throw;
             }
+        }
+
+        public void Dispose()
+        {
+            if (_disposed)
+                return;
+
+            _disposed = true;
+            // No unmanaged resources to dispose, but good practice for the pattern
         }
     }
 }
