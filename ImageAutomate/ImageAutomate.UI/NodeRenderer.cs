@@ -53,6 +53,7 @@ public sealed class NodeRenderer : IDisposable
     /// </summary>
     public static PointF GetSocketPosition(IBlock block, bool isInput)
     {
+        ArgumentNullException.ThrowIfNull(block);
         if (isInput)
         {
             return new PointF((float)block.X, (float)(block.Y + block.Height / 2));
@@ -88,7 +89,7 @@ public sealed class NodeRenderer : IDisposable
     /// <summary>
     /// Draws a connection edge on the graphics surface.
     /// </summary>
-    public void DrawEdge(Graphics g, IBlock source, IBlock target, bool isSelected, double socketRadius)
+    internal void DrawEdge(Graphics g, IBlock source, IBlock target, bool isSelected, double socketRadius)
     {
         using var path = GetEdgePath(source, target);
         g.DrawPath(isSelected ? _selectedEdgePen : _edgePen, path);
@@ -97,7 +98,7 @@ public sealed class NodeRenderer : IDisposable
     /// <summary>
     /// Draws a temporary edge being dragged by the user.
     /// </summary>
-    public void DrawDragEdge(Graphics g, PointF start, PointF end)
+    internal void DrawDragEdge(Graphics g, PointF start, PointF end)
     {
         float controlPointOffset = Math.Max(Math.Abs(end.X - start.X) / 2, 50);
         PointF cp1 = new(start.X + controlPointOffset, start.Y);
@@ -108,7 +109,7 @@ public sealed class NodeRenderer : IDisposable
     /// <summary>
     /// Draws a node (block) on the graphics surface using the block's layout properties.
     /// </summary>
-    public void DrawNode(Graphics g, IBlock block, bool isSelected, Color selectionColor, double socketRadius)
+    internal void DrawNode(Graphics g, IBlock block, bool isSelected, Color selectionColor, double socketRadius)
     {
         RectangleF rect = new(
             (float)block.X,

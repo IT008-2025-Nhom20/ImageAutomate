@@ -71,10 +71,9 @@ namespace ImageAutomate.UI
         /// <summary>
         /// Paints the button with the selected color.
         /// </summary>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1062:Validate arguments of public methods", Justification = "System event override")]
         protected override void OnPaint(PaintEventArgs pevent)
         {
-            base.OnPaint(pevent);
-
             // Draw color preview
             var g = pevent.Graphics;
             var bounds = ClientRectangle;
@@ -100,6 +99,7 @@ namespace ImageAutomate.UI
             {
                 DrawTransparencyPattern(g, colorRect);
             }
+            base.OnPaint(pevent);
         }
 
         /// <summary>

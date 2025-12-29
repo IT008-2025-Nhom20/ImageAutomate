@@ -154,7 +154,9 @@ public class GraphRenderPanel : Panel
     private Point _lastMousePos;
     private bool _isPanning;
     private bool _isDraggingNode;
+#pragma warning disable CA2213 // Disposable fields should be disposed. Reason: Borrowed reference, do not dispose.
     private IBlock? _draggedNode;
+#pragma warning restore CA2213 // Disposable fields should be disposed
     private PointF _dragStartNodePos;
 
     private bool _isConnecting;
@@ -163,9 +165,11 @@ public class GraphRenderPanel : Panel
     #endregion
 
     #region Cursors
+#pragma warning disable CA2213 // Disposable fields should be disposed. Reason: Managed by system. Not GDI+ resources
     private readonly Cursor _panCursor = Cursors.SizeAll;
     private readonly Cursor _dragCursor = Cursors.Hand;
     private readonly Cursor _connectCursor = Cursors.Cross;
+#pragma warning restore CA2213 // Disposable fields should be disposed
     #endregion
 
     #region CTOR
@@ -405,6 +409,7 @@ public class GraphRenderPanel : Panel
         Invalidate();
     }
 
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1062:Validate arguments of public methods", Justification = "System event override")]
     protected override void OnMouseDown(MouseEventArgs e)
     {
         if (Graph == null)
@@ -466,6 +471,7 @@ public class GraphRenderPanel : Panel
         base.OnMouseDown(e);
     }
 
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1062:Validate arguments of public methods", Justification = "System event override")]
     protected override void OnMouseUp(MouseEventArgs e)
     {
         if (_isPanning && e.Button == MouseButtons.Right)
@@ -539,6 +545,7 @@ public class GraphRenderPanel : Panel
         base.OnMouseUp(e);
     }
 
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1062:Validate arguments of public methods", Justification = "System event override")]
     protected override void OnMouseMove(MouseEventArgs e)
     {
         float dx = e.X - _lastMousePos.X;
@@ -581,6 +588,7 @@ public class GraphRenderPanel : Panel
         base.OnMouseMove(e);
     }
 
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1062:Validate arguments of public methods", Justification = "System event override")]
     protected override void OnMouseWheel(MouseEventArgs e)
     {
         float oldScale = _renderScale;
@@ -607,6 +615,7 @@ public class GraphRenderPanel : Panel
         base.OnMouseWheel(e);
     }
 
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1062:Validate arguments of public methods", Justification = "System event override")]
     protected override void OnDragEnter(DragEventArgs e)
     {
         _isDragOver = false;
@@ -636,6 +645,7 @@ public class GraphRenderPanel : Panel
         base.OnDragEnter(e);
     }
 
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1062:Validate arguments of public methods", Justification = "System event override")]
     protected override void OnDragOver(DragEventArgs e)
     {
         if (_isDragOver)
@@ -655,6 +665,7 @@ public class GraphRenderPanel : Panel
         base.OnDragLeave(e);
     }
 
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1062:Validate arguments of public methods", Justification = "System event override")]
     protected override void OnDragDrop(DragEventArgs e)
     {
         if (_isDragOver && _ghostBlockType != null && Graph != null)
@@ -692,6 +703,7 @@ public class GraphRenderPanel : Panel
     #endregion
 
     #region Render Override
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1062:Validate arguments of public methods", Justification = "System event override")]
     protected override void OnPaint(PaintEventArgs e)
     {
         if (Graph == null)

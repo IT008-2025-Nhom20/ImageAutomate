@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using System.Globalization;
 
 namespace ImageAutomate.UI;
 
@@ -6,10 +7,12 @@ namespace ImageAutomate.UI;
 public class ImageCard : Panel
 {
     // Controls
+#pragma warning disable CA2213 // Disposable fields should be disposed. Reason: WinForm manages these
     private PictureBox _pictureBox;
     private Panel _bottomPanel;
     private Label _lblTitle;
     private Label _lblDate;
+#pragma warning restore CA2213 // Disposable fields should be disposed
 
     // Backing Fields
     private Color _defaultBackColor;
@@ -54,8 +57,8 @@ public class ImageCard : Panel
     [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
     public DateTime LastModified
     {
-        get => DateTime.Parse(_lblDate.Text); // Simplified parsing
-        set => _lblDate.Text = value.ToString("yyyy-MM-dd HH:mm");
+        get => DateTime.Parse(_lblDate.Text, CultureInfo.InvariantCulture); // Simplified parsing
+        set => _lblDate.Text = value.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture);
     }
 
     [Category("Appearance")]
@@ -89,7 +92,7 @@ public class ImageCard : Panel
             TextAlign = ContentAlignment.MiddleRight,
             Font = new Font("Segoe UI", 8F, FontStyle.Regular),
             ForeColor = Color.Gray,
-            Text = DateTime.Now.ToString("yyyy-MM-dd")
+            Text = DateTime.Now.ToString(CultureInfo.CurrentCulture)
         };
 
         // 3. Title Label (Left aligned, fills remaining)

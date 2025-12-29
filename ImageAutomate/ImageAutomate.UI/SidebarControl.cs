@@ -145,19 +145,23 @@ public class SidebarControl : Panel
     /// <summary>
     /// Recursively wires MouseEnter events when controls are added.
     /// </summary>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1062:Validate arguments of public methods", Justification = "System event override")]
     protected override void OnControlAdded(ControlEventArgs e)
     {
         base.OnControlAdded(e);
-        WireChildEvents(e.Control);
+        if (e.Control != null)
+            WireChildEvents(e.Control);
     }
 
     /// <summary>
     /// Unwires events when controls are removed to prevent leaks.
     /// </summary>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1062:Validate arguments of public methods", Justification = "System event override")]
     protected override void OnControlRemoved(ControlEventArgs e)
     {
         base.OnControlRemoved(e);
-        UnwireChildEvents(e.Control);
+        if (e.Control != null)
+            UnwireChildEvents(e.Control);
     }
 
     /// <summary>
@@ -197,8 +201,8 @@ public class SidebarControl : Panel
                 WireChildEvents(child);
             }
             // Ensure dynamically added inner controls are also wired
-            control.ControlAdded += (s, args) => WireChildEvents(args.Control);
-            control.ControlRemoved += (s, args) => UnwireChildEvents(args.Control);
+            control.ControlAdded += (s, args) => { if (args.Control != null) WireChildEvents(args.Control); };
+            control.ControlRemoved += (s, args) => { if (args.Control != null) UnwireChildEvents(args.Control); };
         }
     }
 
