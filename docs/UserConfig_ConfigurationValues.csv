@@ -1,0 +1,29 @@
+variable/prop name,which file is it,which file it should be in,exact line number,user config or dev config,expandable?,current value,recommended default,category
+Mode,ImageAutomate.Execution/ExecutorConfiguration.cs,ImageAutomate.Execution/ExecutorConfiguration.cs,13,user config,FALSE,SimpleDfs,SimpleDfs,Execution
+MaxDegreeOfParallelism,ImageAutomate.Execution/ExecutorConfiguration.cs,ImageAutomate.Execution/ExecutorConfiguration.cs,19,user config,FALSE,Environment.ProcessorCount,Ncpu,Execution
+WatchdogTimeout,ImageAutomate.Execution/ExecutorConfiguration.cs,ImageAutomate.Execution/ExecutorConfiguration.cs,30,user config,FALSE,TimeSpan.FromSeconds(30),30s,Execution
+EnableGcThrottling,ImageAutomate.Execution/ExecutorConfiguration.cs,ImageAutomate.Execution/ExecutorConfiguration.cs,37,user config,FALSE,true,true,Execution
+MaxShipmentSize,ImageAutomate.Execution/ExecutorConfiguration.cs,ImageAutomate.Execution/ExecutorConfiguration.cs,45,user config,FALSE,64,64,Execution
+ProfilingWindowSize,ImageAutomate.Execution/ExecutorConfiguration.cs,ImageAutomate.Execution/ExecutorConfiguration.cs,53,user config,FALSE,20,20,Execution
+CostEmaAlpha,ImageAutomate.Execution/ExecutorConfiguration.cs,ImageAutomate.Execution/ExecutorConfiguration.cs,59,user config,FALSE,0.2,0.2,Execution
+CriticalPathRecomputeInterval,ImageAutomate.Execution/ExecutorConfiguration.cs,ImageAutomate.Execution/ExecutorConfiguration.cs,65,user config,FALSE,10,10,Execution
+BatchSize,ImageAutomate.Execution/ExecutorConfiguration.cs,ImageAutomate.Execution/ExecutorConfiguration.cs,71,user config,FALSE,5,5,Execution
+CriticalPathBoost,ImageAutomate.Execution/ExecutorConfiguration.cs,ImageAutomate.Execution/ExecutorConfiguration.cs,78,user config,FALSE,1.5,1.5,Execution
+SelectedBlockOutlineColor,ImageAutomate.UI/GraphRenderPanel.cs,ImageAutomate.UI/GraphRenderPanel.cs,35,user config,TRUE,Color.Red,Color.Red,Editor
+SocketRadius,ImageAutomate.UI/GraphRenderPanel.cs,ImageAutomate.UI/GraphRenderPanel.cs,48,user config,FALSE,6,6,Editor
+RenderScale,ImageAutomate.UI/GraphRenderPanel.cs,ImageAutomate.UI/GraphRenderPanel.cs,61,user config,FALSE,1.0f,1.0,Editor
+AllowOutOfScreenPan,ImageAutomate.UI/GraphRenderPanel.cs,ImageAutomate.UI/GraphRenderPanel.cs,74,user config,FALSE,false,false,Editor
+AutoSnapZoneWidth,ImageAutomate.UI/GraphRenderPanel.cs,ImageAutomate.UI/GraphRenderPanel.cs,81,user config,FALSE,20f,20,Editor
+None,ImageAutomate.UI/NodeRenderer.cs,ThemeConfiguration.cs,26,user config,TRUE,"Color.FromArgb(150, 150, 150)",-,Theme
+None,ImageAutomate.UI/NodeRenderer.cs,ThemeConfiguration.cs,27,user config,TRUE,Color.Red,-,Theme
+None,ImageAutomate.UI/NodeRenderer.cs,ThemeConfiguration.cs,28,user config,TRUE,Color.Orange,-,Theme
+None,ImageAutomate.UI/NodeRenderer.cs,ThemeConfiguration.cs,30,user config,TRUE,"Color.FromArgb(60, 60, 60)",-,Theme
+None,ImageAutomate.UI/NodeRenderer.cs,ThemeConfiguration.cs,31,user config,TRUE,"Color.FromArgb(80, 80, 80)",-,Theme
+None,ImageAutomate.UI/NodeRenderer.cs,ThemeConfiguration.cs,32,user config,TRUE,Color.White,-,Theme
+None,ImageAutomate.UI/NodeRenderer.cs,ThemeConfiguration.cs,34,user config,TRUE,"Color.FromArgb(100, 100, 100)",-,Theme
+None,ImageAutomate.UI/NodeRenderer.cs,ThemeConfiguration.cs,39,user config,TRUE,"Color.FromArgb(100, 200, 100)",-,Theme
+None,ImageAutomate.UI/NodeRenderer.cs,ThemeConfiguration.cs,40,user config,TRUE,"Color.FromArgb(200, 100, 100)",-,Theme
+None,ImageAutomate.UI/NodeRenderer.cs,ThemeConfiguration.cs,117,user config,FALSE,8,8,Theme
+None,ImageAutomate.UI/NodeRenderer.cs,ThemeConfiguration.cs,121,user config,FALSE,25,25,Theme
+None,ImageAutomate.UI/NodeRenderer.cs,ThemeConfiguration.cs,139,user config,FALSE,35,35,Theme
+None,ImageAutomate.UI/NodeRenderer.cs,ThemeConfiguration.cs,144,user config,FALSE,15,15,Theme

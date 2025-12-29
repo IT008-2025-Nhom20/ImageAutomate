@@ -318,11 +318,6 @@ public class GraphExecutorTests
         _graph.AddEdge(source2, source2.Outputs[0], merge, merge.Inputs[0]);
         _graph.AddEdge(merge, merge.Outputs[0], sink, sink.Inputs[0]);
 
-        foreach (var cnn in _graph.Edges)
-        {
-            Debug.WriteLine($"Graph Connection: {cnn.Source.Name}.{cnn.SourceSocket.Id} -> {cnn.Target.Name}.{cnn.TargetSocket.Id}");
-        }
-
         _executor.Execute(_graph);
         Assert.Equal(15, sink.ReceivedItems.Count);
     }

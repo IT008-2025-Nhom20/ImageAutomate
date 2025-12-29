@@ -1,14 +1,15 @@
-# FR-PXL-001: Pixelate Block
+# Pixelate Block
 
 ## Description
-Applies pixelation effect by downsampling and upscaling blocks of pixels.  
+Applies pixelation effect by downsampling and upscaling blocks of pixels.
 Useful for anonymization, stylization, or mosaic effects.
 
 ## Configuration Parameters
-### Size
-Integer representing pixel block size.  
-Higher values produce larger pixel blocks.  
-Range: 1–100
+
+### `Size`
+*   **Type**: `int`
+*   **Description**: Pixel block size. Higher values produce larger pixel blocks.
+*   **Range**: 1–100
 
 ## Acceptance Criteria
 - Pixelation grid must be uniform.
@@ -17,7 +18,7 @@ Range: 1–100
 
 ## Operational Behaviour
 ```csharp
-image.Mutate(x => x.Pixelate(size));
+image.Mutate(x => x.Pixelate(Size));
 ```
 
 ## Technical Notes

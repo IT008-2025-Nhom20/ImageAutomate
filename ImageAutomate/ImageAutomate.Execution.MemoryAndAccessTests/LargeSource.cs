@@ -13,6 +13,7 @@ public class LargeSource : MockBlock, IShipmentSource
     private int _itemsProduced = 0;
 
     public int MaxShipmentSize { get; set; } = 5;
+    public IReadOnlyList<string>? ShipmentData { get; set; }
 
     public LargeSource(string name, int width, int height, int totalItems) : base(name)
     {
@@ -61,6 +62,14 @@ public class LargeSource : MockBlock, IShipmentSource
         {
             { Outputs[0], outputList }
         };
+    }
+
+    public IReadOnlyList<string> GetShipmentTargets()
+    {
+        // Return dummy targets matching total items to produce
+        return Enumerable.Range(0, _totalItemsToProduce)
+            .Select(i => $"large-item-{i}")
+            .ToList();
     }
 }
 

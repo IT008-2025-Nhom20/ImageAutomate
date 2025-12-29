@@ -14,7 +14,7 @@ Specifies how the image is resized.
 - **KeepAspect**: Scales the image to fit within `TargetWidth` or `TargetHeight`, preserving aspect ratio.
 - **Fit**: Fits the image within the target box, preserving aspect ratio.
 - **Fill**: Fills the target box, preserving aspect ratio (cropping if necessary).
-- **Pad**: Fits the image within the target box and pads the remaining space with `BackgroundColor`.
+- **Pad**: Fits the image within the target box and pads the remaining space with `PaddingColor`.
 
 ### `TargetWidth`, `TargetHeight`
 - The target dimensions in pixels.
@@ -33,7 +33,7 @@ Specifies the algorithm used for resampling.
 - **Lanczos3**
 - **Spline**
 
-### `BackgroundColor`
+### `PaddingColor`
 - The color used for padding in **Pad** mode.
 
 ---
@@ -50,7 +50,7 @@ Specifies the algorithm used for resampling.
 - **TargetWidth, TargetHeight** inputs.
 - **PreserveAspectRatio** checkbox (visible for Fixed mode).
 - **Resampler** dropdown.
-- **BackgroundColor** picker (visible for Pad mode).
+- **PaddingColor** picker (visible for Pad mode).
 
 ---
 

@@ -20,58 +20,76 @@ public class Workspace
         WriteIndented = true,
     };
 
-    private PipelineGraph? _graph;
+    private PipelineGraph _graph = null!;
 
     /// <summary>
     /// Gets or sets the workspace name.
     /// </summary>
-    public string Name { get; set; } = "Untitled Workspace";
+    public string Name { get; set; }
+
+    /// <summary>
+    /// Gets the file path where this workspace was saved to or loaded from.
+    /// Null if the workspace has never been saved.
+    /// </summary>
+    public string? FilePath { get; private set; }
+
+    /// <summary>
+    /// Gets a value indicating whether this workspace has been saved to disk.
+    /// </summary>
+    public bool IsSaved => !string.IsNullOrEmpty(FilePath) && File.Exists(FilePath);
 
     /// <summary>
     /// Gets or sets the pipeline graph.
     /// </summary>
-    public PipelineGraph? Graph
+    public PipelineGraph Graph
     {
         get => _graph;
         set
         {
-            // Unsubscribe from old graph
-            if (_graph != null)
-            {
-                _graph.OnNodeRemoved -= OnGraphNodeRemoved;
-            }
-
+            ArgumentNullException.ThrowIfNull(value);
             _graph = value;
-
-            // Subscribe to new graph
-            if (_graph != null)
-            {
-                _graph.OnNodeRemoved += OnGraphNodeRemoved;
-            }
         }
     }
 
     /// <summary>
-    /// Gets or sets the view state.
+    /// Gets or sets the zoom level.
     /// </summary>
-    public ViewState ViewState { get; set; } = new();
+    public double Zoom { get; set; } = 1.0;
+
+    /// <summary>
+    /// Gets or sets the horizontal pan offset.
+    /// </summary>
+    public double PanX { get; set; }
+
+    /// <summary>
+    /// Gets or sets the vertical pan offset.
+    /// </summary>
+    public double PanY { get; set; }
 
     /// <summary>
     /// Gets or sets custom metadata for the workspace.
     /// </summary>
-    public Dictionary<string, object?> Metadata { get; set; } = new();
+    public Dictionary<string, object?> Metadata { get; }
 
-    /// <summary>
-    /// Gets or sets whether to include the $schema property in saved files for IntelliSense support.
-    /// </summary>
-    public bool IncludeSchemaReference { get; set; } = true;
-
-    /// <summary>
-    /// Handles automatic cleanup of ViewState when a block is removed from the graph.
-    /// </summary>
-    private void OnGraphNodeRemoved(IBlock block)
+    public Workspace(PipelineGraph graph)
     {
-        ViewState.RemoveBlock(block);
+        Name = "Untitled Workspace";
+        Graph = graph ?? throw new ArgumentNullException(nameof(graph));
+        Metadata = [];
+    }
+
+    public Workspace(PipelineGraph graph, string name)
+    {
+        Graph = graph ?? throw new ArgumentNullException(nameof(graph));
+        Name = name ?? throw new ArgumentNullException(nameof(name));
+        Metadata = [];
+    }
+
+    public Workspace(PipelineGraph graph, string name, Dictionary<string, object?> metadata)
+    {
+        Name = name ?? throw new ArgumentNullException(nameof(name));
+        Graph = graph ?? throw new ArgumentNullException(nameof(graph));
+        Metadata = metadata;
     }
 
     /// <summary>
@@ -86,11 +104,9 @@ public class Workspace
         for (int i = Graph.Nodes.Count - 1; i >= 0; i--)
         {
             var block = Graph.Nodes[i];
-            var blockPos = ViewState.GetBlockPositionOrDefault(block);
-            var blockSize = ViewState.GetBlockSizeOrDefault(block);
 
-            if (x >= blockPos.X && x <= blockPos.X + blockSize.Width &&
-                y >= blockPos.Y && y <= blockPos.Y + blockSize.Height)
+            if (x >= block.X && x <= block.X + block.Width &&
+                y >= block.Y && y <= block.Y + block.Height)
             {
                 return block;
             }
@@ -103,24 +119,28 @@ public class Workspace
     /// </summary>
     public string ToJson()
     {
-        var dto = new WorkspaceDto
-        {
-            Version = "1.0",
-            Name = Name,
-            Metadata = Metadata
-        };
+        return ToJson(SystemConfiguration.WorkspaceSchemaUrl);
+    }
 
-        if (IncludeSchemaReference)
-        {
-            dto.Schema = "https://raw.githubusercontent.com/IT007-2025-Nhom20/ImageAutomate/project-restructure/docs/workspace-schema.json";
-        }
-
-        if (Graph != null)
-        {
-            // Pass ViewState to embed layout in each block
-            dto.Graph = Graph.ToDto(ViewState);
-            dto.ViewState = ViewState.ToDto();
-        }
+    /// <summary>
+    /// Serializes the workspace to JSON string.
+    /// </summary>
+    /// <param name="schemaUrl">
+    /// The schema URL to include in the $schema field. 
+    /// Pass null to omit the schema reference.
+    /// </param>
+    public string ToJson(Uri? schemaUrl)
+    {
+        var dto = new WorkspaceDto(
+            schema: schemaUrl,
+            version: "1.0",
+            name: Name,
+            graph: Graph.ToDto(),
+            zoom: Zoom,
+            panX: PanX,
+            panY: PanY,
+            metadata: Metadata
+        );
 
         return JsonSerializer.Serialize(dto, _serializerOptions);
     }
@@ -132,24 +152,18 @@ public class Workspace
     {
         var dto = JsonSerializer.Deserialize<WorkspaceDto>(json, _serializerOptions)
             ?? throw new InvalidOperationException("Failed to deserialize workspace from JSON.");
-        
-        var workspace = new Workspace
-        {
-            Name = dto.Name,
-            Metadata = dto.Metadata
-        };
 
-        if (dto.Graph != null)
+        var graph = dto.Graph != null
+            ? PipelineGraph.FromDto(dto.Graph)
+            : new PipelineGraph();
+
+        var workspace = new Workspace(
+            graph, dto.Name ?? "Untitled Workspace", dto.Metadata)
         {
-            // Create ViewState first, then pass to FromDto to extract layout from blocks
-            if (dto.ViewState != null)
-            {
-                workspace.ViewState = ViewState.FromDto(dto.ViewState);
-            }
-            
-            // Pass ViewState to extract embedded layout from blocks
-            workspace.Graph = PipelineGraph.FromDto(dto.Graph, workspace.ViewState);
-        }
+            Zoom = dto.Zoom,
+            PanX = dto.PanX,
+            PanY = dto.PanY
+        };
 
         return workspace;
     }
@@ -157,10 +171,12 @@ public class Workspace
     /// <summary>
     /// Saves the workspace to a file.
     /// </summary>
+    /// <param name="filePath">The file path to save to.</param>
     public void SaveToFile(string filePath)
     {
         var json = ToJson();
         File.WriteAllText(filePath, json);
+        FilePath = filePath;
     }
 
     /// <summary>
@@ -172,6 +188,8 @@ public class Workspace
             throw new FileNotFoundException($"Workspace file not found: {filePath}", filePath);
 
         var json = File.ReadAllText(filePath);
-        return FromJson(json);
+        var workspace = FromJson(json);
+        workspace.FilePath = filePath;
+        return workspace;
     }
 }

@@ -23,7 +23,7 @@ public abstract class MockBlock : IBlock
 
     public string Name { get; }
 
-    public string Title { get; }
+    public string Title { get; set; }
 
     public string Content { get; }
 
@@ -34,6 +34,8 @@ public abstract class MockBlock : IBlock
     public virtual IReadOnlyList<Socket> Inputs { get; protected set; } = new List<Socket>();
 
     public virtual IReadOnlyList<Socket> Outputs { get; protected set; } = new List<Socket>();
+    public double X { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
+    public double Y { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
 
     public virtual IReadOnlyDictionary<Socket, IReadOnlyList<IBasicWorkItem>> Execute(IDictionary<Socket, IReadOnlyList<IBasicWorkItem>> inputs)
     {
@@ -120,6 +122,7 @@ public class MockSource : MockBlock, IShipmentSource
     private int _itemsProduced = 0;
     public int TotalItemsToProduce { get; set; } = 10;
     public int MaxShipmentSize { get; set; } = 5;
+    public IReadOnlyList<string>? ShipmentData { get; set; }
 
     public MockSource(string name, int totalItems = 10) : base(name)
     {
@@ -146,6 +149,15 @@ public class MockSource : MockBlock, IShipmentSource
         {
             { Outputs[0], outputList }
         };
+    }
+
+    public IReadOnlyList<string> GetShipmentTargets()
+    {
+        // Return dummy targets matching TotalItemsToProduce
+        // ExecutionContext uses count to track exhaustion
+        return Enumerable.Range(0, TotalItemsToProduce)
+            .Select(i => $"mock-item-{i}")
+            .ToList();
     }
 }
 
@@ -326,6 +338,7 @@ public class MultiIOBlock : MockBlock
 public class SpinlockSource : MockBlock, IShipmentSource
 {
     public int MaxShipmentSize { get; set; } = 5;
+    public IReadOnlyList<string>? ShipmentData { get; set; }
     public CancellationToken CancellationToken { get; set; }
 
     public SpinlockSource(string name) : base(name)
@@ -346,11 +359,21 @@ public class SpinlockSource : MockBlock, IShipmentSource
         // Return empty result when cancelled
         return new Dictionary<Socket, IReadOnlyList<IBasicWorkItem>>();
     }
+
+    public IReadOnlyList<string> GetShipmentTargets()
+    {
+        // Return dummy targets matching MaxShipmentSize
+        // This source spins indefinitely until cancelled
+        return Enumerable.Range(0, MaxShipmentSize)
+            .Select(i => $"spinlock-item-{i}")
+            .ToList();
+    }
 }
 
 public class SingleItemSource : MockBlock, IShipmentSource
 {
     public int MaxShipmentSize { get; set; } = 10;
+    public IReadOnlyList<string>? ShipmentData { get; set; }
     private bool _produced = false;
 
     public SingleItemSource(string name) : base(name) 
@@ -367,6 +390,12 @@ public class SingleItemSource : MockBlock, IShipmentSource
         { 
             { Outputs[0], new List<IBasicWorkItem> { new MutableWorkItem("Original") } } 
         };
+    }
+
+    public IReadOnlyList<string> GetShipmentTargets()
+    {
+        // Return exactly 1 dummy target for single item source
+        return new List<string> { "single-item" };
     }
 }
 

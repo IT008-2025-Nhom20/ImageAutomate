@@ -12,7 +12,7 @@ namespace ImageAutomate.Execution;
 /// - Any → Blocked (transitive propagation from failed upstream blocks)
 /// - Any → Cancelled (user cancellation)
 /// </remarks>
-internal enum BlockExecutionState
+public enum BlockExecutionState
 {
     /// <summary>
     /// Block is pending execution (waiting for dependencies to be satisfied).

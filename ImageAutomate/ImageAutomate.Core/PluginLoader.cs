@@ -12,6 +12,10 @@ public class PluginException : Exception
 {
     public PluginException(string message) : base(message) { }
     public PluginException(string message, Exception innerException) : base(message, innerException) { }
+
+    public PluginException()
+    {
+    }
 }
 
 /// <summary>
@@ -24,10 +28,33 @@ public class PluginLoader
     private readonly ConcurrentDictionary<object, string> _instanceToPlugin = new();
     private readonly object _lock = new();
 
+    private readonly IRegistryAccessor _registryAccessor;
+    private readonly string _pluginsDirectory;
+
     /// <summary>
     /// Gets a read-only collection of all loaded plugins.
     /// </summary>
     public IReadOnlyCollection<PluginInfo> LoadedPlugins => _plugins.Values.Where(p => p.IsLoaded).ToList();
+
+    /// <summary>
+    /// Initializes a new instance of the PluginLoader.
+    /// </summary>
+    /// <param name="pluginsDirectory">Directory to search for plugins.</param>
+    /// <param name="registryAccessor">Accessor for system registries.</param>
+    public PluginLoader(string pluginsDirectory, IRegistryAccessor registryAccessor)
+    {
+        _pluginsDirectory = pluginsDirectory;
+        _registryAccessor = registryAccessor ?? throw new ArgumentNullException(nameof(registryAccessor));
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the PluginLoader with default registry access.
+    /// </summary>
+    /// <param name="pluginsDirectory">Directory to search for plugins.</param>
+    public PluginLoader(string pluginsDirectory)
+        : this(pluginsDirectory, new RegistryAccessorProxy())
+    {
+    }
 
     /// <summary>
     /// Loads a plugin from a single DLL file.
@@ -70,6 +97,10 @@ public class PluginLoader
             {
                 var loadContext = new PluginLoadContext(fullPath);
                 var assembly = loadContext.LoadFromAssemblyPath(fullPath);
+
+                // Auto-discover and initialize plugin entry point
+                TryInitializePlugin(assembly);
+
                 var pluginInfo = new PluginInfo(name, fullPath, assembly, loadContext);
                 
                 _plugins[name] = pluginInfo;
@@ -311,7 +342,7 @@ public class PluginLoader
     /// <param name="pluginName">Name of the plugin that created the instance.</param>
     public void RegisterInstance(object instance, string pluginName)
     {
-        if (instance == null) throw new ArgumentNullException(nameof(instance));
+        ArgumentNullException.ThrowIfNull(instance);
 
         lock (_lock)
         {
@@ -487,6 +518,110 @@ public class PluginLoader
             return plugin.ActiveInstanceCount;
         }
         return 0;
+    }
+
+    /// <summary>
+    /// Attempts to discover and initialize the plugin entry point.
+    /// </summary>
+    /// <param name="assembly">The plugin assembly to search.</param>
+    private void TryInitializePlugin(Assembly assembly)
+    {
+        try
+        {
+            // Look for class named "PluginInitializer" implementing IPluginInitializer
+            var initializerType = assembly.GetTypes()
+                .FirstOrDefault(t => t.Name == "PluginInitializer" &&
+                                    typeof(IPluginInitializer).IsAssignableFrom(t) &&
+                                    !t.IsAbstract &&
+                                    !t.IsInterface);
+
+            if (initializerType != null)
+            {
+                // Use the provided registry accessor
+                var initializer = (IPluginInitializer?)Activator.CreateInstance(initializerType);
+                initializer?.Initialize(_registryAccessor);
+            }
+        }
+        catch (Exception ex)
+        {
+            // Log but don't fail plugin load
+            Console.Error.WriteLine($"Plugin initialization warning: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Proxy class that allows Core to access Execution registries via reflection.
+    /// This avoids circular dependency between Core and Execution assemblies.
+    /// </summary>
+    private sealed class RegistryAccessorProxy : IRegistryAccessor
+    {
+        public void RegisterScheduler(string name, Func<object> factory)
+        {
+            // Get IScheduler type dynamically
+            var iSchedulerType = Type.GetType("ImageAutomate.Execution.Scheduling.IScheduler, ImageAutomate.Execution");
+            if (iSchedulerType == null)
+            {
+                Console.Error.WriteLine("Failed to locate IScheduler type.");
+                return;
+            }
+
+            // Create Func<IScheduler> type dynamically
+            var funcSchedulerType = typeof(Func<>).MakeGenericType(iSchedulerType);
+            if (funcSchedulerType == null)
+            {
+                Console.Error.WriteLine("Failed to create Func<IScheduler> type.");
+                return;
+            }
+
+            // Create a wrapper delegate that adapts Func<object> to Func<IScheduler>
+            var typedFactory = factory;
+
+            CallRegistryMethod(
+                "ImageAutomate.Execution.Scheduling.SchedulerRegistry, ImageAutomate.Execution",
+                "RegisterScheduler",
+                [typeof(string), funcSchedulerType],
+                [name, typedFactory]
+            );
+        }
+
+        public void RegisterImageFormat(string formatName, IImageFormatStrategy strategy)
+        {
+            CallRegistryMethod(
+                "ImageAutomate.Infrastructure.ImageFormatRegistry, ImageAutomate.Infrastructure",
+                "RegisterFormat",
+                [typeof(string), typeof(IImageFormatStrategy)],
+                [formatName, strategy]
+            );
+        }
+
+        private static void CallRegistryMethod(string fullRegistryTypeName, string methodName, Type[] parameterTypes, object[] parameters)
+        {
+            var registryType = Type.GetType(fullRegistryTypeName);
+            if (registryType == null)
+            {
+                Console.Error.WriteLine($"Failed to locate {fullRegistryTypeName} type.");
+                return;
+            }
+
+            var registryProperty = registryType.GetProperty("Instance",
+                System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public);
+            var registry = registryProperty?.GetValue(null);
+            if (registry == null)
+            {
+                Console.Error.WriteLine($"Failed to access {registryType.Name}.Instance property.");
+                return;
+            }
+
+            var registerMethod = registry.GetType().GetMethod(methodName, parameterTypes);
+
+            if (registerMethod == null)
+            {
+                Console.Error.WriteLine($"Failed to find {methodName} method in {registryType.Name}.");
+                return;
+            }
+
+            registerMethod.Invoke(registry, parameters);
+        }
     }
 }
 

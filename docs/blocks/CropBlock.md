@@ -10,15 +10,16 @@ Supports multiple cropping modes including explicit rectangle, centered cropping
 
 ### `CropMode`
 Specifies how the crop region is determined.
-- **Rectangle**: Uses explicit `X`, `Y` coordinates and `CropWidth`, `CropHeight`.
-- **Center**: Centers the crop region of size `CropWidth` x `CropHeight` within the image.
-- **Anchor**: Aligns the crop region of size `CropWidth` x `CropHeight` relative to an `AnchorPosition`.
+- **Rectangle**: Uses explicit `X`, `Y` coordinates and `Width`, `Height`.
+- **Center**: Centers the crop region of size `Width` x `Height` within the image.
+- **Anchor**: Aligns the crop region of size `Width` x `Height` relative to an `AnchorPosition`.
 
 ### `X`, `Y`
 - Only used in **Rectangle** mode.
 - Top-left coordinates of the crop rectangle.
+- Must be positive integers.
 
-### `CropWidth`, `CropHeight`
+### `Width`, `Height`
 - The dimensions of the resulting cropped image.
 - Must be positive integers.
 
@@ -30,7 +31,7 @@ Specifies how the crop region is determined.
 ---
 
 ## Acceptance Criteria
-- Output image has dimensions `CropWidth` x `CropHeight`.
+- Output image has dimensions `Width` x `Height`.
 - Crop region is correctly positioned according to `CropMode` and parameters.
 - Throws error if crop region exceeds source image bounds.
 
@@ -40,15 +41,15 @@ Specifies how the crop region is determined.
 - **CropMode** dropdown selects the mode.
 - **X, Y** visible only when `CropMode` is `Rectangle`.
 - **AnchorPosition** visible only when `CropMode` is `Anchor`.
-- **CropWidth, CropHeight** always visible.
+- **Width, Height** always visible.
 
 ---
 
 ## Operational Behaviour
 
 ### Bounds Checking
-- **Rectangle Mode**: Throws if `X + CropWidth > SourceWidth` or `Y + CropHeight > SourceHeight`.
-- **Center/Anchor Mode**: Throws if `CropWidth > SourceWidth` or `CropHeight > SourceHeight`.
+- **Rectangle Mode**: Throws if `X + Width > SourceWidth` or `Y + Height > SourceHeight`.
+- **Center/Anchor Mode**: Throws if `Width > SourceWidth` or `Height > SourceHeight`.
 
 ### Execution
 - Applies `Image.Mutate(x => x.Crop(rectangle))` using the calculated rectangle.

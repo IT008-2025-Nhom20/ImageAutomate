@@ -19,14 +19,29 @@ public class LoadBlock : IBlock, IShipmentSource
 
     private string _sourcePath = string.Empty;
     private bool _autoOrient = false;
+    private FileSortOrder _sortOrder = FileSortOrder.Lexicographic;
 
     private bool disposedValue = false;
 
-    // Shipment state
-    private List<string>? _cachedFilePaths;
-    private int _currentOffset = 0;
+    // Layout fields
+    private double _x;
+    private double _y;
+    private int _width;
+    private int _height;
+    private string _title = "Load";
 
     #endregion
+
+    public LoadBlock()
+        : this(200, 100)
+    {
+    }
+
+    public LoadBlock(int width, int height)
+    {
+        _width = width;
+        _height = height;
+    }
 
     #region InotifyPropertyChanged
 
@@ -46,13 +61,91 @@ public class LoadBlock : IBlock, IShipmentSource
     #region Basic Properties
 
     /// <inheritdoc />
+    [Browsable(false)]
     public string Name => "Load";
 
     /// <inheritdoc />
-    public string Title => "Load";
+    [Category("Title")]
+    public string Title
+    {
+        get => _title;
+        set
+        {
+            if (_title != value)
+            {
+                _title = value;
+                OnPropertyChanged(nameof(Title));
+            }
+        }
+    }
 
     /// <inheritdoc />
+    [Browsable(false)]
     public string Content => $"Path: {SourcePath}\nAuto Orient: {AutoOrient}";
+    #endregion
+
+    #region Layout Properties
+
+    /// <inheritdoc />
+    [Category("Layout")]
+    public double X
+    {
+        get => _x;
+        set
+        {
+            if (Math.Abs(_x - value) > double.Epsilon)
+            {
+                _x = value;
+                OnPropertyChanged(nameof(X));
+            }
+        }
+    }
+
+    /// <inheritdoc />
+    [Category("Layout")]
+    public double Y
+    {
+        get => _y;
+        set
+        {
+            if (Math.Abs(_y - value) > double.Epsilon)
+            {
+                _y = value;
+                OnPropertyChanged(nameof(Y));
+            }
+        }
+    }
+
+    /// <inheritdoc />
+    [Category("Layout")]
+    public int Width
+    {
+        get => _width;
+        set
+        {
+            if (_width != value)
+            {
+                _width = value;
+                OnPropertyChanged(nameof(Width));
+            }
+        }
+    }
+
+    /// <inheritdoc />
+    [Category("Layout")]
+    public int Height
+    {
+        get => _height;
+        set
+        {
+            if (_height != value)
+            {
+                _height = value;
+                OnPropertyChanged(nameof(Height));
+            }
+        }
+    }
+
     #endregion
 
     #region Configuration Propertise
@@ -62,6 +155,7 @@ public class LoadBlock : IBlock, IShipmentSource
     /// </summary>
     [Category("Configuration")]
     [Description("File system path to the input image ")]
+    [Editor("System.Windows.Forms.Design.FolderNameEditor, System.Design, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a", "System.Drawing.Design.UITypeEditor, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a")]
     public string SourcePath
     {
         get => _sourcePath;
@@ -94,10 +188,37 @@ public class LoadBlock : IBlock, IShipmentSource
     }
 
     /// <summary>
+    /// Gets or sets the sort order for file loading.
+    /// </summary>
+    [Category("Configuration")]
+    [Description("Sort order for loading files: None (no sort), Lexicographic (standard string sort)")]
+    public FileSortOrder SortOrder
+    {
+        get => _sortOrder;
+        set
+        {
+            if (_sortOrder != value)
+            {
+                _sortOrder = value;
+                OnPropertyChanged(nameof(SortOrder));
+            }
+        }
+    }
+
+    /// <summary>
     /// Maximum number of images to load per execution (shipment size).
     /// Set by the executor during initialization.
     /// </summary>
+    [Browsable(false)]
     public int MaxShipmentSize { get; set; } = 64;
+
+    /// <summary>
+    /// Gets or sets transient data for the current shipment cycle.
+    /// Contains the file paths to load in this batch.
+    /// Set by ExecutionContext before Execute(), cleared after.
+    /// </summary>
+    [Browsable(false)]
+    public IReadOnlyList<string>? ShipmentData { get; set; }
 
     private int _maxCount = int.MaxValue;
 
@@ -126,8 +247,10 @@ public class LoadBlock : IBlock, IShipmentSource
     #region Socket
 
     /// <inheritdoc />
+    [Browsable(false)]
     public IReadOnlyList<Socket> Inputs => _inputs;
     /// <inheritdoc />
+    [Browsable(false)]
     public IReadOnlyList<Socket> Outputs => _outputs;
 
     #endregion
@@ -180,33 +303,18 @@ public class LoadBlock : IBlock, IShipmentSource
 
     private IEnumerable<IBasicWorkItem> LoadWorkItems(CancellationToken cancellationToken)
     {
+        if (ShipmentData == null)
+            throw new InvalidOperationException("LoadBlock: ShipmentData not set by ExecutionContext.");
+
         if (string.IsNullOrWhiteSpace(SourcePath))
             throw new InvalidOperationException("LoadBlock: SourcePath is required.");
 
-        // Initialize file list on first execution
-        if (_cachedFilePaths == null)
-        {
-            if (!Directory.Exists(SourcePath))
-                throw new DirectoryNotFoundException($"LoadBlock: directory not found: {SourcePath}");
-
-            _cachedFilePaths = Directory.GetFiles(SourcePath)
-                .Where(IsValidImageFile)
-                .OrderBy(file => file, StringComparer.OrdinalIgnoreCase)
-                .Take(MaxCount)
-                .ToList();
-            
-            _currentOffset = 0;
-        }
-
-        // Load next shipment batch
-        int remaining = _cachedFilePaths.Count - _currentOffset;
-        int batchSize = Math.Min(MaxShipmentSize, remaining);
-
-        for (int i = 0; i < batchSize; i++)
+        // Load the batch of files provided by ExecutionContext
+        for (int i = 0; i < ShipmentData.Count; i++)
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            string file = _cachedFilePaths[_currentOffset + i];
+            string file = ShipmentData[i];
             
             Image image = LoadImageFile(file);
             var builder = ImmutableDictionary.CreateBuilder<string, object>();
@@ -214,15 +322,39 @@ public class LoadBlock : IBlock, IShipmentSource
             builder.Add("FileName", Path.GetFileName(file));
             builder.Add("FullPath", file);
             builder.Add("Format", image.Metadata.DecodedImageFormat?.Name ?? "Unknown");
-            builder.Add("ShipmentOffset", _currentOffset);
             builder.Add("ShipmentIndex", i);
             var metadata = builder.ToImmutable();
             WorkItem wi = new(image, metadata);
             yield return wi;
         }
+    }
 
-        // Advance offset for next shipment
-        _currentOffset += batchSize;
+    /// <summary>
+    /// Scans the source directory and returns all valid image file paths.
+    /// </summary>
+    public IReadOnlyList<string> GetShipmentTargets()
+    {
+        if (string.IsNullOrWhiteSpace(SourcePath))
+            throw new InvalidOperationException("LoadBlock: SourcePath is required.");
+
+        if (!Directory.Exists(SourcePath))
+            throw new DirectoryNotFoundException($"LoadBlock: directory not found: {SourcePath}");
+
+        // Get all valid image files
+        var files = Directory.GetFiles(SourcePath)
+            .Where(IsValidImageFile);
+
+        // Apply user's sort preference
+        files = SortOrder switch
+        {
+            FileSortOrder.None => files,
+            FileSortOrder.Lexicographic => files.OrderBy(f => f, StringComparer.OrdinalIgnoreCase),
+            // FileSortOrder.Natural => files.OrderBy(f => f, new NaturalStringComparer()),
+            _ => files
+        };
+
+        // Take up to MaxCount and return as list
+        return files.Take(MaxCount).ToList();
     }
 
     private bool IsValidImageFile(string path)

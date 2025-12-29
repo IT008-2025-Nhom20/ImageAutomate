@@ -55,6 +55,9 @@ A robust metadata descriptor pattern representing a loaded plugin unit.
 *   **Identity:** Name, Version, Path.
 *   **Runtime State:** Reference to `Assembly`, `PluginLoadContext`, and `IsLoaded` status.
 *   **Usage Statistics:** `ActiveInstanceCount` for soft-unload decisions.
+*   **Methods:**
+    - `GetExportedTypes()`: Returns all exported types from the plugin assembly.
+    - `GetBlockTypes()`: Returns types that implement `IBlock` (non-abstract, non-interface).
 
 ### 3.3. PluginLoadContext
 
@@ -102,7 +105,36 @@ Code within the Host Application (e.g., the UI or Execution Engine) requests typ
 *   **Activation:** Standard `Activator.CreateInstance()` creates the object.
 *   **Registration:** The Host **MUST** call `RegisterInstance(obj, pluginName)` to increment the reference counter.
 
-### 5.2. Unloading (Soft & Hard)
+### 5.2. Plugin Initialization Convention
+
+Plugins can optionally define a `PluginInitializer` class that implements `IPluginInitializer`:
+
+```csharp
+public interface IPluginInitializer
+{
+    void Initialize(IRegistryAccessor? registryAccessor);
+}
+```
+
+*   **Discovery:** The `PluginLoader` looks for a type named `PluginInitializer` implementing `IPluginInitializer`.
+*   **Invocation:** `Initialize(IRegistryAccessor? accessor)` is called after the assembly is loaded.
+*   **Usage:** Allows plugins to register custom schedulers or perform other initialization.
+
+### 5.3. Plugin Unload Notification
+
+Plugins can optionally implement `IPluginUnloadable` to receive unload notifications:
+
+```csharp
+public interface IPluginUnloadable
+{
+    bool OnUnloadRequested();
+}
+```
+
+*   **Returns:** `true` if the object accepts unload and has cleaned up; `false` if the object rejects unload (e.g., work in progress).
+*   **Usage:** Called during soft unload to allow cooperative cleanup.
+
+### 5.4. Unloading (Soft & Hard)
 
 Unloading is a sensitive operation due to the lack of forced memory access revocation in managed code.
 
@@ -117,13 +149,36 @@ Unloading is a sensitive operation due to the lack of forced memory access revoc
 
 ## 6. Safety & Consistency
 
-### 6.1. Type Equivalence
+### 6.1. IRegistryAccessor
+
+`IRegistryAccessor` is an abstraction layer to allow Core to register schedulers without referencing the Execution assembly:
+
+```csharp
+public interface IRegistryAccessor
+{
+    void RegisterScheduler(string name, Func<object> factory);
+}
+```
+
+Implemented by `RegistryAccessorProxy` using reflection to avoid circular dependency. Plugins can use this to register custom schedulers:
+
+```csharp
+public class PluginInitializer : IPluginInitializer
+{
+    public void Initialize(IRegistryAccessor? accessor)
+    {
+        accessor?.RegisterScheduler("MyScheduler", () => new MyScheduler());
+    }
+}
+```
+
+### 6.2. Type Equivalence
 
 To ensure objects passed between Host and Plugin are compatible, `ImageAutomate.Core` must be shared.
 
 *   **Mechanism:** The `PluginLoadContext` explicitly rejects loading `ImageAutomate.Core.dll` from the plugin folder, forcing usage of the Host's loaded version. This ensures `typeof(IBlock)` in Plugin A is identical to `typeof(IBlock)` in Host.
 
-### 6.2. Reference Counting
+### 6.3. Reference Counting
 
 The system implements a manual Reference Counting (RC) mechanism for high-level safety, distinct from the GC.
 

@@ -26,26 +26,125 @@ public class FlipBlock : IBlock
     private bool _disposed;
 
     private FlipModeOption _flipMode = FlipModeOption.Horizontal;
+
+    // Layout fields
+    private double _x;
+    private double _y;
+    private int _width;
+    private int _height;
+    private string _title = "Flip";
+
     #endregion
+
+    public FlipBlock()
+        : this(200, 100)
+    {
+    }
+
+    public FlipBlock(int width, int height)
+    {
+        _width = width;
+        _height = height;
+    }
 
     #region IBlock basic
 
     /// <inheritdoc />
+    [Browsable(false)]
     public string Name => "Flip";
 
     /// <inheritdoc />
-    public string Title => "Flip";
+    [Category("Title")]
+    public string Title
+    {
+        get => _title;
+        set
+        {
+            if (_title != value)
+            {
+                _title = value;
+                OnPropertyChanged(nameof(Title));
+            }
+        }
+    }
 
     /// <inheritdoc />
+    [Browsable(false)]
     public string Content => $"Flip direction: {FlipMode}";
+
+    #endregion
+
+    #region Layout Properties
+
+    /// <inheritdoc />
+    [Category("Layout")]
+    public double X
+    {
+        get => _x;
+        set
+        {
+            if (Math.Abs(_x - value) > double.Epsilon)
+            {
+                _x = value;
+                OnPropertyChanged(nameof(X));
+            }
+        }
+    }
+
+    /// <inheritdoc />
+    [Category("Layout")]
+    public double Y
+    {
+        get => _y;
+        set
+        {
+            if (Math.Abs(_y - value) > double.Epsilon)
+            {
+                _y = value;
+                OnPropertyChanged(nameof(Y));
+            }
+        }
+    }
+
+    /// <inheritdoc />
+    [Category("Layout")]
+    public int Width
+    {
+        get => _width;
+        set
+        {
+            if (_width != value)
+            {
+                _width = value;
+                OnPropertyChanged(nameof(Width));
+            }
+        }
+    }
+
+    /// <inheritdoc />
+    [Category("Layout")]
+    public int Height
+    {
+        get => _height;
+        set
+        {
+            if (_height != value)
+            {
+                _height = value;
+                OnPropertyChanged(nameof(Height));
+            }
+        }
+    }
 
     #endregion
 
     #region Sockets
 
     /// <inheritdoc />
+    [Browsable(false)]
     public IReadOnlyList<Socket> Inputs => _inputs;
     /// <inheritdoc />
+    [Browsable(false)]
     public IReadOnlyList<Socket> Outputs => _outputs;
 
     #endregion
@@ -112,6 +211,7 @@ public class FlipBlock : IBlock
     public IReadOnlyDictionary<Socket, IReadOnlyList<IBasicWorkItem>> Execute(
         IDictionary<string, IReadOnlyList<IBasicWorkItem>> inputs, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(inputs, nameof(inputs));
         if (!inputs.TryGetValue(_inputs[0].Id, out var inItems))
             throw new ArgumentException($"Input items not found for the expected input socket {_inputs[0].Id}.", nameof(inputs));
 

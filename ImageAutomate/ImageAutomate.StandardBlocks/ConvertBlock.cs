@@ -1,38 +1,10 @@
-﻿using ImageAutomate.Core;
-using SixLabors.ImageSharp.Formats;
-using SixLabors.ImageSharp.Formats.Bmp;
-using SixLabors.ImageSharp.Formats.Gif;
-using SixLabors.ImageSharp.Formats.Jpeg;
-using SixLabors.ImageSharp.Formats.Pbm;
-using SixLabors.ImageSharp.Formats.Png;
-using SixLabors.ImageSharp.Formats.Qoi;
-using SixLabors.ImageSharp.Formats.Tga;
-using SixLabors.ImageSharp.Formats.Tiff;
-using SixLabors.ImageSharp.Formats.Webp;
+using ImageAutomate.Core;
+using ImageAutomate.Infrastructure;
 using SixLabors.ImageSharp.Processing.Processors.Dithering;
 using SixLabors.ImageSharp.Processing.Processors.Quantization;
-using System.Collections.Immutable;
 using System.ComponentModel;
 
 namespace ImageAutomate.StandardBlocks;
-
-#region Format Enum
-
-public enum ImageFormat
-{
-    Unknown = 0,
-    Bmp,
-    Gif,
-    Jpeg,
-    Pbm,
-    Png,
-    Tiff,
-    Tga,
-    WebP,
-    Qoi
-}
-
-#endregion
 
 #region Quantizer Enums and Options
 
@@ -359,13 +331,232 @@ public enum TiffPhotometricInterpretation
 
 #endregion
 
+#region Enum Mappers to ImageSharp Types
+
+/// <summary>
+/// Maps wrapper enums to ImageSharp enums.
+/// Provides compile-time safety when enum values diverge.
+/// </summary>
+internal static class EnumMappers
+{
+    // JPEG
+    internal static SixLabors.ImageSharp.Formats.Jpeg.JpegEncodingColor ToImageSharp(this JpegEncodingColor value) => value switch
+    {
+        JpegEncodingColor.YCbCrRatio420 => SixLabors.ImageSharp.Formats.Jpeg.JpegEncodingColor.YCbCrRatio420,
+        JpegEncodingColor.YCbCrRatio444 => SixLabors.ImageSharp.Formats.Jpeg.JpegEncodingColor.YCbCrRatio444,
+        JpegEncodingColor.YCbCrRatio422 => SixLabors.ImageSharp.Formats.Jpeg.JpegEncodingColor.YCbCrRatio422,
+        JpegEncodingColor.Luminance => SixLabors.ImageSharp.Formats.Jpeg.JpegEncodingColor.Luminance,
+        JpegEncodingColor.Rgb => SixLabors.ImageSharp.Formats.Jpeg.JpegEncodingColor.Rgb,
+        _ => throw new ArgumentOutOfRangeException(nameof(value), $"Unknown JpegEncodingColor: {value}")
+    };
+
+    // PNG
+    internal static SixLabors.ImageSharp.Formats.Png.PngCompressionLevel ToImageSharp(this PngCompressionLevel value) => value switch
+    {
+        PngCompressionLevel.NoCompression => SixLabors.ImageSharp.Formats.Png.PngCompressionLevel.Level0,
+        PngCompressionLevel.BestSpeed => SixLabors.ImageSharp.Formats.Png.PngCompressionLevel.Level1,
+        PngCompressionLevel.Level2 => SixLabors.ImageSharp.Formats.Png.PngCompressionLevel.Level2,
+        PngCompressionLevel.Level3 => SixLabors.ImageSharp.Formats.Png.PngCompressionLevel.Level3,
+        PngCompressionLevel.Level4 => SixLabors.ImageSharp.Formats.Png.PngCompressionLevel.Level4,
+        PngCompressionLevel.Level5 => SixLabors.ImageSharp.Formats.Png.PngCompressionLevel.Level5,
+        PngCompressionLevel.DefaultCompression => SixLabors.ImageSharp.Formats.Png.PngCompressionLevel.Level6,
+        PngCompressionLevel.Level7 => SixLabors.ImageSharp.Formats.Png.PngCompressionLevel.Level7,
+        PngCompressionLevel.Level8 => SixLabors.ImageSharp.Formats.Png.PngCompressionLevel.Level8,
+        PngCompressionLevel.BestCompression => SixLabors.ImageSharp.Formats.Png.PngCompressionLevel.Level9,
+        _ => throw new ArgumentOutOfRangeException(nameof(value), $"Unknown PngCompressionLevel: {value}")
+    };
+
+    internal static SixLabors.ImageSharp.Formats.Png.PngColorType ToImageSharp(this PngColorType value) => value switch
+    {
+        PngColorType.Grayscale => SixLabors.ImageSharp.Formats.Png.PngColorType.Grayscale,
+        PngColorType.GrayscaleWithAlpha => SixLabors.ImageSharp.Formats.Png.PngColorType.GrayscaleWithAlpha,
+        PngColorType.Palette => SixLabors.ImageSharp.Formats.Png.PngColorType.Palette,
+        PngColorType.Rgb => SixLabors.ImageSharp.Formats.Png.PngColorType.Rgb,
+        PngColorType.RgbWithAlpha => SixLabors.ImageSharp.Formats.Png.PngColorType.RgbWithAlpha,
+        _ => throw new ArgumentOutOfRangeException(nameof(value), $"Unknown PngColorType: {value}")
+    };
+
+    internal static SixLabors.ImageSharp.Formats.Png.PngBitDepth ToImageSharp(this PngBitDepth value) => value switch
+    {
+        PngBitDepth.Bit1 => SixLabors.ImageSharp.Formats.Png.PngBitDepth.Bit1,
+        PngBitDepth.Bit2 => SixLabors.ImageSharp.Formats.Png.PngBitDepth.Bit2,
+        PngBitDepth.Bit4 => SixLabors.ImageSharp.Formats.Png.PngBitDepth.Bit4,
+        PngBitDepth.Bit8 => SixLabors.ImageSharp.Formats.Png.PngBitDepth.Bit8,
+        PngBitDepth.Bit16 => SixLabors.ImageSharp.Formats.Png.PngBitDepth.Bit16,
+        _ => throw new ArgumentOutOfRangeException(nameof(value), $"Unknown PngBitDepth: {value}")
+    };
+
+    internal static SixLabors.ImageSharp.Formats.Png.PngInterlaceMode ToImageSharp(this PngInterlaceMethod value) => value switch
+    {
+        PngInterlaceMethod.None => SixLabors.ImageSharp.Formats.Png.PngInterlaceMode.None,
+        PngInterlaceMethod.Adam7 => SixLabors.ImageSharp.Formats.Png.PngInterlaceMode.Adam7,
+        _ => throw new ArgumentOutOfRangeException(nameof(value), $"Unknown PngInterlaceMethod: {value}")
+    };
+
+    internal static SixLabors.ImageSharp.Formats.Png.PngTransparentColorMode ToImageSharp(this PngTransparentColorMode value) => value switch
+    {
+        PngTransparentColorMode.Preserve => SixLabors.ImageSharp.Formats.Png.PngTransparentColorMode.Preserve,
+        PngTransparentColorMode.Clear => SixLabors.ImageSharp.Formats.Png.PngTransparentColorMode.Clear,
+        _ => throw new ArgumentOutOfRangeException(nameof(value), $"Unknown PngTransparentColorMode: {value}")
+    };
+
+    // BMP
+    internal static SixLabors.ImageSharp.Formats.Bmp.BmpBitsPerPixel ToImageSharp(this BmpBitsPerPixel value) => value switch
+    {
+        BmpBitsPerPixel.Pixel1 => SixLabors.ImageSharp.Formats.Bmp.BmpBitsPerPixel.Pixel1,
+        BmpBitsPerPixel.Pixel4 => SixLabors.ImageSharp.Formats.Bmp.BmpBitsPerPixel.Pixel4,
+        BmpBitsPerPixel.Pixel8 => SixLabors.ImageSharp.Formats.Bmp.BmpBitsPerPixel.Pixel8,
+        BmpBitsPerPixel.Pixel16 => SixLabors.ImageSharp.Formats.Bmp.BmpBitsPerPixel.Pixel16,
+        BmpBitsPerPixel.Pixel24 => SixLabors.ImageSharp.Formats.Bmp.BmpBitsPerPixel.Pixel24,
+        BmpBitsPerPixel.Pixel32 => SixLabors.ImageSharp.Formats.Bmp.BmpBitsPerPixel.Pixel32,
+        _ => throw new ArgumentOutOfRangeException(nameof(value), $"Unknown BmpBitsPerPixel: {value}")
+    };
+
+    // GIF
+    internal static SixLabors.ImageSharp.Formats.Gif.GifColorTableMode ToImageSharp(this GifColorTableMode value) => value switch
+    {
+        GifColorTableMode.Global => SixLabors.ImageSharp.Formats.Gif.GifColorTableMode.Global,
+        GifColorTableMode.Local => SixLabors.ImageSharp.Formats.Gif.GifColorTableMode.Local,
+        _ => throw new ArgumentOutOfRangeException(nameof(value), $"Unknown GifColorTableMode: {value}")
+    };
+
+    // TIFF
+    internal static SixLabors.ImageSharp.Formats.Tiff.Constants.TiffCompression ToImageSharp(this TiffCompression value) => value switch
+    {
+        TiffCompression.None => SixLabors.ImageSharp.Formats.Tiff.Constants.TiffCompression.None,
+        TiffCompression.Ccitt1D => SixLabors.ImageSharp.Formats.Tiff.Constants.TiffCompression.Ccitt1D,
+        TiffCompression.PackBits => SixLabors.ImageSharp.Formats.Tiff.Constants.TiffCompression.PackBits,
+        TiffCompression.Deflate => SixLabors.ImageSharp.Formats.Tiff.Constants.TiffCompression.Deflate,
+        TiffCompression.Lzw => SixLabors.ImageSharp.Formats.Tiff.Constants.TiffCompression.Lzw,
+        TiffCompression.CcittGroup3Fax => SixLabors.ImageSharp.Formats.Tiff.Constants.TiffCompression.CcittGroup3Fax,
+        TiffCompression.CcittGroup4Fax => SixLabors.ImageSharp.Formats.Tiff.Constants.TiffCompression.CcittGroup4Fax,
+        TiffCompression.Jpeg => SixLabors.ImageSharp.Formats.Tiff.Constants.TiffCompression.OldJpeg,
+        TiffCompression.Webp => SixLabors.ImageSharp.Formats.Tiff.Constants.TiffCompression.OldJpeg,
+        _ => throw new ArgumentOutOfRangeException(nameof(value), $"Unknown TiffCompression: {value}")
+    };
+
+    internal static SixLabors.ImageSharp.Formats.Tiff.TiffBitsPerPixel ToImageSharp(this TiffBitsPerPixel value) => value switch
+    {
+        TiffBitsPerPixel.Bit1 => SixLabors.ImageSharp.Formats.Tiff.TiffBitsPerPixel.Bit1,
+        TiffBitsPerPixel.Bit4 => SixLabors.ImageSharp.Formats.Tiff.TiffBitsPerPixel.Bit4,
+        TiffBitsPerPixel.Bit8 => SixLabors.ImageSharp.Formats.Tiff.TiffBitsPerPixel.Bit8,
+        TiffBitsPerPixel.Bit24 => SixLabors.ImageSharp.Formats.Tiff.TiffBitsPerPixel.Bit24,
+        TiffBitsPerPixel.Bit32 => SixLabors.ImageSharp.Formats.Tiff.TiffBitsPerPixel.Bit32,
+        TiffBitsPerPixel.Bit48 => SixLabors.ImageSharp.Formats.Tiff.TiffBitsPerPixel.Bit48,
+        TiffBitsPerPixel.Bit64 => SixLabors.ImageSharp.Formats.Tiff.TiffBitsPerPixel.Bit64,
+        _ => throw new ArgumentOutOfRangeException(nameof(value), $"Unknown TiffBitsPerPixel: {value}")
+    };
+
+    internal static SixLabors.ImageSharp.Compression.Zlib.DeflateCompressionLevel ToImageSharp(this DeflateCompressionLevel value) => value switch
+    {
+        DeflateCompressionLevel.NoCompression => SixLabors.ImageSharp.Compression.Zlib.DeflateCompressionLevel.Level0,
+        DeflateCompressionLevel.BestSpeed => SixLabors.ImageSharp.Compression.Zlib.DeflateCompressionLevel.Level1,
+        DeflateCompressionLevel.Level2 => SixLabors.ImageSharp.Compression.Zlib.DeflateCompressionLevel.Level2,
+        DeflateCompressionLevel.Level3 => SixLabors.ImageSharp.Compression.Zlib.DeflateCompressionLevel.Level3,
+        DeflateCompressionLevel.Level4 => SixLabors.ImageSharp.Compression.Zlib.DeflateCompressionLevel.Level4,
+        DeflateCompressionLevel.Level5 => SixLabors.ImageSharp.Compression.Zlib.DeflateCompressionLevel.Level5,
+        DeflateCompressionLevel.DefaultCompression => SixLabors.ImageSharp.Compression.Zlib.DeflateCompressionLevel.Level6,
+        DeflateCompressionLevel.Level7 => SixLabors.ImageSharp.Compression.Zlib.DeflateCompressionLevel.Level7,
+        DeflateCompressionLevel.Level8 => SixLabors.ImageSharp.Compression.Zlib.DeflateCompressionLevel.Level8,
+        DeflateCompressionLevel.BestCompression => SixLabors.ImageSharp.Compression.Zlib.DeflateCompressionLevel.Level9,
+        _ => throw new ArgumentOutOfRangeException(nameof(value), $"Unknown DeflateCompressionLevel: {value}")
+    };
+
+    internal static SixLabors.ImageSharp.Formats.Tiff.Constants.TiffPredictor ToImageSharp(this TiffPredictor value) => value switch
+    {
+        TiffPredictor.None => SixLabors.ImageSharp.Formats.Tiff.Constants.TiffPredictor.None,
+        TiffPredictor.Horizontal => SixLabors.ImageSharp.Formats.Tiff.Constants.TiffPredictor.Horizontal,
+        _ => throw new ArgumentOutOfRangeException(nameof(value), $"Unknown TiffPredictor: {value}")
+    };
+
+    // TGA
+    internal static SixLabors.ImageSharp.Formats.Tga.TgaBitsPerPixel ToImageSharp(this TgaBitsPerPixel value) => value switch
+    {
+        TgaBitsPerPixel.Pixel8 => SixLabors.ImageSharp.Formats.Tga.TgaBitsPerPixel.Pixel8,
+        TgaBitsPerPixel.Pixel16 => SixLabors.ImageSharp.Formats.Tga.TgaBitsPerPixel.Pixel16,
+        TgaBitsPerPixel.Pixel24 => SixLabors.ImageSharp.Formats.Tga.TgaBitsPerPixel.Pixel24,
+        TgaBitsPerPixel.Pixel32 => SixLabors.ImageSharp.Formats.Tga.TgaBitsPerPixel.Pixel32,
+        _ => throw new ArgumentOutOfRangeException(nameof(value), $"Unknown TgaBitsPerPixel: {value}")
+    };
+
+    internal static SixLabors.ImageSharp.Formats.Tga.TgaCompression ToImageSharp(this TgaCompression value) => value switch
+    {
+        TgaCompression.None => SixLabors.ImageSharp.Formats.Tga.TgaCompression.None,
+        TgaCompression.RunLength => SixLabors.ImageSharp.Formats.Tga.TgaCompression.RunLength,
+        _ => throw new ArgumentOutOfRangeException(nameof(value), $"Unknown TgaCompression: {value}")
+    };
+
+    // WebP
+    internal static SixLabors.ImageSharp.Formats.Webp.WebpFileFormatType ToImageSharp(this WebpFileFormatType value) => value switch
+    {
+        WebpFileFormatType.Lossless => SixLabors.ImageSharp.Formats.Webp.WebpFileFormatType.Lossless,
+        WebpFileFormatType.Lossy => SixLabors.ImageSharp.Formats.Webp.WebpFileFormatType.Lossy,
+        _ => throw new ArgumentOutOfRangeException(nameof(value), $"Unknown WebpFileFormatType: {value}")
+    };
+
+    internal static SixLabors.ImageSharp.Formats.Webp.WebpEncodingMethod ToImageSharp(this WebpEncodingMethod value) => value switch
+    {
+        WebpEncodingMethod.Fastest => SixLabors.ImageSharp.Formats.Webp.WebpEncodingMethod.Level0,
+        WebpEncodingMethod.Level1 => SixLabors.ImageSharp.Formats.Webp.WebpEncodingMethod.Level1,
+        WebpEncodingMethod.Level2 => SixLabors.ImageSharp.Formats.Webp.WebpEncodingMethod.Level2,
+        WebpEncodingMethod.Level3 => SixLabors.ImageSharp.Formats.Webp.WebpEncodingMethod.Level3,
+        WebpEncodingMethod.Default => SixLabors.ImageSharp.Formats.Webp.WebpEncodingMethod.Level4,
+        WebpEncodingMethod.Level5 => SixLabors.ImageSharp.Formats.Webp.WebpEncodingMethod.Level5,
+        WebpEncodingMethod.BestQuality => SixLabors.ImageSharp.Formats.Webp.WebpEncodingMethod.Level6,
+        _ => throw new ArgumentOutOfRangeException(nameof(value), $"Unknown WebpEncodingMethod: {value}")
+    };
+
+    // PBM
+    internal static SixLabors.ImageSharp.Formats.Pbm.PbmColorType ToImageSharp(this PbmColorType value) => value switch
+    {
+        PbmColorType.BlackAndWhite => SixLabors.ImageSharp.Formats.Pbm.PbmColorType.BlackAndWhite,
+        PbmColorType.Grayscale => SixLabors.ImageSharp.Formats.Pbm.PbmColorType.Grayscale,
+        PbmColorType.Rgb => SixLabors.ImageSharp.Formats.Pbm.PbmColorType.Rgb,
+        _ => throw new ArgumentOutOfRangeException(nameof(value), $"Unknown PbmColorType: {value}")
+    };
+
+    internal static SixLabors.ImageSharp.Formats.Pbm.PbmComponentType ToImageSharp(this PbmComponentType value) => value switch
+    {
+        PbmComponentType.Byte => SixLabors.ImageSharp.Formats.Pbm.PbmComponentType.Byte,
+        PbmComponentType.Short => SixLabors.ImageSharp.Formats.Pbm.PbmComponentType.Short,
+        _ => throw new ArgumentOutOfRangeException(nameof(value), $"Unknown PbmComponentType: {value}")
+    };
+
+    internal static SixLabors.ImageSharp.Formats.Pbm.PbmEncoding ToImageSharp(this PbmEncoding value) => value switch
+    {
+        PbmEncoding.Plain => SixLabors.ImageSharp.Formats.Pbm.PbmEncoding.Plain,
+        PbmEncoding.Binary => SixLabors.ImageSharp.Formats.Pbm.PbmEncoding.Binary,
+        _ => throw new ArgumentOutOfRangeException(nameof(value), $"Unknown PbmEncoding: {value}")
+    };
+
+    // QOI
+    internal static SixLabors.ImageSharp.Formats.Qoi.QoiChannels ToImageSharp(this QoiChannels value) => value switch
+    {
+        QoiChannels.Rgb => SixLabors.ImageSharp.Formats.Qoi.QoiChannels.Rgb,
+        QoiChannels.Rgba => SixLabors.ImageSharp.Formats.Qoi.QoiChannels.Rgba,
+        _ => throw new ArgumentOutOfRangeException(nameof(value), $"Unknown QoiChannels: {value}")
+    };
+
+    internal static SixLabors.ImageSharp.Formats.Qoi.QoiColorSpace ToImageSharp(this QoiColorSpace value) => value switch
+    {
+        QoiColorSpace.SrgbWithLinearAlpha => SixLabors.ImageSharp.Formats.Qoi.QoiColorSpace.SrgbWithLinearAlpha,
+        QoiColorSpace.Linear => SixLabors.ImageSharp.Formats.Qoi.QoiColorSpace.AllChannelsLinear,
+        _ => throw new ArgumentOutOfRangeException(nameof(value), $"Unknown QoiColorSpace: {value}")
+    };
+}
+
+#endregion
+
 public class ConvertBlock : IBlock
 {
     #region Fields
+    public static IReadOnlyList<string> SupportedFormats
+        => ImageFormatRegistry.Instance.GetRegisteredFormats();
+
     private readonly IReadOnlyList<Socket> _inputs = [new("Convert.In", "Image.Input")];
     private readonly IReadOnlyList<Socket> _outputs = [new("Convert.Out", "Image.Out")];
 
-    private ImageFormat _targetFormat = ImageFormat.Png;
+    private string _targetFormat = "PNG";
     private bool _alwaysEncode = false;
     private bool disposedValue = false;
 
@@ -379,10 +570,24 @@ public class ConvertBlock : IBlock
     private WebPEncodingOptions _webpOptions = new();
     private QoiEncodingOptions _qoiOptions = new();
 
+    // Layout fields
+    private double _x;
+    private double _y;
+    private int _width;
+    private int _height;
+    private string _title = "Convert";
+
     #endregion
 
     public ConvertBlock()
+        : this(200, 100)
     {
+    }
+
+    public ConvertBlock(int width, int height)
+    {
+        _width = width;
+        _height = height;
         _jpegOptions.PropertyChanged += Options_OnPropertyChanged;
         _pbmOptions.PropertyChanged += Options_OnPropertyChanged;
         _pngOptions.PropertyChanged += Options_OnPropertyChanged;
@@ -396,28 +601,116 @@ public class ConvertBlock : IBlock
 
     #region Basic Properties
 
+    [Browsable(false)]
     public string Name => "Convert";
 
-    public string Title => "Convert";
+    [Category("Title")]
+    public string Title
+    {
+        get => _title;
+        set
+        {
+            if (_title != value)
+            {
+                _title = value;
+                OnPropertyChanged(nameof(Title));
+            }
+        }
+    }
 
+    [Browsable(false)]
     public string Content
     {
         get
         {
-            var optionSummaries = TargetFormat switch
+            var strategy = ImageFormatRegistry.Instance.GetFormat(TargetFormat);
+            var options = GetOptionsForFormat(TargetFormat);
+            var optionSummary = strategy?.GetOptionsSummary(options) ?? "Default";
+            return $"Format: {TargetFormat}\nRe-encode: {AlwaysEncode}\n{optionSummary}";
+        }
+    }
+
+    /// <summary>
+    /// Gets the encoding options for the specified format.
+    /// </summary>
+    private object? GetOptionsForFormat(string formatName)
+    {
+        return formatName.ToUpperInvariant() switch
+        {
+            "JPEG" => JpegOptions,
+            "PNG" => PngOptions,
+            "BMP" => BmpOptions,
+            "GIF" => GifOptions,
+            "TIFF" => TiffOptions,
+            "TGA" => TgaOptions,
+            "WEBP" => WebPOptions,
+            "PBM" => PbmOptions,
+            "QOI" => QoiOptions,
+            _ => null
+        };
+    }
+
+    #endregion
+
+    #region Layout Properties
+
+    /// <inheritdoc />
+    [Category("Layout")]
+    public double X
+    {
+        get => _x;
+        set
+        {
+            if (Math.Abs(_x - value) > double.Epsilon)
             {
-                ImageFormat.Jpeg => $"Quality: {JpegOptions.Quality}",
-                ImageFormat.Pbm => $"Encoding: {PbmOptions.Encoding}",
-                ImageFormat.Png => $"Compression: {PngOptions.CompressionLevel}",
-                ImageFormat.Bmp => BmpOptions.BitsPerPixel.HasValue ? $"{BmpOptions.BitsPerPixel}bpp" : "Auto",
-                ImageFormat.Gif => $"{GifOptions.Quantizer.MaxColors} colors, {GifOptions.ColorTableMode}",
-                ImageFormat.Tiff => $"Compression: {TiffOptions.Compression}",
-                ImageFormat.Tga => $"Compression: {TgaOptions.Compression}",
-                ImageFormat.WebP => WebPOptions.FileFormat == WebpFileFormatType.Lossless ? "Lossless" : $"Lossy Q{WebPOptions.Quality}",
-                ImageFormat.Qoi => QoiOptions.Channels.HasValue ? $"{QoiOptions.Channels}" : "Auto",
-                _ => "Options: Default"
-            };
-            return $"Format: {TargetFormat}\nRe-encode: {AlwaysEncode}\n{optionSummaries}";
+                _x = value;
+                OnPropertyChanged(nameof(X));
+            }
+        }
+    }
+
+    /// <inheritdoc />
+    [Category("Layout")]
+    public double Y
+    {
+        get => _y;
+        set
+        {
+            if (Math.Abs(_y - value) > double.Epsilon)
+            {
+                _y = value;
+                OnPropertyChanged(nameof(Y));
+            }
+        }
+    }
+
+    /// <inheritdoc />
+    [Category("Layout")]
+    public int Width
+    {
+        get => _width;
+        set
+        {
+            if (_width != value)
+            {
+                _width = value;
+                OnPropertyChanged(nameof(Width));
+            }
+        }
+    }
+
+    /// <inheritdoc />
+    [Category("Layout")]
+    public int Height
+    {
+        get => _height;
+        set
+        {
+            if (_height != value)
+            {
+                _height = value;
+                OnPropertyChanged(nameof(Height));
+            }
         }
     }
 
@@ -425,7 +718,9 @@ public class ConvertBlock : IBlock
 
     #region Sockets
 
+    [Browsable(false)]
     public IReadOnlyList<Socket> Inputs => _inputs;
+    [Browsable(false)]
     public IReadOnlyList<Socket> Outputs => _outputs;
 
     #endregion
@@ -434,7 +729,8 @@ public class ConvertBlock : IBlock
 
     [Category("Configuration")]
     [Description("Target image format for conversion")]
-    public ImageFormat TargetFormat
+    [TypeConverter(typeof(ImageFormatConverter))]
+    public string TargetFormat
     {
         get => _targetFormat;
         set
@@ -443,6 +739,7 @@ public class ConvertBlock : IBlock
             {
                 _targetFormat = value;
                 OnPropertyChanged(nameof(TargetFormat));
+                OnPropertyChanged(nameof(Content));
                 OnPropertyChanged(nameof(JpegOptions));
                 OnPropertyChanged(nameof(PbmOptions));
                 OnPropertyChanged(nameof(PngOptions));
@@ -687,6 +984,7 @@ public class ConvertBlock : IBlock
 
     public IReadOnlyDictionary<Socket, IReadOnlyList<IBasicWorkItem>> Execute(IDictionary<string, IReadOnlyList<IBasicWorkItem>> inputs, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(inputs, nameof(inputs));
         if (!inputs.TryGetValue(_inputs[0].Id, out var inItems))
             throw new ArgumentException($"Input items not found for the expected input socket {_inputs[0].Id}.", nameof(inputs));
 
@@ -695,25 +993,12 @@ public class ConvertBlock : IBlock
         foreach (WorkItem sourceItem in inItems.OfType<WorkItem>())
         {
             cancellationToken.ThrowIfCancellationRequested();
-            
+
             // Mutate metadata in-place and return same WorkItem (no image cloning needed)
             sourceItem.Metadata = sourceItem.Metadata
-                .SetItem("Format", TargetFormat.ToString())
-                .SetItem("EncodingOptions", TargetFormat switch
-                {
-                    ImageFormat.Jpeg => (object)JpegOptions,
-                    ImageFormat.Pbm => (object)PbmOptions,
-                    ImageFormat.Png => (object)PngOptions,
-                    ImageFormat.Bmp => (object)BmpOptions,
-                    ImageFormat.Gif => (object)GifOptions,
-                    ImageFormat.Tiff => (object)TiffOptions,
-                    ImageFormat.Tga => (object)TgaOptions,
-                    ImageFormat.WebP => (object)WebPOptions,
-                    ImageFormat.Qoi => (object)QoiOptions,
-                    ImageFormat.Unknown => throw new InvalidOperationException("Cannot convert to Unknown format."),
-                    _ => null
-                } ?? null!);
-            
+                .SetItem("Format", TargetFormat)
+                .SetItem("EncodingOptions", GetOptionsForFormat(TargetFormat) ?? null!);
+
             outputItems.Add(sourceItem);
         }
 
@@ -739,6 +1024,17 @@ public class ConvertBlock : IBlock
     }
 
     #endregion
+}
+
+public class ImageFormatConverter : StringConverter
+{
+    public override bool GetStandardValuesSupported(ITypeDescriptorContext? context) => true;
+    public override bool GetStandardValuesExclusive(ITypeDescriptorContext? context) => true;
+
+    public override StandardValuesCollection GetStandardValues(ITypeDescriptorContext? context)
+    {
+        return new StandardValuesCollection((System.Collections.ICollection)ConvertBlock.SupportedFormats);
+    }
 }
 
 #region Encoding Classes
@@ -1147,23 +1443,3 @@ public class TiffEncodingOptions : INotifyPropertyChanged
 }
 
 #endregion
-
-public static class ImageSharpExtensions
-{
-    public static ImageFormat ToSimpleFormat(this IImageFormat format)
-    {
-        return format switch
-        {
-            BmpFormat => ImageFormat.Bmp,
-            GifFormat => ImageFormat.Gif,
-            JpegFormat => ImageFormat.Jpeg,
-            PbmFormat => ImageFormat.Pbm,
-            PngFormat => ImageFormat.Png,
-            TiffFormat => ImageFormat.Tiff,
-            TgaFormat => ImageFormat.Tga,
-            WebpFormat => ImageFormat.WebP,
-            QoiFormat => ImageFormat.Qoi,
-            _ => ImageFormat.Unknown
-        };
-    }
-}

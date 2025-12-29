@@ -142,4 +142,9 @@ public class StubGraphValidator : IGraphValidator
     {
         return true;
     }
+
+    public Task<bool> ValidateAsync(PipelineGraph graph, CancellationToken cancellationToken = default)
+    {
+        return Task.FromResult(true);
+    }
 }

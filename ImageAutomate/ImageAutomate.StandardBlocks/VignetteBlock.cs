@@ -1,4 +1,4 @@
-﻿using ImageAutomate.Core;
+using ImageAutomate.Core;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Processing;
 using System.ComponentModel;
@@ -16,7 +16,25 @@ public class VignetteBlock : IBlock
     private float _strength = 0.6f;
     private bool _disposed;
 
+    // Layout fields
+    private double _x;
+    private double _y;
+    private int _width;
+    private int _height;
+    private string _title = "Vignette";
+
     #endregion
+
+    public VignetteBlock()
+        : this(200, 100)
+    {
+    }
+
+    public VignetteBlock(int width, int height)
+    {
+        _width = width;
+        _height = height;
+    }
 
     #region INotifyPropertyChanged
 
@@ -29,11 +47,89 @@ public class VignetteBlock : IBlock
 
     #region Basic Properties
 
+    [Browsable(false)]
     public string Name => "Vignette";
 
-    public string Title => "Vignette";
+    [Category("Title")]
+    public string Title
+    {
+        get => _title;
+        set
+        {
+            if (_title != value)
+            {
+                _title = value;
+                OnPropertyChanged(nameof(Title));
+            }
+        }
+    }
 
+    [Browsable(false)]
     public string Content => $"Color: {Color}\nStrength: {Strength}";
+
+    #endregion
+
+    #region Layout Properties
+
+    /// <inheritdoc />
+    [Category("Layout")]
+    public double X
+    {
+        get => _x;
+        set
+        {
+            if (Math.Abs(_x - value) > double.Epsilon)
+            {
+                _x = value;
+                OnPropertyChanged(nameof(X));
+            }
+        }
+    }
+
+    /// <inheritdoc />
+    [Category("Layout")]
+    public double Y
+    {
+        get => _y;
+        set
+        {
+            if (Math.Abs(_y - value) > double.Epsilon)
+            {
+                _y = value;
+                OnPropertyChanged(nameof(Y));
+            }
+        }
+    }
+
+    /// <inheritdoc />
+    [Category("Layout")]
+    public int Width
+    {
+        get => _width;
+        set
+        {
+            if (_width != value)
+            {
+                _width = value;
+                OnPropertyChanged(nameof(Width));
+            }
+        }
+    }
+
+    /// <inheritdoc />
+    [Category("Layout")]
+    public int Height
+    {
+        get => _height;
+        set
+        {
+            if (_height != value)
+            {
+                _height = value;
+                OnPropertyChanged(nameof(Height));
+            }
+        }
+    }
 
     #endregion
 
@@ -74,7 +170,9 @@ public class VignetteBlock : IBlock
 
     #region Sockets
 
+    [Browsable(false)]
     public IReadOnlyList<Socket> Inputs => _inputs;
+    [Browsable(false)]
     public IReadOnlyList<Socket> Outputs => _outputs;
 
     #endregion
@@ -102,6 +200,7 @@ public class VignetteBlock : IBlock
     public IReadOnlyDictionary<Socket, IReadOnlyList<IBasicWorkItem>> Execute(
         IDictionary<string, IReadOnlyList<IBasicWorkItem>> inputs, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(inputs, nameof(inputs));
         if (!inputs.TryGetValue(_inputs[0].Id, out var inItems))
             throw new ArgumentException($"Input items not found for the expected input socket {_inputs[0].Id}.", nameof(inputs));
 
@@ -151,4 +250,3 @@ public class VignetteBlock : IBlock
 
     #endregion
 }
-

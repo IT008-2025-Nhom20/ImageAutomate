@@ -26,8 +26,8 @@ internal class PluginLoadContext : AssemblyLoadContext
         }
 
         // Also share common dependencies to avoid version conflicts
-        if (assemblyName.Name?.StartsWith("System.") == true ||
-            assemblyName.Name?.StartsWith("Microsoft.") == true ||
+        if (assemblyName.Name?.StartsWith("System.", StringComparison.Ordinal) == true ||
+            assemblyName.Name?.StartsWith("Microsoft.", StringComparison.Ordinal) == true ||
             assemblyName.Name == "netstandard" ||
             assemblyName.Name == "SixLabors.ImageSharp")
         {

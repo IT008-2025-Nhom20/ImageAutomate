@@ -4,6 +4,7 @@
  * Data Transfer Objects for serializing PipelineGraph and related types.
  */
 
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
 
 namespace ImageAutomate.Core.Serialization;
@@ -23,6 +24,7 @@ public class SocketDto
 
     public SocketDto(Socket socket)
     {
+        ArgumentNullException.ThrowIfNull(socket);
         Id = socket.Id;
         Name = socket.Name;
     }
@@ -34,26 +36,10 @@ public class SocketDto
 }
 
 /// <summary>
-/// DTO for block layout information (embedded in each block for human readability).
-/// </summary>
-public class BlockLayoutDto
-{
-    [JsonPropertyName("x")]
-    public double X { get; set; }
-
-    [JsonPropertyName("y")]
-    public double Y { get; set; }
-
-    [JsonPropertyName("width")]
-    public int Width { get; set; }
-
-    [JsonPropertyName("height")]
-    public int Height { get; set; }
-}
-
-/// <summary>
 /// DTO for serializing IBlock data.
+/// Layout properties (X, Y, Width, Height) are serialized as regular properties.
 /// </summary>
+[SuppressMessage("Usage", "CA2227:Collection properties should be read only", Justification = "DTO requires setters for JSON deserialization")]
 public class BlockDto
 {
     [JsonPropertyName("blockType")]
@@ -62,20 +48,27 @@ public class BlockDto
     [JsonPropertyName("assemblyQualifiedName")]
     public string AssemblyQualifiedName { get; set; } = string.Empty;
 
-    /// <summary>
-    /// Layout information (position and size) embedded in the block for human-readable JSON.
-    /// </summary>
-    [JsonPropertyName("layout")]
-    public BlockLayoutDto? Layout { get; set; }
-
     [JsonPropertyName("properties")]
-    public Dictionary<string, object?> Properties { get; set; } = new();
+    public Dictionary<string, object?> Properties { get; set; } = [];
 
     [JsonPropertyName("inputs")]
-    public List<SocketDto> Inputs { get; set; } = new();
+    public IReadOnlyList<SocketDto> Inputs { get; set; } = [];
 
     [JsonPropertyName("outputs")]
-    public List<SocketDto> Outputs { get; set; } = new();
+    public IReadOnlyList<SocketDto> Outputs { get; set; } = [];
+
+    public BlockDto()
+    {
+    }
+
+    public BlockDto(string blockType, string assemblyQualifiedName, Dictionary<string, object?> properties, IReadOnlyList<SocketDto> inputs, IReadOnlyList<SocketDto> outputs)
+    {
+        BlockType = blockType;
+        AssemblyQualifiedName = assemblyQualifiedName;
+        Properties = properties;
+        Inputs = inputs;
+        Outputs = outputs;
+    }
 }
 
 /// <summary>
@@ -102,38 +95,35 @@ public class ConnectionDto
 public class PipelineGraphDto
 {
     [JsonPropertyName("blocks")]
-    public List<BlockDto> Blocks { get; set; } = new();
+    public IReadOnlyList<BlockDto> Blocks { get; set; }
 
     [JsonPropertyName("connections")]
-    public List<ConnectionDto> Connections { get; set; } = new();
+    public IReadOnlyList<ConnectionDto> Connections { get; set; }
 
     [JsonPropertyName("centerBlockIndex")]
     public int? CenterBlockIndex { get; set; }
-}
 
-/// <summary>
-/// DTO for storing view state information (global view settings only).
-/// Block-specific layout is now embedded in each BlockDto.
-/// </summary>
-public class ViewStateDto
-{
-    [JsonPropertyName("zoom")]
-    public double Zoom { get; set; } = 1.0;
+    public PipelineGraphDto()
+        : this([], [], null)
+    {
+    }
 
-    [JsonPropertyName("panX")]
-    public double PanX { get; set; } = 0.0;
-
-    [JsonPropertyName("panY")]
-    public double PanY { get; set; } = 0.0;
+    public PipelineGraphDto(IReadOnlyList<BlockDto> blocks, IReadOnlyList<ConnectionDto> connections, int? centerBlockIndex)
+    {
+        Blocks = blocks;
+        Connections = connections;
+        CenterBlockIndex = centerBlockIndex;
+    }
 }
 
 /// <summary>
 /// DTO for serializing a complete Workspace.
 /// </summary>
+[SuppressMessage("Usage", "CA2227:Collection properties should be read only", Justification = "DTO requires setters for JSON deserialization")]
 public class WorkspaceDto
 {
     [JsonPropertyName("$schema")]
-    public string? Schema { get; set; }
+    public Uri? Schema { get; set; }
 
     [JsonPropertyName("version")]
     public string Version { get; set; } = "1.0";
@@ -144,9 +134,36 @@ public class WorkspaceDto
     [JsonPropertyName("graph")]
     public PipelineGraphDto? Graph { get; set; }
 
-    [JsonPropertyName("viewState")]
-    public ViewStateDto? ViewState { get; set; }
+    [JsonPropertyName("zoom")]
+    public double Zoom { get; set; } = 1.0;
+
+    [JsonPropertyName("panX")]
+    public double PanX { get; set; } = 0.0;
+
+    [JsonPropertyName("panY")]
+    public double PanY { get; set; } = 0.0;
 
     [JsonPropertyName("metadata")]
-    public Dictionary<string, object?> Metadata { get; set; } = new();
+    public Dictionary<string, object?> Metadata { get; set; } = [];
+
+    public WorkspaceDto()
+    {
+    }
+
+    public WorkspaceDto(Uri? schema, string version, string name, PipelineGraphDto? graph, double zoom, double panX, double panY, Dictionary<string, object?> metadata)
+    {
+        Schema = schema;
+        Version = version;
+        Name = name;
+        Graph = graph;
+        Zoom = zoom;
+        PanX = panX;
+        PanY = panY;
+        Metadata = metadata;
+    }
+
+    public WorkspaceDto(string version, string name, PipelineGraphDto? graph, double zoom, double panX, double panY, Dictionary<string, object?> metadata)
+        : this(null, version, name, graph, zoom, panX, panY, metadata)
+    {
+    }
 }

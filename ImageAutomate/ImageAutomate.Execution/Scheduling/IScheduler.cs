@@ -26,7 +26,7 @@ namespace ImageAutomate.Execution.Scheduling;
 /// <item>Block blocked/failed (<see cref="NotifyBlocked"/>)</item>
 /// </list>
 /// </remarks>
-internal interface IScheduler
+public interface IScheduler
 {
     /// <summary>
     /// Gets whether the scheduler has pending work (queued or could be queued).

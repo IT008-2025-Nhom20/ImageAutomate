@@ -39,35 +39,41 @@ public class GraphExecutor : IGraphExecutor
     {
         configuration ??= new ExecutorConfiguration();
 
-        // Phase 1: Static Validation
-        if (!_validator.Validate(graph))
+        // Phase 1: Static Validation (offloaded to ThreadPool)
+        if (!await _validator.ValidateAsync(graph, cancellationToken))
             throw new PipelineValidationException("Graph validation failed.");
 
-        // Phase 2: Initialization
-        var scheduler = SchedulerFactory.CreateScheduler(configuration.Mode);
-        var context = new ExecutionContext(graph, configuration, scheduler, cancellationToken);
+        ExecutionContext? context = null;
 
-        // Initialize shipment sources and track them as active
-        foreach (var block in graph.Nodes)
+        await Task.Run(() =>
         {
-            if (block is IShipmentSource shipmentSource)
+            // Phase 2: Initialization (runs on ThreadPool, not UI thread)
+            var scheduler = SchedulerFactory.CreateScheduler(configuration.Mode);
+            context = new ExecutionContext(graph, configuration, scheduler, cancellationToken);
+
+            // Initialize shipment sources and track them as active
+            foreach (var block in graph.Nodes)
             {
-                shipmentSource.MaxShipmentSize = configuration.MaxShipmentSize;
-                context.MarkSourceActive(block);
+                if (block is IShipmentSource shipmentSource)
+                {
+                    shipmentSource.MaxShipmentSize = configuration.MaxShipmentSize;
+                    context.InitializeShipmentSource(shipmentSource); // Scan directories and prepare file lists
+                    context.MarkSourceActive(block);
+                }
             }
-        }
 
-        // Initialize active connections after all sources are marked active
-        context.InitializeActiveConnections();
+            // Initialize active connections after all sources are marked active
+            context.InitializeActiveConnections();
 
-        // Let scheduler discover and enqueue source blocks
-        scheduler.Initialize(context);
+            // Let scheduler discover and enqueue source blocks
+            scheduler.Initialize(context);
 
-        // Phase 3: Runtime Loop
-        await ExecuteRuntimeLoopAsync(context);
+            // Phase 3: Runtime Loop (runs on ThreadPool)
+            return ExecuteRuntimeLoopAsync(context);
+        }, cancellationToken);
 
         // Phase 4: Error Propagation
-        if (context.HasExceptions)
+        if (context!.HasExceptions)
         {
             throw new AggregateException(
                 "Pipeline execution failed with one or more errors.",
@@ -78,7 +84,7 @@ public class GraphExecutor : IGraphExecutor
     /// <summary>
     /// Main execution loop: dispatch blocks, execute, and signal dependencies.
     /// </summary>
-    private async Task ExecuteRuntimeLoopAsync(ExecutionContext context)
+    private static async Task ExecuteRuntimeLoopAsync(ExecutionContext context)
     {
         var watchdogTimer = Stopwatch.StartNew();
         var activeTasks = new List<Task>();
@@ -176,7 +182,7 @@ public class GraphExecutor : IGraphExecutor
     /// <summary>
     /// Executes a single block and handles result propagation.
     /// </summary>
-    private void ExecuteBlock(IBlock block, ExecutionContext context)
+    private static void ExecuteBlock(IBlock block, ExecutionContext context)
     {
         IDictionary<Socket, IReadOnlyList<IBasicWorkItem>>? inputs = null;
         IReadOnlyDictionary<Socket, IReadOnlyList<IBasicWorkItem>>? outputs = null;
@@ -185,6 +191,12 @@ public class GraphExecutor : IGraphExecutor
         {
             // Mark as running
             context.SetBlockState(block, BlockExecutionState.Running);
+
+            // Prepare shipment data for sources before execution
+            if (block is IShipmentSource shipmentSource)
+            {
+                context.PrepareShipment(shipmentSource);
+            }
 
             // Gather inputs from upstream warehouses
             inputs = GatherInputs(block, context);
@@ -196,7 +208,14 @@ public class GraphExecutor : IGraphExecutor
             ExportOutputs(block, outputs, context);
 
             // Check if this is a shipment source that has more shipments
-            bool hasMoreShipments = ShouldReEnqueueShipment(block, outputs, context);
+            bool hasMoreShipments = false;
+            if (block is IShipmentSource source)
+            {
+                // Consume the processed shipment and check if exhausted
+                int processedCount = outputs.Values.FirstOrDefault()?.Count ?? 0;
+                bool isExhausted = context.ConsumeShipment(source, processedCount);
+                hasMoreShipments = !isExhausted;
+            }
 
             // Notify scheduler of completion FIRST
             context.Scheduler.NotifyCompleted(block, context);
@@ -244,41 +263,9 @@ public class GraphExecutor : IGraphExecutor
     }
 
     /// <summary>
-    /// Determines if a shipment source should be re-enqueued for another execution.
-    /// </summary>
-    /// <remarks>
-    /// A block is re-enqueued if:
-    /// 1. It implements IShipmentSource
-    /// 2. It has no incoming connections (is a source block)
-    /// 3. Its output count equals MaxShipmentSize (indicating more may be available)
-    ///
-    /// When output count &lt; MaxShipmentSize, the source is exhausted.
-    /// </remarks>
-    private bool ShouldReEnqueueShipment(
-        IBlock block,
-        IReadOnlyDictionary<Socket, IReadOnlyList<IBasicWorkItem>> outputs,
-        ExecutionContext context)
-    {
-        // Only shipment sources can be re-enqueued
-        if (block is not IShipmentSource shipmentSource)
-            return false;
-
-        // Only source blocks (in-degree == 0) are shipment sources
-        if (context.InDegree[block] != 0)
-            return false;
-
-        // Check if output count indicates more shipments available
-        int totalOutputCount = outputs.Values.Sum(list => list.Count);
-
-        // If output count equals max shipment size, assume more shipments exist
-        // If output count < max shipment size, source is exhausted
-        return totalOutputCount >= shipmentSource.MaxShipmentSize;
-    }
-
-    /// <summary>
     /// Gathers inputs for a block from upstream warehouses (implements JIT cloning).
     /// </summary>
-    private IDictionary<Socket, IReadOnlyList<IBasicWorkItem>> GatherInputs(IBlock block, ExecutionContext context)
+    private static Dictionary<Socket, IReadOnlyList<IBasicWorkItem>> GatherInputs(IBlock block, ExecutionContext context)
     {
         var inputs = new Dictionary<Socket, List<IBasicWorkItem>>();
 
@@ -299,11 +286,10 @@ public class GraphExecutor : IGraphExecutor
                 // Map source socket to target socket, merging items if multiple connections to same socket
                 if (warehouseOutputs.TryGetValue(connection.SourceSocket, out var items))
                 {
-                    if (!inputs.ContainsKey(targetSocket))
+                    if (inputs.TryGetValue(targetSocket, out var existingItems))
                     {
-                        inputs[targetSocket] = new List<IBasicWorkItem>();
+                        existingItems.AddRange(items);
                     }
-                    inputs[targetSocket].AddRange(items);
                 }
             }
         }
@@ -317,7 +303,7 @@ public class GraphExecutor : IGraphExecutor
     /// <summary>
     /// Commits block outputs to its warehouse.
     /// </summary>
-    private void ExportOutputs(
+    private static void ExportOutputs(
         IBlock block,
         IReadOnlyDictionary<Socket, IReadOnlyList<IBasicWorkItem>> outputs,
         ExecutionContext context)
@@ -335,7 +321,7 @@ public class GraphExecutor : IGraphExecutor
     /// </summary>
     /// <param name="inputs">The input work items to potentially dispose.</param>
     /// <param name="outputs">The output work items to exclude from disposal (may contain same objects as inputs).</param>
-    private void DisposeInputs(
+    private static void DisposeInputs(
         IDictionary<Socket, IReadOnlyList<IBasicWorkItem>> inputs,
         IReadOnlyDictionary<Socket, IReadOnlyList<IBasicWorkItem>>? outputs)
     {
@@ -371,7 +357,7 @@ public class GraphExecutor : IGraphExecutor
     /// NOTE: This is only called for failures, not for natural source exhaustion.
     /// Exhausted sources let their final batch flow through naturally.
     /// </remarks>
-    private void BlockDownstreamOnFailure(IBlock failedBlock, ExecutionContext context)
+    private static void BlockDownstreamOnFailure(IBlock failedBlock, ExecutionContext context)
     {
         // BFS to find and block all downstream blocks that can't execute
         var visited = new HashSet<IBlock>();
@@ -426,7 +412,7 @@ public class GraphExecutor : IGraphExecutor
     /// <summary>
     /// Handles block execution failure: marks blocked, propagates downstream.
     /// </summary>
-    private void HandleBlockFailure(IBlock block, Exception exception, ExecutionContext context)
+    private static void HandleBlockFailure(IBlock block, Exception exception, ExecutionContext context)
     {
         // Mark as failed (failed blocks are "poisonous" - they behave like blocked
         // blocks but retain their Failed state for diagnostics)
@@ -448,7 +434,7 @@ public class GraphExecutor : IGraphExecutor
     /// </summary>
     /// <param name="context">The execution context.</param>
     /// <param name="activeTasks">List of active tasks to cancel.</param>
-    private async Task CleanupOnCancellation(ExecutionContext context, List<Task> activeTasks)
+    private static async Task CleanupOnCancellation(ExecutionContext context, List<Task> activeTasks)
     {
         // Note: Warehouses are cleared on next cycle reset or by context cleanup
         // The main concern here is to let active tasks complete gracefully

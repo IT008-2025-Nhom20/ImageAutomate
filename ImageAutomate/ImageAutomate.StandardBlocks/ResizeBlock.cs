@@ -48,28 +48,126 @@ public class ResizeBlock : IBlock
     private int? _targetHeight = 100;
     private bool _preserveAspectRatio = true;
     private ResizeResampler _resampler = ResizeResampler.Bicubic;
-    private Color _backgroundColor = Color.Black;
+    private Color _paddingColor = Color.Black;
+
+    // Layout fields
+    private double _x;
+    private double _y;
+    private int _width;
+    private int _height;
+    private string _title = "Resize";
 
     #endregion
+
+    public ResizeBlock()
+        : this(200, 100)
+    {
+    }
+
+    public ResizeBlock(int width, int height)
+    {
+        _width = width;
+        _height = height;
+    }
 
     #region IBlock basic
 
     /// <inheritdoc />
+    [Browsable(false)]
     public string Name => "Resize";
 
     /// <inheritdoc />
-    public string Title => "Resize";
+    [Category("Title")]
+    public string Title
+    {
+        get => _title;
+        set
+        {
+            if (_title != value)
+            {
+                _title = value;
+                OnPropertyChanged(nameof(Title));
+            }
+        }
+    }
 
     /// <inheritdoc />
+    [Browsable(false)]
     public string Content => $"Size: {TargetWidth}x{TargetHeight}\nMode: {ResizeMode}";
+
+    #endregion
+
+    #region Layout Properties
+
+    /// <inheritdoc />
+    [Category("Layout")]
+    public double X
+    {
+        get => _x;
+        set
+        {
+            if (Math.Abs(_x - value) > double.Epsilon)
+            {
+                _x = value;
+                OnPropertyChanged(nameof(X));
+            }
+        }
+    }
+
+    /// <inheritdoc />
+    [Category("Layout")]
+    public double Y
+    {
+        get => _y;
+        set
+        {
+            if (Math.Abs(_y - value) > double.Epsilon)
+            {
+                _y = value;
+                OnPropertyChanged(nameof(Y));
+            }
+        }
+    }
+
+    /// <inheritdoc />
+    [Category("Layout")]
+    public int Width
+    {
+        get => _width;
+        set
+        {
+            if (_width != value)
+            {
+                _width = value;
+                OnPropertyChanged(nameof(Width));
+            }
+        }
+    }
+
+    /// <inheritdoc />
+    [Category("Layout")]
+    public int Height
+    {
+        get => _height;
+        set
+        {
+            if (_height != value)
+            {
+                _height = value;
+                OnPropertyChanged(nameof(Height));
+            }
+        }
+    }
 
     #endregion
 
     #region Sockets
 
     /// <inheritdoc />
+    [Browsable(false)]
     public IReadOnlyList<Socket> Inputs => _inputs;
     /// <inheritdoc />
+    [Browsable(false)]
     public IReadOnlyList<Socket> Outputs => _outputs;
 
     #endregion
@@ -177,15 +275,15 @@ public class ResizeBlock : IBlock
     /// </summary>
     [Category("Configuration")]
     [Description("Background color used when ResizeMode = Pad.")]
-    public Color BackgroundColor
+    public Color PaddingColor
     {
-        get => _backgroundColor;
+        get => _paddingColor;
         set
         {
-            if (_backgroundColor != value)
+            if (_paddingColor != value)
             {
-                _backgroundColor = value;
-                OnPropertyChanged(nameof(BackgroundColor));
+                _paddingColor = value;
+                OnPropertyChanged(nameof(PaddingColor));
             }
         }
     }
@@ -228,6 +326,7 @@ public class ResizeBlock : IBlock
     /// <inheritdoc />
     public IReadOnlyDictionary<Socket, IReadOnlyList<IBasicWorkItem>> Execute(IDictionary<string, IReadOnlyList<IBasicWorkItem>> inputs, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(inputs, nameof(inputs));
         if (!inputs.TryGetValue(_inputs[0].Id, out var inItems))
             throw new ArgumentException($"Input items not found for the expected input socket {_inputs[0].Id}.", nameof(inputs));
 
@@ -276,7 +375,7 @@ public class ResizeBlock : IBlock
 
         if (_resizeMode == ResizeModeOption.Pad)
         {
-            options.PadColor = BackgroundColor;
+            options.PadColor = PaddingColor;
         }
 
         return options;

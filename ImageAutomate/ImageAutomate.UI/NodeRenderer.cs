@@ -2,9 +2,6 @@ using System.Drawing.Drawing2D;
 
 using ImageAutomate.Core;
 
-using GeomEdge = Microsoft.Msagl.Core.Layout.Edge;
-using GeomNode = Microsoft.Msagl.Core.Layout.Node;
-
 namespace ImageAutomate.UI;
 
 /// <summary>
@@ -12,9 +9,6 @@ namespace ImageAutomate.UI;
 /// </summary>
 public sealed class NodeRenderer : IDisposable
 {
-    /// <summary>
-    /// Singleton instance of the renderer.
-    /// </summary>
     public static readonly NodeRenderer Instance = new();
 
     #region Fields
@@ -33,12 +27,11 @@ public sealed class NodeRenderer : IDisposable
     private bool _isDisposed;
     #endregion
 
-    private NodeRenderer(Workspace? workspace = null)
+    private NodeRenderer()
     {
         var edgeColor = Color.FromArgb(150, 150, 150);
         _edgePen = new Pen(edgeColor, 2);
         _selectedEdgePen = new Pen(Color.Red, 3);
-
         _dragEdgePen = new Pen(Color.Orange, 2) { DashStyle = DashStyle.Dash };
 
         _bgBrush = new SolidBrush(Color.FromArgb(60, 60, 60));
@@ -56,27 +49,28 @@ public sealed class NodeRenderer : IDisposable
     }
 
     /// <summary>
-    /// Calculates the screen position of a socket based on the block's position and size.
+    /// Calculates the screen position of a socket based on the block's layout properties.
     /// </summary>
-    public static PointF GetSocketPosition(Position blockPosition, Core.Size blockSize, bool isInput)
+    public static PointF GetSocketPosition(IBlock block, bool isInput)
     {
+        ArgumentNullException.ThrowIfNull(block);
         if (isInput)
         {
-            return new PointF((float)blockPosition.X, (float)(blockPosition.Y + blockSize.Height / 2));
+            return new PointF((float)block.X, (float)(block.Y + block.Height / 2));
         }
         else
         {
-            return new PointF((float)(blockPosition.X + blockSize.Width), (float)(blockPosition.Y + blockSize.Height / 2));
+            return new PointF((float)(block.X + block.Width), (float)(block.Y + block.Height / 2));
         }
     }
 
     /// <summary>
     /// Generates a Bezier curve path representing an edge between two blocks.
     /// </summary>
-    public static GraphicsPath GetEdgePath(Position sourcePos, Core.Size sourceSize, Position targetPos, Core.Size targetSize)
+    public static GraphicsPath GetEdgePath(IBlock source, IBlock target)
     {
-        PointF start = GetSocketPosition(sourcePos, sourceSize, isInput: false);
-        PointF end = GetSocketPosition(targetPos, targetSize, isInput: true);
+        PointF start = GetSocketPosition(source, isInput: false);
+        PointF end = GetSocketPosition(target, isInput: true);
         return CreateBezierPath(start, end);
     }
 
@@ -95,52 +89,42 @@ public sealed class NodeRenderer : IDisposable
     /// <summary>
     /// Draws a connection edge on the graphics surface.
     /// </summary>
-    public void DrawEdge(Graphics g, Position sourcePosition, Core.Size sourceSize, Position targetPosition, Core.Size targetSize, bool isSelected, double socketRadius)
+    internal void DrawEdge(Graphics g, IBlock source, IBlock target, bool isSelected, double socketRadius)
     {
-        using var path = GetEdgePath(sourcePosition, sourceSize, targetPosition, targetSize);
+        using var path = GetEdgePath(source, target);
         g.DrawPath(isSelected ? _selectedEdgePen : _edgePen, path);
     }
 
     /// <summary>
     /// Draws a temporary edge being dragged by the user.
     /// </summary>
-    public void DrawDragEdge(Graphics g, PointF start, PointF end)
-    {
-        DrawBezier(g, _dragEdgePen, start, end);
-    }
-
-    private static void DrawBezier(Graphics g, Pen pen, PointF start, PointF end)
+    internal void DrawDragEdge(Graphics g, PointF start, PointF end)
     {
         float controlPointOffset = Math.Max(Math.Abs(end.X - start.X) / 2, 50);
-
         PointF cp1 = new(start.X + controlPointOffset, start.Y);
         PointF cp2 = new(end.X - controlPointOffset, end.Y);
-
-        g.DrawBezier(pen, start, cp1, cp2, end);
+        g.DrawBezier(_dragEdgePen, start, cp1, cp2, end);
     }
 
     /// <summary>
-    /// Draws a node (block) on the graphics surface.
+    /// Draws a node (block) on the graphics surface using the block's layout properties.
     /// </summary>
-    public void DrawNode(Graphics g, IBlock block, Position blockPosition, Core.Size blockSize, bool isSelected, Color selectionColor, double socketRadius)
+    internal void DrawNode(Graphics g, IBlock block, bool isSelected, Color selectionColor, double socketRadius)
     {
         RectangleF rect = new(
-            (float)blockPosition.X,
-            (float)blockPosition.Y,
-            blockSize.Width,
-            blockSize.Height
+            (float)block.X,
+            (float)block.Y,
+            block.Width,
+            block.Height
         );
 
         float radius = 8;
 
-        // Cache path for background
         using var mainPath = CreateRoundedRectPath(rect, radius);
 
-        // Header
         RectangleF headerRect = new(rect.X, rect.Y, rect.Width, 25);
         using var headerPath = CreateRoundedRectPath(headerRect, radius, topOnly: true);
 
-        // Drawing - Shape Layer
         g.FillPath(_bgBrush, mainPath);
         g.FillPath(_headerBrush, headerPath);
 
@@ -154,7 +138,6 @@ public sealed class NodeRenderer : IDisposable
             g.DrawPath(_borderPenNormal, mainPath);
         }
 
-        // Drawing - Text Layer
         g.DrawString(block.Title, _labelFont, _textBrush, new PointF(rect.X + 10, rect.Y + 5));
 
         float yOffset = rect.Y + 35;
@@ -165,58 +148,43 @@ public sealed class NodeRenderer : IDisposable
             yOffset += 15;
         }
 
-        // Draw Sockets
-        // Input (Left)
         if (block.Inputs.Count > 0)
         {
-            DrawSocket(g, GetSocketPosition(blockPosition, blockSize, true), isInput: true, socketRadius);
+            DrawSocket(g, GetSocketPosition(block, true), isInput: true, socketRadius);
         }
-        // Output (Right)
         if (block.Outputs.Count > 0)
         {
-            DrawSocket(g, GetSocketPosition(blockPosition, blockSize, false), isInput: false, socketRadius);
+            DrawSocket(g, GetSocketPosition(block, false), isInput: false, socketRadius);
         }
     }
-
-    #region Static Helper Methods
 
     private static GraphicsPath CreateRoundedRectPath(RectangleF rect, float radius, bool topOnly = false)
     {
         GraphicsPath path = new();
         float diameter = radius * 2;
 
-        // MSAGL coords (Y-up)
         float left = rect.X;
-        float bottom = rect.Y;
+        float visualTop = rect.Y;
         float right = rect.Right;
-        float top = rect.Bottom; // RectangleF.Bottom is Y + Height
+        float visualBottom = rect.Bottom;
 
         path.StartFigure();
 
         if (topOnly)
         {
-            // Top Right (Rounded)
-            path.AddArc(right - diameter, top - diameter, diameter, diameter, 0, 90);
-            // Top Left (Rounded)
-            path.AddArc(left, top - diameter, diameter, diameter, 90, 90);
-
-            // Line down to header bottom
-            path.AddLine(left, top - diameter + radius, left, bottom);
-            // Line across bottom
-            path.AddLine(left, bottom, right, bottom);
-            // Line up
-            path.AddLine(right, bottom, right, top - diameter + radius);
+            // Visual Top Only (Rounded Top, Flat Bottom)
+            path.AddArc(left, visualTop, diameter, diameter, 180, 90); // Top Left
+            path.AddArc(right - diameter, visualTop, diameter, diameter, 270, 90); // Top Right
+            path.AddLine(right, visualTop + radius, right, visualBottom); // Down Right
+            path.AddLine(right, visualBottom, left, visualBottom); // Across Bottom
+            path.AddLine(left, visualBottom, left, visualTop + radius); // Up Left
         }
         else
         {
-            // Top Right Corner
-            path.AddArc(right - diameter, top - diameter, diameter, diameter, 0, 90);
-            // Top Left Corner
-            path.AddArc(left, top - diameter, diameter, diameter, 90, 90);
-            // Bottom Left Corner
-            path.AddArc(left, bottom, diameter, diameter, 180, 90);
-            // Bottom Right Corner
-            path.AddArc(right - diameter, bottom, diameter, diameter, 270, 90);
+            path.AddArc(right - diameter, visualBottom - diameter, diameter, diameter, 0, 90);
+            path.AddArc(left, visualBottom - diameter, diameter, diameter, 90, 90);
+            path.AddArc(left, visualTop, diameter, diameter, 180, 90);
+            path.AddArc(right - diameter, visualTop, diameter, diameter, 270, 90);
         }
 
         path.CloseFigure();
@@ -239,14 +207,13 @@ public sealed class NodeRenderer : IDisposable
         g.DrawEllipse(_socketBorderPen, socketRect);
     }
 
-    #endregion
-
-    /// <inheritdoc />
     public void Dispose()
     {
         if (_isDisposed) return;
 
         _edgePen?.Dispose();
+        _selectedEdgePen?.Dispose();
+        _dragEdgePen?.Dispose();
         _bgBrush?.Dispose();
         _headerBrush?.Dispose();
         _textBrush?.Dispose();

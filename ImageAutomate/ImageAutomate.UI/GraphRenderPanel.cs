@@ -5,7 +5,9 @@
  */
 
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Drawing.Drawing2D;
+
 using ImageAutomate.Core;
 
 namespace ImageAutomate.UI;
@@ -20,17 +22,11 @@ namespace ImageAutomate.UI;
 public record SocketHit(IBlock Block, Socket Socket, bool IsInput, PointF Position);
 
 /// <summary>
-/// Custom panel for rendering and interacting with a pipeline graph. Supports node visualization, layout,
-/// selection, zooming, and panning operations.
+/// Custom panel for rendering and interacting with a pipeline graph.
 /// </summary>
-/// <remarks>GraphRenderPanel enables visualization and manipulation of directed graphs composed of blocks and
-/// connections. It supports interactive features such as selecting nodes, centering the view, zooming, and panning,
-/// with configurable appearance and layout options. The panel automatically updates its rendering when relevant
-/// properties or the underlying graph change. Thread safety is not guaranteed; all interactions should occur on the UI
-/// thread.</remarks>
 public class GraphRenderPanel : Panel
 {
-    #region Exposed Properties
+    #region Designer Properties
 
     [Category("Node Appearance")]
     [Description("Outline color for the selected block")]
@@ -72,10 +68,39 @@ public class GraphRenderPanel : Panel
         set
         {
             _renderScale = value;
+            UpdateWorkspaceState();
             Invalidate();
         }
     }
     private float _renderScale = 1.0f;
+
+    [Category("Graph Appearance")]
+    [Description("Horizontal pan offset")]
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    public float PanX
+    {
+        get => _panOffset.X;
+        set
+        {
+            _panOffset.X = value;
+            UpdateWorkspaceState();
+            Invalidate();
+        }
+    }
+
+    [Category("Graph Appearance")]
+    [Description("Vertical pan offset")]
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    public float PanY
+    {
+        get => _panOffset.Y;
+        set
+        {
+            _panOffset.Y = value;
+            UpdateWorkspaceState();
+            Invalidate();
+        }
+    }
 
     [Category("Graph Behavior")]
     [Description("Allows the graph to be panned completely off-screen")]
@@ -91,6 +116,7 @@ public class GraphRenderPanel : Panel
 
     #endregion
 
+    #region Public Properties
     [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
     public Workspace? Workspace
     {
@@ -98,6 +124,17 @@ public class GraphRenderPanel : Panel
         set
         {
             _workspace = value;
+            if (_workspace != null)
+            {
+                _renderScale = (float)_workspace.Zoom;
+                _panOffset = new PointF((float)_workspace.PanX, (float)_workspace.PanY);
+            }
+            else
+            {
+                // Reset pan and zoom to default when workspace is cleared.
+                _renderScale = 1.0f;
+                _panOffset = PointF.Empty;
+            }
             Invalidate();
         }
     }
@@ -106,13 +143,20 @@ public class GraphRenderPanel : Panel
     [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
     public PipelineGraph? Graph => _workspace?.Graph;
 
-    private PointF _panOffset = new(0, 0);
-    private Point _lastMousePos;
+    [Category("Graph Events")]
+    [Description("Event fired when the selected item changes")]
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
+    public event Action<object?, EventArgs>? SelectedItemChanged;
+    #endregion
 
     #region Interaction States
+    private PointF _panOffset = new(0, 0);
+    private Point _lastMousePos;
     private bool _isPanning;
     private bool _isDraggingNode;
+#pragma warning disable CA2213 // Disposable fields should be disposed. Reason: Borrowed reference, do not dispose.
     private IBlock? _draggedNode;
+#pragma warning restore CA2213 // Disposable fields should be disposed
     private PointF _dragStartNodePos;
 
     private bool _isConnecting;
@@ -121,31 +165,30 @@ public class GraphRenderPanel : Panel
     #endregion
 
     #region Cursors
+#pragma warning disable CA2213 // Disposable fields should be disposed. Reason: Managed by system. Not GDI+ resources
     private readonly Cursor _panCursor = Cursors.SizeAll;
     private readonly Cursor _dragCursor = Cursors.Hand;
     private readonly Cursor _connectCursor = Cursors.Cross;
+#pragma warning restore CA2213 // Disposable fields should be disposed
     #endregion
 
+    #region CTOR
     public GraphRenderPanel()
     {
         DoubleBuffered = true;
         BackColor = Color.White;
+        AllowDrop = true;
     }
+    #endregion
+
+    #region Drag & Drop Ghost State
+    private Type? _ghostBlockType;
+    private PointF _ghostPosition;
+    private bool _isDragOver;
+    #endregion
 
     #region Public API
 
-    /// <summary>
-    /// Adds the specified blocks to the graph if not already present and connects the
-    /// source block's output socket to the destination block's input socket.
-    /// </summary>
-    /// <remarks>If either block is not already part of the graph, it will be added automatically before the
-    /// connection is made.</remarks>
-    /// <param name="sourceBlock">The block that provides the output socket to be connected. Cannot be null.</param>
-    /// <param name="sourceSocket">The output socket on the source block to connect. Must be an Output of sourceBlock.</param>
-    /// <param name="destBlock">The block that receives the input socket connection. Cannot be null.</param>
-    /// <param name="destSocket">The input socket on the destination block to connect. Must be an Input of destBlock.</param>
-    /// <exception cref="Exception">Thrown if the specified source socket is not present in the source block's Outputs collection, or if the
-    /// destination socket is not present in the destination block's Inputs collection.</exception>
     public void AddBlockAndConnect(IBlock sourceBlock, Socket sourceSocket, IBlock destBlock, Socket destSocket)
     {
         ArgumentNullException.ThrowIfNull(sourceBlock);
@@ -162,8 +205,6 @@ public class GraphRenderPanel : Panel
         if (!Graph.Nodes.Contains(destBlock))
             Graph.AddBlock(destBlock);
 
-        // TODO: Implement proper exception type for mismatching block and socket.
-        // Note: Temporary solution using ArgumentException.
         if (!sourceBlock.Outputs.Contains(sourceSocket))
             throw new ArgumentException($"Invalid socket {sourceSocket.Id} for block {sourceBlock.Name}", nameof(sourceSocket));
 
@@ -175,90 +216,45 @@ public class GraphRenderPanel : Panel
         Invalidate();
     }
 
-    /// <summary>
-    /// Connects the specified source socket of the Selected block to a receiving block and socket within the graph.
-    /// </summary>
-    /// <remarks>If the graph or the Selected block is not initialized, the method returns immediately.</remarks>
-    /// <param name="sourceSocket">The socket in the Selected block from which the connection originates.</param>
-    /// <param name="destBlock">The block that will be connected to the source socket.</param>
-    /// <param name="destSocket">The socket in the destination block to which the connection is made.</param>
     public void AddSuccessor(Socket sourceSocket, IBlock destBlock, Socket destSocket)
     {
         ArgumentNullException.ThrowIfNull(destBlock);
         ArgumentNullException.ThrowIfNull(sourceSocket);
         ArgumentNullException.ThrowIfNull(destSocket);
 
-        if (Graph?.SelectedItem is null)
-            return;
-
-        if (Graph.SelectedItem is IBlock selectBlock)
+        if (Graph?.SelectedItem is IBlock selectBlock)
             AddBlockAndConnect(selectBlock, sourceSocket, destBlock, destSocket);
     }
 
-    /// <summary>
-    /// Connects the specified source block to the Selected block of the graph
-    /// </summary>
-    /// <remarks>If the graph or its center block is null, the method returns immediately.</remarks>
-    /// <param name="sourceBlock">The block to be added as a predecessor and connected to the center block.</param>
-    /// <param name="sourceSocket">The socket on the source block used for the connection.</param>
-    /// <param name="destSocket">The socket on the center block that will be connected to the source block.</param>
     public void AddPredecessor(IBlock sourceBlock, Socket sourceSocket, Socket destSocket)
     {
         ArgumentNullException.ThrowIfNull(sourceBlock);
         ArgumentNullException.ThrowIfNull(sourceSocket);
         ArgumentNullException.ThrowIfNull(destSocket);
 
-        if (Graph?.SelectedItem is null)
-            return;
-
-        if (Graph.SelectedItem is IBlock selectBlock)
+        if (Graph?.SelectedItem is IBlock selectBlock)
             AddBlockAndConnect(sourceBlock, sourceSocket, selectBlock, destSocket);
     }
 
-    /// <summary>
-    /// Gets the world coordinates of the center point of the current viewport.
-    /// </summary>
-    /// <returns>The world coordinates corresponding to the center of the viewport.</returns>
     public PointF GetViewportCenterWorld()
     {
         return ScreenToWorld(new Point(Width / 2, Height / 2));
     }
 
-    /// <summary>
-    /// Deletes the specified block from the graph.
-    /// </summary>
-    /// <param name="block">Block to remove</param>
     public void DeleteBlock(IBlock block)
     {
         ArgumentNullException.ThrowIfNull(block);
-
-        if (Graph?.SelectedItem == null)
-            return;
-
-        Graph.RemoveNode(block);
-
+        Graph?.RemoveNode(block);
         Invalidate();
     }
 
-    /// <summary>
-    /// Deletes the specified connection from the graph.
-    /// </summary>
-    /// <param name="connection">Connection to remove</param>
-    public void DeleteConnection(Core.Connection connection)
+    public void DeleteConnection(Connection connection)
     {
         ArgumentNullException.ThrowIfNull(connection);
-        if (Graph == null)
-            return;
-
-        Graph.RemoveEdge(connection);
-
+        Graph?.RemoveEdge(connection);
         Invalidate();
     }
 
-    /// <summary>
-    /// Deletes the specified item from the graph. Item must be either a Block or a Connection.
-    /// </summary>
-    /// <param name="item">item to remove</param>
     public void DeleteItem(object item)
     {
         ArgumentNullException.ThrowIfNull(item);
@@ -268,7 +264,7 @@ public class GraphRenderPanel : Panel
 
         if (item is IBlock block)
             Graph.RemoveNode(block);
-        else if (item is Core.Connection conn)
+        else if (item is Connection conn)
             Graph.RemoveEdge(conn);
         else
             throw new ArgumentException("Item must be either a Block or a Connection", nameof(item));
@@ -276,9 +272,6 @@ public class GraphRenderPanel : Panel
         Invalidate();
     }
 
-    /// <summary>
-    /// Deletes the currently selected item from the graph.
-    /// </summary>
     public void DeleteSelectedItem()
     {
         if (Graph?.SelectedItem == null)
@@ -288,20 +281,28 @@ public class GraphRenderPanel : Panel
 
         if (selected is IBlock block)
             Graph.RemoveNode(block);
-        else if (selected is Core.Connection conn)
+        else if (selected is Connection conn)
             Graph.RemoveEdge(conn);
+
+        Graph.SelectedItem = null;
+
+        SelectedItemChanged?.Invoke(this, EventArgs.Empty);
 
         Invalidate();
     }
-
-    #endregion
-
-
-    #region Implicit Event Handlers
-
     #endregion
 
     #region Private Methods
+
+    private void UpdateWorkspaceState()
+    {
+        if (_workspace != null)
+        {
+            _workspace.Zoom = _renderScale;
+            _workspace.PanX = _panOffset.X;
+            _workspace.PanY = _panOffset.Y;
+        }
+    }
 
     private static float DistanceSq(PointF p1, PointF p2)
     {
@@ -313,35 +314,23 @@ public class GraphRenderPanel : Panel
         if (Graph == null)
             return null;
 
-        var viewState = Workspace?.ViewState;
-        if (viewState == null)
-            return null;
-
-        // Reverse order to match top-down visual
         foreach (var block in Graph.Nodes.Reverse())
         {
-            Position blockPos = viewState.GetBlockPositionOrDefault(block);
-            Core.Size blockSize = viewState.GetBlockSizeOrDefault(block);
-
             // Check Input Zone (Left Side)
             if (block.Inputs.Count > 0)
             {
-
                 RectangleF inputZone = new(
-                    (float)blockPos.X - AutoSnapZoneWidth / 2,
-                    (float)blockPos.Y,
+                    (float)block.X - AutoSnapZoneWidth / 2,
+                    (float)block.Y,
                     AutoSnapZoneWidth,
-                    blockSize.Height);
+                    block.Height);
 
                 if (inputZone.Contains(worldPos))
                 {
-                    // Return first input (Assuming single input for PoC)
-                    // If multiple, would find closest Y
-                    return new SocketHit(block, block.Inputs[0], true, NodeRenderer.GetSocketPosition(blockPos, blockSize, true));
+                    return new SocketHit(block, block.Inputs[0], true, NodeRenderer.GetSocketPosition(block, true));
                 }
 
-                // Also check strict circle for precision if outside zone (e.g. just slightly off)
-                var pos = NodeRenderer.GetSocketPosition(blockPos, blockSize, true);
+                var pos = NodeRenderer.GetSocketPosition(block, true);
                 if (DistanceSq(worldPos, pos) <= _socketRadius * _socketRadius * 4)
                 {
                     return new SocketHit(block, block.Inputs[0], true, pos);
@@ -352,17 +341,17 @@ public class GraphRenderPanel : Panel
             if (block.Outputs.Count > 0)
             {
                 RectangleF outputZone = new(
-                    (float)(blockPos.X + blockSize.Width) - AutoSnapZoneWidth / 2,
-                    (float)blockPos.Y,
+                    (float)(block.X + block.Width) - AutoSnapZoneWidth / 2,
+                    (float)block.Y,
                     AutoSnapZoneWidth,
-                    blockSize.Height);
+                    block.Height);
 
                 if (outputZone.Contains(worldPos))
                 {
-                    return new SocketHit(block, block.Outputs[0], false, NodeRenderer.GetSocketPosition(blockPos, blockSize, false));
+                    return new SocketHit(block, block.Outputs[0], false, NodeRenderer.GetSocketPosition(block, false));
                 }
 
-                var pos = NodeRenderer.GetSocketPosition(blockPos, blockSize, false);
+                var pos = NodeRenderer.GetSocketPosition(block, false);
                 if (DistanceSq(worldPos, pos) <= _socketRadius * _socketRadius * 4)
                 {
                     return new SocketHit(block, block.Outputs[0], false, pos);
@@ -377,26 +366,17 @@ public class GraphRenderPanel : Panel
         if (Graph == null)
             return null;
 
-        var viewState = Workspace?.ViewState;
-        if (viewState == null)
-            return null;
-
-        // Check edges. Order might matter if they overlap, but usually doesn't.
-        using Pen hitPen = new Pen(Color.Black, 10); // Wide pen for hit testing
+        using Pen hitPen = new(Color.Black, 10);
 
         foreach (var edge in Graph.Edges)
         {
-            var sourcePos = viewState.GetBlockPositionOrDefault(edge.Source);
-            var sourceSize = viewState.GetBlockSizeOrDefault(edge.Source);
-            var targetPos = viewState.GetBlockPositionOrDefault(edge.Target);
-            var targetSize = viewState.GetBlockSizeOrDefault(edge.Target);
-            using var path = NodeRenderer.GetEdgePath(sourcePos, sourceSize, targetPos, targetSize);
+            using var path = NodeRenderer.GetEdgePath(edge.Source, edge.Target);
             if (path.IsOutlineVisible(worldPosition, hitPen))
             {
                 return edge;
             }
         }
-        return null;    
+        return null;
     }
 
     private PointF ScreenToWorld(Point screenPoint)
@@ -407,32 +387,13 @@ public class GraphRenderPanel : Panel
         );
     }
 
-    private Matrix GetWorldToScreenMatrix()
-    {
-        Matrix matrix = new();
-
-        // Translate to center + pan offset
-        matrix.Translate(Width / 2f + _panOffset.X, Height / 2f + _panOffset.Y);
-
-        // Scale (MSAGL using flipped y)
-        matrix.Scale(_renderScale, -_renderScale);
-
-        return matrix;
-    }
-
     private void CenterCameraOnBlock(IBlock block)
     {
-        var viewState = Workspace?.ViewState;
-        if (viewState == null)
-            return;
-
-        var blockPos = viewState.GetBlockPositionOrDefault(block);
-        var blockSize = viewState.GetBlockSizeOrDefault(block);
         float screenCX = Width / 2.0f;
         float screenCY = Height / 2.0f;
 
-        float blockCX = (float)(blockPos.X + blockSize.Width / 2);
-        float blockCY = (float)(blockPos.Y + blockSize.Height / 2);
+        float blockCX = (float)(block.X + block.Width / 2);
+        float blockCY = (float)(block.Y + block.Height / 2);
 
         _panOffset.X = screenCX - blockCX * _renderScale;
         _panOffset.Y = screenCY - blockCY * _renderScale;
@@ -442,18 +403,18 @@ public class GraphRenderPanel : Panel
     #endregion
 
     #region Handler Overrides
-    
     protected override void OnResize(EventArgs e)
     {
         base.OnResize(e);
         Invalidate();
     }
 
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1062:Validate arguments of public methods", Justification = "System event override")]
     protected override void OnMouseDown(MouseEventArgs e)
     {
         if (Graph == null)
             return;
-        
+
         PointF worldPosition = ScreenToWorld(e.Location);
         _lastMousePos = e.Location;
 
@@ -464,7 +425,6 @@ public class GraphRenderPanel : Panel
         }
         else if (e.Button == MouseButtons.Left)
         {
-            // 1. Check Socket Hit (Connecting)
             var socketHit = HitTestSocket(worldPosition);
             if (socketHit != null)
             {
@@ -473,42 +433,45 @@ public class GraphRenderPanel : Panel
                 _currentMouseWorldPos = worldPosition;
                 Cursor = _connectCursor;
                 Invalidate();
+                base.OnMouseDown(e);
                 return;
             }
 
-            // 2. Check Node Hit (Selection / Dragging)
             var hitNode = Workspace?.HitTestNode(worldPosition.X, worldPosition.Y);
-            if (hitNode != null && Workspace?.ViewState != null)
+            if (hitNode != null)
             {
                 Graph.BringToTop(hitNode);
                 Graph.SelectedItem = hitNode;
-                var blockPos = Workspace.ViewState.GetBlockPositionOrDefault(hitNode);
+                SelectedItemChanged?.Invoke(this, EventArgs.Empty);
 
                 _isDraggingNode = true;
                 _draggedNode = hitNode;
-                _dragStartNodePos = new PointF((float)blockPos.X, (float)blockPos.Y);
+                _dragStartNodePos = new PointF((float)hitNode.X, (float)hitNode.Y);
                 Cursor = _dragCursor;
                 Invalidate();
+                base.OnMouseDown(e);
                 return;
             }
 
-            // 3. Check Edge Hit (Selection)
             var hitEdge = HitTestEdge(worldPosition);
             if (hitEdge != null)
             {
                 Graph.SelectedItem = hitEdge;
+                SelectedItemChanged?.Invoke(this, EventArgs.Empty);
                 Invalidate();
+                base.OnMouseDown(e);
                 return;
             }
 
-            // 4. Hit Background (Deselect)
             Graph.SelectedItem = null;
+            SelectedItemChanged?.Invoke(this, EventArgs.Empty);
             Invalidate();
         }
 
         base.OnMouseDown(e);
     }
 
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1062:Validate arguments of public methods", Justification = "System event override")]
     protected override void OnMouseUp(MouseEventArgs e)
     {
         if (_isPanning && e.Button == MouseButtons.Right)
@@ -526,13 +489,11 @@ public class GraphRenderPanel : Panel
 
         if (_isConnecting && e.Button == MouseButtons.Left)
         {
-            // End Connection Drag
             PointF worldPos = ScreenToWorld(e.Location);
             var socketHit = HitTestSocket(worldPos);
 
             if (socketHit != null && _dragStartSocket != null)
             {
-                // Validate Connection
                 bool valid = true;
 
                 if (socketHit.Block == _dragStartSocket.Block)
@@ -564,7 +525,6 @@ public class GraphRenderPanel : Panel
                         targetSocket = socketHit.Socket;
                     }
 
-                    // Prevent duplicate edges
                     bool exists = Graph!.Edges.Any(edge =>
                         edge.Source == source && edge.SourceSocket == sourceSocket &&
                         edge.Target == target && edge.TargetSocket == targetSocket);
@@ -581,10 +541,11 @@ public class GraphRenderPanel : Panel
             Cursor = Cursors.Default;
             Invalidate();
         }
-        
+
         base.OnMouseUp(e);
     }
 
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1062:Validate arguments of public methods", Justification = "System event override")]
     protected override void OnMouseMove(MouseEventArgs e)
     {
         float dx = e.X - _lastMousePos.X;
@@ -592,8 +553,6 @@ public class GraphRenderPanel : Panel
 
         PointF worldPosition = ScreenToWorld(e.Location);
 
-        // Hover Feedback Logic
-        // If not dragging, check if over edge to change cursor
         if (!_isPanning && !_isDraggingNode && !_isConnecting)
         {
             var hitEdge = HitTestEdge(worldPosition);
@@ -604,6 +563,7 @@ public class GraphRenderPanel : Panel
         {
             _panOffset.X += dx;
             _panOffset.Y += dy;
+            UpdateWorkspaceState();
             Invalidate();
         }
         else if (_isDraggingNode && _draggedNode != null)
@@ -611,11 +571,9 @@ public class GraphRenderPanel : Panel
             float worldDx = dx / _renderScale;
             float worldDy = dy / _renderScale;
 
-            Workspace?
-                .ViewState
-                .SetBlockPosition(_draggedNode, new Position(
-                    _dragStartNodePos.X + worldDx,
-                    _dragStartNodePos.Y + worldDy));
+            // Direct property manipulation - no ViewState needed!
+            _draggedNode.X += worldDx;
+            _draggedNode.Y += worldDy;
 
             Invalidate();
         }
@@ -630,18 +588,17 @@ public class GraphRenderPanel : Panel
         base.OnMouseMove(e);
     }
 
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1062:Validate arguments of public methods", Justification = "System event override")]
     protected override void OnMouseWheel(MouseEventArgs e)
     {
-        // TODO: Move this out as configurable property
-        const float zoomFactor = 1.1f;
         float oldScale = _renderScale;
 
         if (e.Delta > 0)
-            _renderScale *= zoomFactor;
+            _renderScale *= EditorConfiguration.ZoomFactor;
         else
-            _renderScale /= zoomFactor;
+            _renderScale /= EditorConfiguration.ZoomFactor;
 
-        _renderScale = Math.Max(0.1f, Math.Min(_renderScale, 5.0f));
+        _renderScale = Math.Max(EditorConfiguration.MinZoom, Math.Min(_renderScale, EditorConfiguration.MaxZoom));
 
         float mouseX = e.X;
         float mouseY = e.Y;
@@ -652,18 +609,102 @@ public class GraphRenderPanel : Panel
         _panOffset.X = mouseX - (worldX * _renderScale);
         _panOffset.Y = mouseY - (worldY * _renderScale);
 
+        UpdateWorkspaceState();
         Invalidate();
 
         base.OnMouseWheel(e);
     }
 
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1062:Validate arguments of public methods", Justification = "System event override")]
+    protected override void OnDragEnter(DragEventArgs e)
+    {
+        _isDragOver = false;
+        e.Effect = DragDropEffects.None;
+
+        if (e.Data is null)
+        {
+            base.OnDragEnter(e);
+            return;
+        }
+
+        try
+        {
+            var rawData = e.Data.GetData(e.Data.GetFormats()[0]);
+            if (rawData is Type t && typeof(IBlock).IsAssignableFrom(t))
+            { 
+                e.Effect = DragDropEffects.Copy;
+                _ghostBlockType = t;
+                _isDragOver = true;
+                return;
+            }
+        }
+        catch { /* Ignore */ }
+
+        base.OnDragEnter(e);
+    }
+
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1062:Validate arguments of public methods", Justification = "System event override")]
+    protected override void OnDragOver(DragEventArgs e)
+    {
+        if (_isDragOver)
+        {
+            var clientPoint = PointToClient(new Point(e.X, e.Y));
+            _ghostPosition = ScreenToWorld(clientPoint);
+            Invalidate();
+        }
+        base.OnDragOver(e);
+    }
+
+    protected override void OnDragLeave(EventArgs e)
+    {
+        _isDragOver = false;
+        _ghostBlockType = null;
+        Invalidate();
+        base.OnDragLeave(e);
+    }
+
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1062:Validate arguments of public methods", Justification = "System event override")]
+    protected override void OnDragDrop(DragEventArgs e)
+    {
+        if (_isDragOver && _ghostBlockType != null && Graph != null)
+        {
+            try
+            {
+                var newBlock = (IBlock?)Activator.CreateInstance(
+                    _ghostBlockType,
+                    [
+                        EditorConfiguration.NewBlockWidth,
+                        EditorConfiguration.NewBlockHeight
+                    ]
+                );
+                if (newBlock != null)
+                {
+                    // Direct property assignment - no ViewState needed!
+                    newBlock.X = _ghostPosition.X - EditorConfiguration.NewBlockXOffset;
+                    newBlock.Y = _ghostPosition.Y - EditorConfiguration.NewBlockYOffset;
+
+                    Graph.AddBlock(newBlock);
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Failed to create block: {ex.Message}");
+            }
+        }
+
+        _isDragOver = false;
+        _ghostBlockType = null;
+        Invalidate();
+
+        base.OnDragDrop(e);
+    }
+    #endregion
+
+    #region Render Override
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1062:Validate arguments of public methods", Justification = "System event override")]
     protected override void OnPaint(PaintEventArgs e)
     {
         if (Graph == null)
-            return;
-
-        var viewState = Workspace?.ViewState;
-        if (viewState == null)
             return;
 
         Graphics g = e.Graphics;
@@ -678,13 +719,8 @@ public class GraphRenderPanel : Panel
         // Draw Connections
         foreach (var edge in Graph.Edges)
         {
-            var sourcePos = viewState.GetBlockPositionOrDefault(edge.Source);
-            var sourceSize = viewState.GetBlockSizeOrDefault(edge.Source);
-            var targetPos = viewState.GetBlockPositionOrDefault(edge.Target);
-            var targetSize = viewState.GetBlockSizeOrDefault(edge.Target);
-            bool isSelected = Graph.SelectedItem is Connection conn
-                && edge == conn;
-            NodeRenderer.Instance.DrawEdge(g, sourcePos, sourceSize, targetPos, targetSize, isSelected, _socketRadius);
+            bool isSelected = Graph.SelectedItem is Connection conn && edge == conn;
+            NodeRenderer.Instance.DrawEdge(g, edge.Source, edge.Target, isSelected, _socketRadius);
         }
 
         // Draw Pending Connection Drag
@@ -696,10 +732,29 @@ public class GraphRenderPanel : Panel
         // Draw Nodes
         foreach (var block in Graph.Nodes)
         {
-            var blockPos = viewState.GetBlockPositionOrDefault(block);
-            var blockSize = viewState.GetBlockSizeOrDefault(block);
             bool isSelected = block == Graph.SelectedItem;
-            NodeRenderer.Instance.DrawNode(g, block, blockPos, blockSize, isSelected, _selectedBlockOutlineColor, _socketRadius);
+            NodeRenderer.Instance.DrawNode(g, block, isSelected, _selectedBlockOutlineColor, _socketRadius);
+        }
+
+        // Draw Drag & Drop Ghost
+        if (_isDragOver && _ghostBlockType != null)
+        {
+            int ghostWidth = EditorConfiguration.GhostWidth;
+            int ghostHeight = EditorConfiguration.GhostHeight;
+
+            float drawX = _ghostPosition.X - ghostWidth / 2;
+            float drawY = _ghostPosition.Y - ghostHeight / 2;
+
+            using var brush = new SolidBrush(Color.FromArgb(100, 200, 200, 255));
+            using var pen = new Pen(Color.Blue, 2) { DashStyle = DashStyle.Dash };
+            using var textBrush = new SolidBrush(Color.Blue);
+            using var font = new Font("Segoe UI", 9, FontStyle.Bold);
+
+            g.FillRectangle(brush, drawX, drawY, ghostWidth, ghostHeight);
+            g.DrawRectangle(pen, drawX, drawY, ghostWidth, ghostHeight);
+            g.DrawString($"New {_ghostBlockType.Name}", font, textBrush, drawX + 5, drawY + 5);
+            g.FillEllipse(Brushes.Gray, drawX - 3, drawY + 10, 6, 6);
+            g.FillEllipse(Brushes.Gray, drawX + ghostWidth - 3, drawY + 10, 6, 6);
         }
 
         g.ResetTransform();

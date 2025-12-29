@@ -1,16 +1,10 @@
 using ImageAutomate.Core;
+using ImageAutomate.Infrastructure;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats;
-using SixLabors.ImageSharp.Formats.Bmp;
-using SixLabors.ImageSharp.Formats.Gif;
-using SixLabors.ImageSharp.Formats.Jpeg;
-using SixLabors.ImageSharp.Formats.Pbm;
-using SixLabors.ImageSharp.Formats.Png;
-using SixLabors.ImageSharp.Formats.Qoi;
-using SixLabors.ImageSharp.Formats.Tga;
-using SixLabors.ImageSharp.Formats.Tiff;
-using SixLabors.ImageSharp.Formats.Webp;
 using System.ComponentModel;
+using System.Diagnostics;
+using System.Globalization;
 
 namespace ImageAutomate.StandardBlocks;
 
@@ -31,26 +25,124 @@ public class SaveBlock : IBlock, IShipmentSink
     private bool _createDirectory = true;
     private bool _skipMetadata = false;
 
+    // Layout fields
+    private double _x;
+    private double _y;
+    private int _width;
+    private int _height;
+    private string _title = "Save";
+
     #endregion
+
+    public SaveBlock()
+        : this(200, 100)
+    {
+    }
+
+    public SaveBlock(int width, int height)
+    {
+        _width = width;
+        _height = height;
+    }
 
     #region IBlock basic
 
     /// <inheritdoc />
+    [Browsable(false)]
     public string Name => "Save";
 
     /// <inheritdoc />
-    public string Title => "Save";
+    [Category("Title")]
+    public string Title
+    {
+        get => _title;
+        set
+        {
+            if (_title != value)
+            {
+                _title = value;
+                OnPropertyChanged(nameof(Title));
+            }
+        }
+    }
 
     /// <inheritdoc />
+    [Browsable(false)]
     public string Content => $"Output path: {OutputPath}\nOverwrite: {Overwrite}\nCreate directory: {CreateDirectory}";
+
+    #endregion
+
+    #region Layout Properties
+
+    /// <inheritdoc />
+    [Category("Layout")]
+    public double X
+    {
+        get => _x;
+        set
+        {
+            if (Math.Abs(_x - value) > double.Epsilon)
+            {
+                _x = value;
+                OnPropertyChanged(nameof(X));
+            }
+        }
+    }
+
+    /// <inheritdoc />
+    [Category("Layout")]
+    public double Y
+    {
+        get => _y;
+        set
+        {
+            if (Math.Abs(_y - value) > double.Epsilon)
+            {
+                _y = value;
+                OnPropertyChanged(nameof(Y));
+            }
+        }
+    }
+
+    /// <inheritdoc />
+    [Category("Layout")]
+    public int Width
+    {
+        get => _width;
+        set
+        {
+            if (_width != value)
+            {
+                _width = value;
+                OnPropertyChanged(nameof(Width));
+            }
+        }
+    }
+
+    /// <inheritdoc />
+    [Category("Layout")]
+    public int Height
+    {
+        get => _height;
+        set
+        {
+            if (_height != value)
+            {
+                _height = value;
+                OnPropertyChanged(nameof(Height));
+            }
+        }
+    }
 
     #endregion
 
     #region Sockets
 
     /// <inheritdoc />
+    [Browsable(false)]
     public IReadOnlyList<Socket> Inputs => _inputs;
     /// <inheritdoc />
+    [Browsable(false)]
     public IReadOnlyList<Socket> Outputs => _outputs;
 
     #endregion
@@ -62,6 +154,7 @@ public class SaveBlock : IBlock, IShipmentSink
     /// </summary>
     [Category("Configuration")]
     [Description("Directory path for saving the processed images.")]
+    [Editor("System.Windows.Forms.Design.FolderNameEditor, System.Design, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a", "System.Drawing.Design.UITypeEditor, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a")]
     public string OutputPath
     {
         get => _outputPath;
@@ -171,14 +264,22 @@ public class SaveBlock : IBlock, IShipmentSink
     public IReadOnlyDictionary<Socket, IReadOnlyList<IBasicWorkItem>> Execute(
         IDictionary<string, IReadOnlyList<IBasicWorkItem>> inputs, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(inputs, nameof(inputs));
         if (!inputs.TryGetValue(_inputs[0].Id, out var inItems))
             throw new ArgumentException($"Input items not found for the expected input socket {_inputs[0].Id}.", nameof(inputs));
 
-        foreach (var workItem in inItems.OfType<WorkItem>())
+        var workItems = inItems.OfType<WorkItem>().ToList();
+
+        var parallelOptions = new ParallelOptions
         {
-            cancellationToken.ThrowIfCancellationRequested();
+            CancellationToken = cancellationToken,
+            MaxDegreeOfParallelism = Math.Min(Environment.ProcessorCount, workItems.Count)
+        };
+
+        Parallel.ForEach(workItems, parallelOptions, workItem =>
+        {
             SaveImage(workItem);
-        }
+        });
 
         // Sink block; does not emit new WorkItem list
         return new Dictionary<Socket, IReadOnlyList<IBasicWorkItem>>();
@@ -219,11 +320,11 @@ public class SaveBlock : IBlock, IShipmentSink
         var finalFileName = fileName.ToString()!;
 
         // Step 1: If "Format" metadata exists (set by ConvertBlock), override the extension
-        if (workItem.Metadata.TryGetValue("Format", out var formatObj) 
-            && formatObj is string formatStr 
-            && Enum.TryParse<ImageFormat>(formatStr, out var targetFormat))
+        if (workItem.Metadata.TryGetValue("Format", out var formatObj)
+            && formatObj is string formatStr
+            && !string.IsNullOrEmpty(formatStr))
         {
-            finalFileName = UpdateFileExtension(finalFileName, targetFormat);
+            finalFileName = UpdateFileExtension(finalFileName, formatStr);
         }
 
         var path = Path.Combine(outputDirectory, finalFileName);
@@ -234,11 +335,12 @@ public class SaveBlock : IBlock, IShipmentSink
                 $"SaveBlock: Output file '{path}' already exists.");
         }
 
-        // Step 2 & 3: If "EncodingOptions" exists, create encoder and save with it
+        // Step 2 & 3: If "EncodingOptions" and "Format" exist, create encoder and save with it
         // Otherwise, let ImageSharp decide based on file extension
-        if (workItem.Metadata.TryGetValue("EncodingOptions", out var encodingOptions) && encodingOptions != null)
+        if (workItem.Metadata.TryGetValue("EncodingOptions", out var encodingOptions) && encodingOptions != null
+            && workItem.Metadata.TryGetValue("Format", out var formatObj2) && formatObj2 is string formatName)
         {
-            var encoder = CreateEncoder(encodingOptions);
+            var encoder = CreateEncoder(formatName, encodingOptions);
             workItem.Image.Save(path, encoder);
         }
         else
@@ -251,153 +353,33 @@ public class SaveBlock : IBlock, IShipmentSink
     /// <summary>
     /// Updates the file extension based on the target format.
     /// </summary>
-    static private string UpdateFileExtension(string fileName, ImageFormat format)
+    /// <param name="fileName">The file name to update.</param>
+    /// <param name="formatName">The format name (e.g., "JPEG", "PNG").</param>
+    /// <returns>The file name with the updated extension.</returns>
+    private static string UpdateFileExtension(string fileName, string formatName)
     {
+        var strategy = ImageFormatRegistry.Instance.GetFormat(formatName);
+        if (strategy == null)
+        {
+            return fileName; // Keep original if unknown
+        }
+
         var nameWithoutExt = Path.GetFileNameWithoutExtension(fileName);
-        var newExtension = format switch
-        {
-            ImageFormat.Jpeg => ".jpg",
-            ImageFormat.Png => ".png",
-            ImageFormat.Gif => ".gif",
-            ImageFormat.Bmp => ".bmp",
-            ImageFormat.Pbm => ".pbm",
-            ImageFormat.Tiff => ".tiff",
-            ImageFormat.Tga => ".tga",
-            ImageFormat.WebP => ".webp",
-            ImageFormat.Qoi => ".qoi",
-            _ => Path.GetExtension(fileName) // Keep original extension if unknown
-        };
-        
-        return nameWithoutExt + newExtension;
+        return nameWithoutExt + strategy.FileExtension;
     }
 
-    private IImageEncoder CreateEncoder(object encodingOptions)
+    /// <summary>
+    /// Creates an encoder for the specified format with the given options.
+    /// </summary>
+    /// <param name="formatName">The format name (e.g., "JPEG", "PNG").</param>
+    /// <param name="encodingOptions">The encoding options.</param>
+    /// <returns>An image encoder.</returns>
+    /// <exception cref="InvalidOperationException">Thrown when format is not registered.</exception>
+    private IImageEncoder CreateEncoder(string formatName, object encodingOptions)
     {
-        return encodingOptions switch
-        {
-            JpegEncodingOptions opt => CreateJpegEncoder(opt),
-            PbmEncodingOptions opt => CreatePbmEncoder(opt),
-            PngEncodingOptions opt => CreatePngEncoder(opt),
-            BmpEncodingOptions opt => CreateBmpEncoder(opt),
-            GifEncodingOptions opt => CreateGifEncoder(opt),
-            TiffEncodingOptions opt => CreateTiffEncoder(opt),
-            TgaEncodingOptions opt => CreateTgaEncoder(opt),
-            WebPEncodingOptions opt => CreateWebpEncoder(opt),
-            QoiEncodingOptions opt => CreateQoiEncoder(opt),
-            _ => throw new InvalidOperationException($"Unknown encoding options type: {encodingOptions.GetType()}")
-        };
-    }
-
-    private JpegEncoder CreateJpegEncoder(JpegEncodingOptions? opt)
-    {
-        if (opt == null) return new JpegEncoder { SkipMetadata = SkipMetadata };
-        return new JpegEncoder
-        {
-            Quality = opt.Quality,
-            ColorType = opt.ColorType.HasValue ? (SixLabors.ImageSharp.Formats.Jpeg.JpegEncodingColor)opt.ColorType.Value : null,
-            Interleaved = opt.Interleaved,
-            SkipMetadata = SkipMetadata
-        };
-    }
-
-    private PbmEncoder CreatePbmEncoder(PbmEncodingOptions? opt)
-    {
-        if (opt == null) return new PbmEncoder { SkipMetadata = SkipMetadata };
-        return new PbmEncoder
-        {
-            ColorType = (SixLabors.ImageSharp.Formats.Pbm.PbmColorType)opt.ColorType,
-            ComponentType = opt.ComponentType.HasValue ? (SixLabors.ImageSharp.Formats.Pbm.PbmComponentType)opt.ComponentType.Value : null,
-            Encoding = (SixLabors.ImageSharp.Formats.Pbm.PbmEncoding)opt.Encoding,
-            SkipMetadata = SkipMetadata
-        };
-    }
-
-    private PngEncoder CreatePngEncoder(PngEncodingOptions? opt)
-    {
-        if (opt == null) return new PngEncoder { SkipMetadata = SkipMetadata };
-        return new PngEncoder
-        {
-            CompressionLevel = (SixLabors.ImageSharp.Formats.Png.PngCompressionLevel)opt.CompressionLevel,
-            ColorType = opt.ColorType.HasValue ? (SixLabors.ImageSharp.Formats.Png.PngColorType)opt.ColorType.Value : null,
-            BitDepth = opt.BitDepth.HasValue ? (SixLabors.ImageSharp.Formats.Png.PngBitDepth)opt.BitDepth.Value : null,
-            InterlaceMethod = opt.InterlaceMethod.HasValue ? (SixLabors.ImageSharp.Formats.Png.PngInterlaceMode)opt.InterlaceMethod.Value : null,
-            TransparentColorMode = (SixLabors.ImageSharp.Formats.Png.PngTransparentColorMode)opt.TransparentColorMode,
-            Quantizer = opt.Quantizer.CreateQuantizer(),
-            SkipMetadata = SkipMetadata
-        };
-    }
-
-    private BmpEncoder CreateBmpEncoder(BmpEncodingOptions? opt)
-    {
-        if (opt == null) return new BmpEncoder { SkipMetadata = SkipMetadata };
-        return new BmpEncoder
-        {
-            BitsPerPixel = opt.BitsPerPixel.HasValue ? (SixLabors.ImageSharp.Formats.Bmp.BmpBitsPerPixel)opt.BitsPerPixel.Value : null,
-            SupportTransparency = opt.SupportTransparency,
-            Quantizer = opt.Quantizer.CreateQuantizer(),
-            SkipMetadata = SkipMetadata
-        };
-    }
-
-    private GifEncoder CreateGifEncoder(GifEncodingOptions? opt)
-    {
-        if (opt == null) return new GifEncoder { SkipMetadata = SkipMetadata };
-        return new GifEncoder
-        {
-            ColorTableMode = (SixLabors.ImageSharp.Formats.Gif.GifColorTableMode)opt.ColorTableMode,
-            Quantizer = opt.Quantizer.CreateQuantizer(),
-            SkipMetadata = SkipMetadata
-        };
-    }
-
-    private TiffEncoder CreateTiffEncoder(TiffEncodingOptions? opt)
-    {
-        if (opt == null) return new TiffEncoder { SkipMetadata = SkipMetadata };
-        return new TiffEncoder
-        {
-            Compression = opt.Compression.HasValue ? (SixLabors.ImageSharp.Formats.Tiff.Constants.TiffCompression)opt.Compression.Value : null,
-            BitsPerPixel = opt.BitsPerPixel.HasValue ? (SixLabors.ImageSharp.Formats.Tiff.TiffBitsPerPixel)opt.BitsPerPixel.Value : null,
-            CompressionLevel = (SixLabors.ImageSharp.Compression.Zlib.DeflateCompressionLevel)opt.CompressionLevel,
-            HorizontalPredictor = opt.HorizontalPredictor.HasValue ? (SixLabors.ImageSharp.Formats.Tiff.Constants.TiffPredictor)opt.HorizontalPredictor.Value : null,
-            Quantizer = opt.Quantizer.CreateQuantizer(),
-            SkipMetadata = SkipMetadata
-        };
-    }
-
-    private TgaEncoder CreateTgaEncoder(TgaEncodingOptions? opt)
-    {
-        if (opt == null) return new TgaEncoder { SkipMetadata = SkipMetadata };
-        return new TgaEncoder
-        {
-            BitsPerPixel = opt.BitsPerPixel.HasValue ? (SixLabors.ImageSharp.Formats.Tga.TgaBitsPerPixel)opt.BitsPerPixel.Value : null,
-            Compression = (SixLabors.ImageSharp.Formats.Tga.TgaCompression)opt.Compression,
-            SkipMetadata = SkipMetadata
-        };
-    }
-
-    private WebpEncoder CreateWebpEncoder(WebPEncodingOptions? opt)
-    {
-        if (opt == null) return new WebpEncoder { SkipMetadata = SkipMetadata };
-        return new WebpEncoder
-        {
-            FileFormat = (SixLabors.ImageSharp.Formats.Webp.WebpFileFormatType)opt.FileFormat,
-            Quality = opt.Quality,
-            Method = (SixLabors.ImageSharp.Formats.Webp.WebpEncodingMethod)opt.Method,
-            NearLossless = opt.NearLossless,
-            NearLosslessQuality = opt.NearLosslessQuality,
-            SkipMetadata = SkipMetadata
-        };
-    }
-
-    private QoiEncoder CreateQoiEncoder(QoiEncodingOptions? opt)
-    {
-        if (opt == null) return new QoiEncoder { SkipMetadata = SkipMetadata };
-        return new QoiEncoder
-        {
-            Channels = opt.Channels.HasValue ? (SixLabors.ImageSharp.Formats.Qoi.QoiChannels)opt.Channels.Value : null,
-            ColorSpace = opt.ColorSpace.HasValue ? (SixLabors.ImageSharp.Formats.Qoi.QoiColorSpace)opt.ColorSpace.Value : null,
-            SkipMetadata = SkipMetadata
-        };
+        var strategy = ImageFormatRegistry.Instance.GetFormat(formatName.ToUpper(CultureInfo.InvariantCulture))
+            ?? throw new InvalidOperationException($"Unknown format: {formatName}");
+        return strategy.CreateEncoder(encodingOptions, SkipMetadata);
     }
 
     #endregion

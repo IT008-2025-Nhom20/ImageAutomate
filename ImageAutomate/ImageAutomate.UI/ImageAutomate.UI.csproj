@@ -7,13 +7,24 @@
 		<UseWindowsForms>true</UseWindowsForms>
 	</PropertyGroup>
 
+	<PropertyGroup>
+		<EnableNETAnalyzers>true</EnableNETAnalyzers>
+		<AnalysisLevel>latest-all</AnalysisLevel>
+
+		<TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+	</PropertyGroup>
+	
 	<ItemGroup>
 		<Compile Update="GraphRenderPanel.cs">
+			<SubType>Component</SubType>
+		</Compile>
+		<Compile Update="SidebarControl.cs">
 			<SubType>Component</SubType>
 		</Compile>
 	</ItemGroup>
 
 	<ItemGroup>
+		<PackageReference Include="Microsoft.CodeAnalysis.Metrics" Version="4.14.0" />
 		<PackageReference Include="Microsoft.Msagl" Version="1.1.6" />
 	</ItemGroup>
 
