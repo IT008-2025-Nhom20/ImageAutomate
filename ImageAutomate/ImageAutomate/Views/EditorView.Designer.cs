@@ -33,6 +33,7 @@
             NewGraphMenuItem = new ToolStripMenuItem();
             OpenMenuItem = new ToolStripMenuItem();
             SaveMenuItem = new ToolStripMenuItem();
+            SaveAsMenuItem = new ToolStripMenuItem();
             CloseMenuItem = new ToolStripMenuItem();
             ExecuteMenuItem = new ToolStripMenuItem();
             AboutMenuItem = new ToolStripMenuItem();
@@ -64,7 +65,7 @@
             // 
             // FileMenu
             // 
-            FileMenu.DropDownItems.AddRange(new ToolStripItem[] { NewGraphMenuItem, OpenMenuItem, SaveMenuItem, CloseMenuItem });
+            FileMenu.DropDownItems.AddRange(new ToolStripItem[] { NewGraphMenuItem, OpenMenuItem, SaveMenuItem, SaveAsMenuItem, CloseMenuItem });
             FileMenu.Name = "FileMenu";
             FileMenu.Size = new Size(37, 20);
             FileMenu.Text = "File";
@@ -89,6 +90,13 @@
             SaveMenuItem.Size = new Size(103, 22);
             SaveMenuItem.Text = "Save";
             SaveMenuItem.Click += OnSaveMenuItemClick;
+            // 
+            // SaveAsMenuItem
+            // 
+            SaveAsMenuItem.Name = "SaveAsMenuItem";
+            SaveAsMenuItem.Size = new Size(103, 22);
+            SaveAsMenuItem.Text = "Save As...";
+            SaveAsMenuItem.Click += OnSaveAsMenuItemClick;
             // 
             // CloseMenuItem
             // 
@@ -216,6 +224,7 @@
         private ToolStripMenuItem NewGraphMenuItem;
         private ToolStripMenuItem OpenMenuItem;
         private ToolStripMenuItem SaveMenuItem;
+        private ToolStripMenuItem SaveAsMenuItem;
         private ToolStripMenuItem CloseMenuItem;
         private SplitContainer GraphPanelPropertyGridSplit;
         private PropertyGrid BlockPropertyGrid;

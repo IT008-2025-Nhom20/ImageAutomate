@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 
 using ImageAutomate.Core;
-using ImageAutomate.Data;
+using ImageAutomate.Dialogs;
 using ImageAutomate.Models;
 using ImageAutomate.Services;
 using ImageAutomate.UI;
@@ -30,13 +30,11 @@ namespace ImageAutomate.Views.DashboardViews
         {
             InitializeComponent();
 
-            // Initialize service with CSV data context
-            var dataContext = new CsvWorkspaceDataContext();
-
             // Wire up events
             SearchTextBox.TextChanged += TextBoxSearch_TextChanged;
             NewButton.Click += BtnNew_Click;
             BrowseButton.Click += BtnBrowse_Click;
+            ImportButton.Click += BtnImport_Click;
 
             // Initial load
             LoadWorkspaces();
@@ -99,6 +97,12 @@ namespace ImageAutomate.Views.DashboardViews
             var openItem = new ToolStripMenuItem("Open");
             openItem.Click += (s, e) => OpenWorkspace(workspaceInfo);
             contextMenu.Items.Add(openItem);
+
+            contextMenu.Items.Add(new ToolStripSeparator());
+
+            var editItem = new ToolStripMenuItem("Edit...");
+            editItem.Click += (s, e) => EditWorkspaceEntry(workspaceInfo);
+            contextMenu.Items.Add(editItem);
 
             var removeItem = new ToolStripMenuItem("Remove from List");
             removeItem.Click += (s, e) => RemoveWorkspaceFromList(workspaceInfo);
@@ -210,6 +214,49 @@ namespace ImageAutomate.Views.DashboardViews
             }
         }
 
+        private void EditWorkspaceEntry(WorkspaceInfo workspaceInfo)
+        {
+            using var dialog = new WorkspaceSaveDialog(
+                workspaceInfo.Name,
+                workspaceInfo.FilePath,
+                workspaceInfo.ThumbnailPath,
+                isEditMode: true
+            );
+
+            if (dialog.ShowDialog() == DialogResult.OK)
+            {
+                try
+                {
+                    // Load the workspace JSON, update the name, and save it back
+                    if (File.Exists(workspaceInfo.FilePath))
+                    {
+                        var workspace = Workspace.LoadFromFile(workspaceInfo.FilePath);
+                        workspace.Name = dialog.WorkspaceName;
+                        workspace.SaveToFile(workspaceInfo.FilePath);
+                    }
+
+                    // Update the CSV entry with new name and image path
+                    _workspaceService.AddOrUpdateWorkspace(
+                        workspaceInfo.FilePath,
+                        dialog.WorkspaceName,
+                        workspaceInfo.Description,
+                        dialog.ImagePath
+                    );
+
+                    // Refresh the list
+                    LoadWorkspaces(_lastSearchQuery);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(
+                        $"Failed to update workspace:\n{ex.Message}",
+                        "Error",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Error);
+                }
+            }
+        }
+
         private void TextBoxSearch_TextChanged(object? sender, EventArgs e)
         {
             _lastSearchQuery = SearchTextBox.Text;
@@ -289,6 +336,62 @@ namespace ImageAutomate.Views.DashboardViews
                         "Error",
                         MessageBoxButtons.OK,
                         MessageBoxIcon.Error);
+                }
+            }
+        }
+
+        private void BtnImport_Click(object? sender, EventArgs e)
+        {
+            using OpenFileDialog dialog = new()
+            {
+                Filter = "ImageAutomate Workspace (*.imageautomate;*.json)|*.imageautomate;*.json|All Files (*.*)|*.*",
+                Title = "Import Workspaces",
+                Multiselect = true
+            };
+
+            if (dialog.ShowDialog() == DialogResult.OK)
+            {
+                int importedCount = 0;
+                int failedCount = 0;
+
+                foreach (var filePath in dialog.FileNames)
+                {
+                    try
+                    {
+                        var workspace = Workspace.LoadFromFile(filePath);
+
+                        // Add to workspaces list (without opening)
+                        _workspaceService.AddOrUpdateWorkspace(filePath, workspace.Name);
+                        importedCount++;
+
+                        Debug.WriteLine($"Imported workspace: {workspace.Name} from {filePath}");
+                    }
+                    catch (Exception ex)
+                    {
+                        failedCount++;
+                        Debug.WriteLine($"Failed to import workspace from {filePath}: {ex.Message}");
+                    }
+                }
+
+                // Reload list
+                LoadWorkspaces(_lastSearchQuery);
+
+                // Show summary
+                if (failedCount == 0)
+                {
+                    MessageBox.Show(
+                        $"Successfully imported {importedCount} workspace(s).",
+                        "Import Complete",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Information);
+                }
+                else
+                {
+                    MessageBox.Show(
+                        $"Imported {importedCount} workspace(s).\n{failedCount} file(s) could not be imported.",
+                        "Import Complete",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Warning);
                 }
             }
         }

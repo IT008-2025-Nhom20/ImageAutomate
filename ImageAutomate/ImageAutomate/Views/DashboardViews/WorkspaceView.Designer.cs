@@ -32,6 +32,7 @@
             SearchTextBox = new TextBox();
             NewButton = new Button();
             BrowseButton = new Button();
+            ImportButton = new Button();
             WorkspacesPanel = new FlowLayoutPanel();
             EmptyLabel = new Label();
             SuspendLayout();
@@ -53,14 +54,14 @@
             SearchTextBox.Location = new Point(20, 65);
             SearchTextBox.Name = "SearchTextBox";
             SearchTextBox.PlaceholderText = "Search workspaces...";
-            SearchTextBox.Size = new Size(450, 25);
+            SearchTextBox.Size = new Size(330, 25);
             SearchTextBox.TabIndex = 1;
             // 
             // NewButton
             // 
             NewButton.Anchor = AnchorStyles.Top | AnchorStyles.Right;
             NewButton.Font = new Font("Segoe UI", 9F);
-            NewButton.Location = new Point(490, 65);
+            NewButton.Location = new Point(370, 65);
             NewButton.Name = "NewButton";
             NewButton.Size = new Size(110, 25);
             NewButton.TabIndex = 2;
@@ -71,12 +72,23 @@
             // 
             BrowseButton.Anchor = AnchorStyles.Top | AnchorStyles.Right;
             BrowseButton.Font = new Font("Segoe UI", 9F);
-            BrowseButton.Location = new Point(610, 65);
+            BrowseButton.Location = new Point(490, 65);
             BrowseButton.Name = "BrowseButton";
             BrowseButton.Size = new Size(110, 25);
             BrowseButton.TabIndex = 3;
             BrowseButton.Text = "Browse...";
             BrowseButton.UseVisualStyleBackColor = true;
+            // 
+            // ImportButton
+            // 
+            ImportButton.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            ImportButton.Font = new Font("Segoe UI", 9F);
+            ImportButton.Location = new Point(610, 65);
+            ImportButton.Name = "ImportButton";
+            ImportButton.Size = new Size(110, 25);
+            ImportButton.TabIndex = 4;
+            ImportButton.Text = "Import...";
+            ImportButton.UseVisualStyleBackColor = true;
             // 
             // WorkspacesPanel
             // 
@@ -86,7 +98,7 @@
             WorkspacesPanel.Name = "WorkspacesPanel";
             WorkspacesPanel.Padding = new Padding(5);
             WorkspacesPanel.Size = new Size(700, 475);
-            WorkspacesPanel.TabIndex = 4;
+            WorkspacesPanel.TabIndex = 5;
             // 
             // EmptyLabel
             // 
@@ -97,7 +109,7 @@
             EmptyLabel.Location = new Point(245, 300);
             EmptyLabel.Name = "EmptyLabel";
             EmptyLabel.Size = new Size(278, 20);
-            EmptyLabel.TabIndex = 5;
+            EmptyLabel.TabIndex = 6;
             EmptyLabel.Text = "No workspaces found. Create a new one!";
             EmptyLabel.Visible = false;
             // 
@@ -108,6 +120,7 @@
             BackColor = SystemColors.Control;
             Controls.Add(EmptyLabel);
             Controls.Add(WorkspacesPanel);
+            Controls.Add(ImportButton);
             Controls.Add(BrowseButton);
             Controls.Add(NewButton);
             Controls.Add(SearchTextBox);
@@ -124,6 +137,7 @@
         private TextBox SearchTextBox;
         private Button NewButton;
         private Button BrowseButton;
+        private Button ImportButton;
         private FlowLayoutPanel WorkspacesPanel;
         private Label EmptyLabel;
     }

@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 
 using ImageAutomate.Core;
-using ImageAutomate.Data;
+using ImageAutomate.Dialogs;
 using ImageAutomate.Models;
 using ImageAutomate.Services;
 using ImageAutomate.UI;
@@ -29,9 +29,6 @@ namespace ImageAutomate.Views.DashboardViews
         public WelcomeView()
         {
             InitializeComponent();
-
-            // Initialize service with CSV data context
-            var dataContext = new CsvWorkspaceDataContext();
 
             WireEventHandlers();
             LoadRecentWorkspaces();
@@ -104,26 +101,50 @@ namespace ImageAutomate.Views.DashboardViews
                 FlatStyle = FlatStyle.Flat,
                 Margin = new Padding(0, 0, 0, 5),
                 Padding = new Padding(10, 5, 10, 5),
-                Tag = ws.FilePath,
+                Tag = ws,
                 BackColor = Color.FromArgb(240, 240, 240)
             };
 
             // Simple styling
             btn.FlatAppearance.BorderSize = 0;
-            //btn.FlatAppearance.MouseOverBackColor = Color.FromArgb(240, 240, 240);
 
             btn.Click += RecentWorkspaceClick;
             btn.MouseEnter += RecentWorkspaceAnimationMouseEnter;
             btn.MouseLeave += RecentWorkspaceAnimationMouseLeave;
+
+            // Add context menu
+            var contextMenu = new ContextMenuStrip();
+
+            var openItem = new ToolStripMenuItem("Open");
+            openItem.Click += (s, e) => OpenWorkspace(ws.FilePath);
+            contextMenu.Items.Add(openItem);
+
+            contextMenu.Items.Add(new ToolStripSeparator());
+
+            var editItem = new ToolStripMenuItem("Edit...");
+            editItem.Click += (s, e) => EditWorkspaceEntry(ws);
+            contextMenu.Items.Add(editItem);
+
+            var removeItem = new ToolStripMenuItem("Remove from List");
+            removeItem.Click += (s, e) => RemoveWorkspaceFromList(ws);
+            contextMenu.Items.Add(removeItem);
+
+            contextMenu.Items.Add(new ToolStripSeparator());
+
+            var showInExplorerItem = new ToolStripMenuItem("Show in File Explorer");
+            showInExplorerItem.Click += (s, e) => ShowInFileExplorer(ws.FilePath);
+            contextMenu.Items.Add(showInExplorerItem);
+
+            btn.ContextMenuStrip = contextMenu;
 
             return btn;
         }
 
         private void RecentWorkspaceClick(object? sender, EventArgs e)
         {
-            if (sender is Button btn && btn.Tag is string filePath)
+            if (sender is Button btn && btn.Tag is WorkspaceInfo ws)
             {
-                OpenWorkspace(filePath);
+                OpenWorkspace(ws.FilePath);
             }
         }
 
@@ -175,6 +196,72 @@ namespace ImageAutomate.Views.DashboardViews
                 // Optionally remove from list?
                 _workspaceService.RemoveWorkspace(filePath);
                 LoadRecentWorkspaces();
+            }
+        }
+
+        private void EditWorkspaceEntry(WorkspaceInfo ws)
+        {
+            using var dialog = new WorkspaceSaveDialog(
+                ws.Name,
+                ws.FilePath,
+                ws.ThumbnailPath,
+                isEditMode: true
+            );
+
+            if (dialog.ShowDialog() == DialogResult.OK)
+            {
+                try
+                {
+                    // Load the workspace JSON, update the name, and save it back
+                    if (File.Exists(ws.FilePath))
+                    {
+                        var workspace = Workspace.LoadFromFile(ws.FilePath);
+                        workspace.Name = dialog.WorkspaceName;
+                        workspace.SaveToFile(ws.FilePath);
+                    }
+
+                    // Update the CSV entry with new name and image path
+                    _workspaceService.AddOrUpdateWorkspace(
+                        ws.FilePath,
+                        dialog.WorkspaceName,
+                        ws.Description,
+                        dialog.ImagePath
+                    );
+
+                    // Refresh the list
+                    LoadRecentWorkspaces();
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(
+                        $"Failed to update workspace:\n{ex.Message}",
+                        "Error",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Error);
+                }
+            }
+        }
+
+        private void RemoveWorkspaceFromList(WorkspaceInfo ws)
+        {
+            var result = MessageBox.Show(
+                $"Remove '{ws.Name}' from the recent list?\n\nThe workspace file will not be deleted.",
+                "Remove Workspace",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Question);
+
+            if (result == DialogResult.Yes)
+            {
+                _workspaceService.RemoveWorkspace(ws.FilePath);
+                LoadRecentWorkspaces();
+            }
+        }
+
+        private void ShowInFileExplorer(string filePath)
+        {
+            if (File.Exists(filePath))
+            {
+                Process.Start("explorer.exe", $"/select,\"{filePath}\"");
             }
         }
     }

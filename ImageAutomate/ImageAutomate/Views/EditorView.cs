@@ -1,6 +1,8 @@
 ﻿using System.Diagnostics;
 using ImageAutomate.Core;
+using ImageAutomate.Dialogs;
 using ImageAutomate.Execution;
+using ImageAutomate.Services;
 using ImageAutomate.StandardBlocks;
 using ImageAutomate.UI;
 
@@ -10,6 +12,7 @@ namespace ImageAutomate.Views;
 public partial class EditorView : UserControl
 {
     private PipelineGraph graph = new();
+    private WorkspaceService workspaceService = WorkspaceService.Instance;
 
     public event EventHandler? CloseRequested;
 
@@ -163,25 +166,68 @@ public partial class EditorView : UserControl
             return;
         }
 
-        using SaveFileDialog dialog = new()
+        // If workspace was previously saved, save to same location
+        if (GraphPanel.Workspace.IsSaved)
         {
-            Filter = "ImageAutomate Workspace (*.imageautomate)|*.imageautomate|JSON File (*.json)|*.json|All Files (*.*)|*.*",
-            DefaultExt = "imageautomate",
-            Title = "Save Workspace"
-        };
+            SaveWorkspaceToFile(GraphPanel.Workspace.FilePath!);
+        }
+        else
+        {
+            // Show save dialog for new workspaces
+            ShowSaveDialog();
+        }
+    }
+
+    private void OnSaveAsMenuItemClick(object sender, EventArgs e)
+    {
+        if (GraphPanel.Workspace == null)
+        {
+            MessageBox.Show("No workspace to save.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            return;
+        }
+
+        // Always show the save dialog
+        ShowSaveDialog();
+    }
+
+    private void ShowSaveDialog()
+    {
+        var workspace = GraphPanel.Workspace!;
+        
+        using var dialog = new WorkspaceSaveDialog(
+            workspace.Name,
+            workspace.FilePath,
+            null, // No image path stored in workspace currently
+            false // Not edit mode
+        );
 
         if (dialog.ShowDialog() == DialogResult.OK)
         {
             try
             {
-                GraphPanel.Workspace.Name = Path.GetFileNameWithoutExtension(dialog.FileName);
-                GraphPanel.Workspace.SaveToFile(dialog.FileName);
+                workspace.Name = dialog.WorkspaceName;
+                workspace.SaveToFile(dialog.FilePath);
+                workspaceService.AddOrUpdateWorkspace(dialog.FilePath, workspace.Name, null, dialog.ImagePath);
                 MessageBox.Show("Workspace saved successfully!", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
             catch (Exception ex)
             {
                 MessageBox.Show($"Failed to save workspace: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
+        }
+    }
+
+    private void SaveWorkspaceToFile(string filePath)
+    {
+        try
+        {
+            GraphPanel.Workspace!.SaveToFile(filePath);
+            workspaceService.AddOrUpdateWorkspace(filePath, GraphPanel.Workspace.Name);
+            MessageBox.Show("Workspace saved successfully!", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Failed to save workspace: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
     }
 
