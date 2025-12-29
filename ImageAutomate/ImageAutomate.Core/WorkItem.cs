@@ -1,4 +1,5 @@
 ﻿using System.Collections.Immutable;
+
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Processing;
 
@@ -82,7 +83,7 @@ public sealed class BatchWorkItem(IEnumerable<Image> images, IImmutableDictionar
         get => _metadata ??= ImmutableDictionary<string, object>.Empty;
         set => _metadata = value;
     }
-    
+
     public void Dispose()
     {
         foreach (var image in Images)

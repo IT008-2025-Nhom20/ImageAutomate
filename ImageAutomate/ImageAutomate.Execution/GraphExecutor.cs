@@ -1,4 +1,5 @@
 using System.Diagnostics;
+
 using ImageAutomate.Core;
 using ImageAutomate.Execution.Exceptions;
 
@@ -186,7 +187,7 @@ public class GraphExecutor : IGraphExecutor
     {
         IDictionary<Socket, IReadOnlyList<IBasicWorkItem>>? inputs = null;
         IReadOnlyDictionary<Socket, IReadOnlyList<IBasicWorkItem>>? outputs = null;
-        
+
         try
         {
             // Mark as running
@@ -257,7 +258,7 @@ public class GraphExecutor : IGraphExecutor
             {
                 DisposeInputs(inputs, outputs);
             }
-            
+
             context.DecrementActiveBlocks();
         }
     }
@@ -438,7 +439,7 @@ public class GraphExecutor : IGraphExecutor
     {
         // Note: Warehouses are cleared on next cycle reset or by context cleanup
         // The main concern here is to let active tasks complete gracefully
-        
+
         // Wait for all active tasks to complete (they will check cancellation token)
         if (activeTasks.Count > 0)
         {

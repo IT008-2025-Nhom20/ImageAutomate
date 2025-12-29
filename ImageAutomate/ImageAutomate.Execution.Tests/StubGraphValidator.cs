@@ -1,5 +1,4 @@
 using ImageAutomate.Core;
-using ImageAutomate.Execution;
 
 namespace ImageAutomate.Execution.Tests;
 

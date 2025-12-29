@@ -7,7 +7,7 @@ namespace ImageAutomate.Execution.Exceptions;
 public class PipelineDeadlockException : Exception
 {
     public PipelineDeadlockException(string message) : base(message) { }
-    public PipelineDeadlockException(string message, Exception innerException) 
+    public PipelineDeadlockException(string message, Exception innerException)
         : base(message, innerException) { }
 
     public PipelineDeadlockException()

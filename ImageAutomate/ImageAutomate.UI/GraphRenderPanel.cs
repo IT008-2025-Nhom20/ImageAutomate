@@ -5,7 +5,6 @@
  */
 
 using System.ComponentModel;
-using System.Diagnostics;
 using System.Drawing.Drawing2D;
 
 using ImageAutomate.Core;
@@ -631,7 +630,7 @@ public class GraphRenderPanel : Panel
         {
             var rawData = e.Data.GetData(e.Data.GetFormats()[0]);
             if (rawData is Type t && typeof(IBlock).IsAssignableFrom(t))
-            { 
+            {
                 e.Effect = DragDropEffects.Copy;
                 _ghostBlockType = t;
                 _isDragOver = true;

@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using ImageAutomate.Models;
 
 namespace ImageAutomate.Data

@@ -46,7 +46,7 @@ public class ExecutorConfiguration
     public int MaxShipmentSize { get; set; } = 64;
 
     #region Adaptive Mode Configuration
-    
+
     /// <summary>
     /// Gets or sets the profiling window size for cost estimation (Adaptive Mode only).
     /// Default: 20 samples.

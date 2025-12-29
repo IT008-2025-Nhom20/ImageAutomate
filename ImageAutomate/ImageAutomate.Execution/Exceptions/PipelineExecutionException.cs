@@ -6,7 +6,7 @@ namespace ImageAutomate.Execution.Exceptions;
 public class PipelineExecutionException : Exception
 {
     public PipelineExecutionException(string message) : base(message) { }
-    public PipelineExecutionException(string message, Exception innerException) 
+    public PipelineExecutionException(string message, Exception innerException)
         : base(message, innerException) { }
 
     public PipelineExecutionException()

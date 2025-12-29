@@ -1,8 +1,3 @@
-using System;
-using System.Drawing;
-using System.IO;
-using System.Windows.Forms;
-
 namespace ImageAutomate.Dialogs
 {
     /// <summary>
@@ -136,7 +131,7 @@ namespace ImageAutomate.Dialogs
                 // Load image without locking the file
                 using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
                 var image = Image.FromStream(stream);
-                
+
                 // Dispose previous image
                 pictureBoxPreview.Image?.Dispose();
                 pictureBoxPreview.Image = image;
@@ -181,7 +176,7 @@ namespace ImageAutomate.Dialogs
         protected override void OnFormClosing(FormClosingEventArgs e)
         {
             base.OnFormClosing(e);
-            
+
             // Clean up the preview image
             pictureBoxPreview.Image?.Dispose();
             pictureBoxPreview.Image = null;

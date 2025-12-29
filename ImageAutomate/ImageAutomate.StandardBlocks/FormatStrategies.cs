@@ -1,4 +1,5 @@
 using ImageAutomate.Core;
+
 using SixLabors.ImageSharp.Formats;
 
 namespace ImageAutomate.StandardBlocks;

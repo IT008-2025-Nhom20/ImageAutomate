@@ -1,8 +1,4 @@
 using ImageAutomate.Core;
-using ImageAutomate.Execution;
-using ImageAutomate.Execution.Tests;
-using ImageAutomate.Execution.Exceptions;
-using Xunit.v3;
 
 namespace ImageAutomate.Execution.Tests;
 
@@ -258,10 +254,10 @@ public class GLMTest
 
         var source1 = new MockSource("Source1", 5);
         var source2 = new MockSource("Source2", 5); // Redundant source
-        
+
         var failingBlock = new WillFailBlock("FailingBlock"); // In path from source1
         var workingBlock = new PassthroughBlock("WorkingBlock"); // In path from source2
-        
+
         var redundantMerge = new MultiInputBlock("RedundantMerge", 2); // Gets from both paths
         var sink = new MockSink("Sink");
 
@@ -302,15 +298,15 @@ public class GLMTest
 
         var sourceA = new MockSource("SourceA", 5);
         var sourceB = new MockSource("SourceB", 5); // Separate, should not be affected
-        
+
         var chain1_1 = new PassthroughBlock("Chain1_1");
         var chain1_2 = new WillFailBlock("Chain1_2"); // Fails here
         var chain1_3 = new PassthroughBlock("Chain1_3");
-        
+
         var chain2_1 = new PassthroughBlock("Chain2_1");
         var chain2_2 = new PassthroughBlock("Chain2_2");
         var chain2_3 = new PassthroughBlock("Chain2_3");
-        
+
         var finalMerge = new MultiInputBlock("FinalMerge", 2);
         var sink = new MockSink("Sink");
 

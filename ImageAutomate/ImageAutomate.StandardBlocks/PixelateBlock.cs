@@ -1,10 +1,12 @@
-using ImageAutomate.Core;
-using SixLabors.ImageSharp.Processing;
 using System.ComponentModel;
+
+using ImageAutomate.Core;
+
+using SixLabors.ImageSharp.Processing;
 
 namespace ImageAutomate.StandardBlocks;
 
-public class PixelateBlock: IBlock
+public class PixelateBlock : IBlock
 {
     #region Fields
 

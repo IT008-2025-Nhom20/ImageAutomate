@@ -1,8 +1,6 @@
-﻿using System.Diagnostics;
-using System.Runtime.InteropServices;
+﻿using System.Runtime.InteropServices;
 
 using ImageAutomate.Core;
-using ImageAutomate.Execution;
 using ImageAutomate.Execution.Scheduling;
 
 namespace ImageAutomate.Views.DashboardViews

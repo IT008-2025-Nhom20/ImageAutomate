@@ -187,7 +187,7 @@ public class PipelineGraph
         List<BlockDto> blocks = [];
         List<ConnectionDto> connections = [];
         int? centerBlockIndex = null;
-        
+
         // Serialize blocks (layout is now part of block properties)
         foreach (var block in _nodes)
         {

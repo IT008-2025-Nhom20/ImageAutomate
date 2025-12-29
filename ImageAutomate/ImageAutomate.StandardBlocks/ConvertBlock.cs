@@ -1,8 +1,10 @@
+using System.ComponentModel;
+
 using ImageAutomate.Core;
 using ImageAutomate.Infrastructure;
+
 using SixLabors.ImageSharp.Processing.Processors.Dithering;
 using SixLabors.ImageSharp.Processing.Processors.Quantization;
-using System.ComponentModel;
 
 namespace ImageAutomate.StandardBlocks;
 

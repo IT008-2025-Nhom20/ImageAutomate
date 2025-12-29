@@ -1,5 +1,4 @@
 using ImageAutomate.Core;
-using Xunit;
 
 namespace ImageAutomate.StandardBlocks.Tests;
 

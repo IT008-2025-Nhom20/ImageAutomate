@@ -1,9 +1,11 @@
-using ImageAutomate.Core;
+using System.Collections.Immutable;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+
+using ImageAutomate.Core;
+
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Processing;
-using System.Collections.Immutable;
 
 namespace ImageAutomate.StandardBlocks;
 
@@ -315,7 +317,7 @@ public class LoadBlock : IBlock, IShipmentSource
             cancellationToken.ThrowIfCancellationRequested();
 
             string file = ShipmentData[i];
-            
+
             Image image = LoadImageFile(file);
             var builder = ImmutableDictionary.CreateBuilder<string, object>();
             builder.Add("BatchFolder", SourcePath);

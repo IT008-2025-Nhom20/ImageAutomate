@@ -5,6 +5,7 @@
  */
 
 using System.Text.Json;
+
 using ImageAutomate.Core.Serialization;
 
 namespace ImageAutomate.Core;

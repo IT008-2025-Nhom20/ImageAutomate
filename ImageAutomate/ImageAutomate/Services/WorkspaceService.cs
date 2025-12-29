@@ -1,5 +1,3 @@
-using System.Diagnostics;
-
 using ImageAutomate.Data;
 using ImageAutomate.Models;
 
@@ -26,10 +24,10 @@ namespace ImageAutomate.Services
         public List<WorkspaceInfo> GetAllWorkspaces()
         {
             var workspaces = _dataContext.GetAll();
-            
+
             // Remove entries where the file no longer exists
             var validWorkspaces = workspaces.Where(w => File.Exists(w.FilePath)).ToList();
-            
+
             // If we removed any invalid entries, update the data store
             if (validWorkspaces.Count < workspaces.Count)
             {
@@ -103,7 +101,7 @@ namespace ImageAutomate.Services
             if (existing != null)
             {
                 existing.LastOpened = DateTime.Now;
-                
+
                 // Also update file modified time if it changed
                 if (File.Exists(filePath))
                 {
@@ -137,7 +135,7 @@ namespace ImageAutomate.Services
 
             var lowerQuery = query.ToLowerInvariant();
             return GetAllWorkspaces()
-                .Where(w => 
+                .Where(w =>
                     w.Name.ToLowerInvariant().Contains(lowerQuery) ||
                     (w.Description?.ToLowerInvariant().Contains(lowerQuery) ?? false))
                 .ToList();

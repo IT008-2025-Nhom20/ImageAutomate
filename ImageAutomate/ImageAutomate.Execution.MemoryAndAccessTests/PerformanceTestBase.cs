@@ -1,10 +1,8 @@
-using System.Diagnostics;
 using ImageAutomate.Core;
-using ImageAutomate.Execution;
 using ImageAutomate.Execution.MemoryAndAccessTests.LargeSources;
+
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
-using Xunit;
 
 namespace ImageAutomate.Execution.MemoryAndAccessTests;
 
@@ -148,17 +146,18 @@ public abstract class PerformanceTestBase
             {
                 if (img is Image<Rgba32> rgba)
                 {
-                    rgba.ProcessPixelRows(accessor => {
+                    rgba.ProcessPixelRows(accessor =>
+                    {
                         var row = accessor.GetRowSpan(0);
                         var p = row[0]; // Touch pixel
                     });
                 }
                 else
                 {
-                   // Fallback for generic image
-                   // Image abstract class does not support [x,y] indexing directly without pixel type
-                   // But we can check width/height or metadata
-                   _ = img.Width;
+                    // Fallback for generic image
+                    // Image abstract class does not support [x,y] indexing directly without pixel type
+                    // But we can check width/height or metadata
+                    _ = img.Width;
                 }
             }
             catch (ObjectDisposedException)

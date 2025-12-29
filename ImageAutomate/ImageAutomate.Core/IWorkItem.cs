@@ -1,4 +1,5 @@
 ﻿using System.Collections.Immutable;
+
 using SixLabors.ImageSharp;
 
 namespace ImageAutomate.Core;
