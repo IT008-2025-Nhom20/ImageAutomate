@@ -329,7 +329,7 @@ public class CropBlock : IBlock
     /// <summary>
     /// Gets or sets a value indicating whether crop parameters are relative (0.0-1.0) or absolute pixels.
     /// </summary>
-    [Category("Configuration")]
+    [Category("Region Configuration")]
     [Description("If true, uses relative values (0.0-1.0) instead of pixels.")]
     public bool IsRelative
     {
@@ -347,7 +347,7 @@ public class CropBlock : IBlock
     /// <summary>
     /// Gets or sets the relative X coordinate (0.0-1.0).
     /// </summary>
-    [Category("Configuration")]
+    [Category("Region Configuration")]
     [Description("Relative Left coordinate (X) of crop origin (0.0-1.0).")]
     public double CropXRelative
     {
@@ -368,7 +368,7 @@ public class CropBlock : IBlock
     /// <summary>
     /// Gets or sets the relative Y coordinate (0.0-1.0).
     /// </summary>
-    [Category("Configuration")]
+    [Category("Region Configuration")]
     [Description("Relative Top coordinate (Y) of crop origin (0.0-1.0).")]
     public double CropYRelative
     {
@@ -389,7 +389,7 @@ public class CropBlock : IBlock
     /// <summary>
     /// Gets or sets the relative width (0.0-1.0).
     /// </summary>
-    [Category("Configuration")]
+    [Category("Region Configuration")]
     [Description("Relative crop width (0.0-1.0).")]
     public double CropWidthRelative
     {
@@ -410,7 +410,7 @@ public class CropBlock : IBlock
     /// <summary>
     /// Gets or sets the relative height (0.0-1.0).
     /// </summary>
-    [Category("Configuration")]
+    [Category("Region Configuration")]
     [Description("Relative crop height (0.0-1.0).")]
     public double CropHeightRelative
     {

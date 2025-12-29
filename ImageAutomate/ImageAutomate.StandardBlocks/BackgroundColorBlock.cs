@@ -2,6 +2,8 @@
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Processing;
 using System.ComponentModel;
+using WinColor = System.Drawing.Color;
+using SharpColor = SixLabors.ImageSharp.Color;
 
 namespace ImageAutomate.StandardBlocks;
 
@@ -15,7 +17,13 @@ public class BackgroundColorBlock : IBlock
     private bool _disposed;
 
     // Configuration fields
-    private Color _color = Color.White; // Default to White
+    private WinColor _color = WinColor.White; // Default to White
+
+    private bool _isRelative = true;
+    private float _rectX = 0.0f;
+    private float _rectY = 0.0f;
+    private float _rectWidth = 1.0f;
+    private float _rectHeight = 1.0f;
 
     // Layout fields
     private double _x;
@@ -138,7 +146,7 @@ public class BackgroundColorBlock : IBlock
 
     [Category("Configuration")]
     [Description("The color to apply to the background (transparent areas).")]
-    public Color Color
+    public WinColor Color
     {
         get => _color;
         set
@@ -150,7 +158,86 @@ public class BackgroundColorBlock : IBlock
             }
         }
     }
+    [Category("Region Configuration")]
+    [Description("If true, values are percentages (0.0-1.0). If false, values are pixels.")]
+    public bool IsRelative
+    {
+        get => _isRelative;
+        set
+        {
+            if (_isRelative != value)
+            {
+                _isRelative = value;
+                OnPropertyChanged(nameof(IsRelative));
+            }
+        }
+    }
 
+    [Category("Region Configuration")]
+    [Description("X coordinate of the top-left corner.")]
+    public float RectX
+    {
+        get => _rectX;
+        set
+        {
+            if (Math.Abs(_rectX - value) > float.Epsilon)
+            {
+                _rectX = value;
+                OnPropertyChanged(nameof(RectX));
+            }
+        }
+    }
+
+    [Category("Region Configuration")]
+    [Description("Y coordinate of the top-left corner.")]
+    public float RectY
+    {
+        get => _rectY;
+        set
+        {
+            if (Math.Abs(_rectY - value) > float.Epsilon)
+            {
+                _rectY = value;
+                OnPropertyChanged(nameof(RectY));
+            }
+        }
+    }
+
+    [Category("Region Configuration")]
+    [Description("Width of the region.")]
+    public float RectWidth
+    {
+        get => _rectWidth;
+        set
+        {
+            // Đảm bảo chiều rộng không âm
+            if (value < 0) value = 0;
+
+            if (Math.Abs(_rectWidth - value) > float.Epsilon)
+            {
+                _rectWidth = value;
+                OnPropertyChanged(nameof(RectWidth));
+            }
+        }
+    }
+
+    [Category("Region Configuration")]
+    [Description("Height of the region.")]
+    public float RectHeight
+    {
+        get => _rectHeight;
+        set
+        {
+            // Đảm bảo chiều cao không âm
+            if (value < 0) value = 0;
+
+            if (Math.Abs(_rectHeight - value) > float.Epsilon)
+            {
+                _rectHeight = value;
+                OnPropertyChanged(nameof(RectHeight));
+            }
+        }
+    }
     #endregion
 
     #region INotifyPropertyChanged
@@ -194,8 +281,14 @@ public class BackgroundColorBlock : IBlock
         foreach (var sourceItem in inItems.OfType<WorkItem>())
         {
             cancellationToken.ThrowIfCancellationRequested();
+            var img = sourceItem.Image;
+            int w = img.Width;
+            int h = img.Height;
 
-            sourceItem.Image.Mutate(x => x.BackgroundColor(Color));
+            Rectangle region = GetProcessRegion(w, h);
+
+            var sharpColor = SharpColor.FromRgba(_color.R, _color.G, _color.B, _color.A);
+            sourceItem.Image.Mutate(x => x.BackgroundColor(sharpColor, region));
 
             outputItems.Add(sourceItem);
         }
@@ -205,7 +298,29 @@ public class BackgroundColorBlock : IBlock
                 { _outputs[0], outputItems }
             };
     }
+    private Rectangle GetProcessRegion(int sourceWidth, int sourceHeight)
+    {
+        int x, y, w, h;
 
+        if (IsRelative)
+        {
+            x = (int)(RectX * sourceWidth);
+            y = (int)(RectY * sourceHeight);
+            w = (int)(RectWidth * sourceWidth);
+            h = (int)(RectHeight * sourceHeight);
+        }
+        else
+        {
+            x = (int)RectX;
+            y = (int)RectY;
+            w = (int)RectWidth;
+            h = (int)RectHeight;
+        }
+
+        var rect = new Rectangle(x, y, w, h);
+        rect.Intersect(new Rectangle(0, 0, sourceWidth, sourceHeight));
+        return rect;
+    }
     #endregion
 
     #region IDisposable
