@@ -29,10 +29,7 @@ public sealed class SchedulerRegistry
     public void RegisterScheduler(string name, Func<IScheduler> factory)
     {
         ArgumentNullException.ThrowIfNull(factory, nameof(factory));
-        if (string.IsNullOrEmpty(name))
-        {
-            throw new ArgumentException("Scheduler name cannot be null or empty.", nameof(name));
-        }
+        ArgumentNullException.ThrowIfNullOrEmpty(name, nameof(name));
 
         _factories[name] = factory;
     }

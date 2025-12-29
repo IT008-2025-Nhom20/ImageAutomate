@@ -25,18 +25,11 @@ public sealed class ImageFormatRegistry : IImageFormatRegistry
     /// </summary>
     /// <param name="formatName">Unique format name (case-insensitive).</param>
     /// <param name="strategy">Format strategy instance.</param>
-    /// <exception cref="ArgumentException">Thrown when format name is null or empty.</exception>
     /// <exception cref="ArgumentNullException">Thrown when strategy is null.</exception>
     public void RegisterFormat(string formatName, IImageFormatStrategy strategy)
     {
-        if (string.IsNullOrEmpty(formatName))
-        {
-            throw new ArgumentException("Format name cannot be null or empty.", nameof(formatName));
-        }
-        if (strategy == null)
-        {
-            throw new ArgumentNullException(nameof(strategy));
-        }
+        ArgumentNullException.ThrowIfNull(formatName, nameof(formatName));
+        ArgumentNullException.ThrowIfNull(strategy, nameof(strategy));
 
         lock (_lock)
         {
