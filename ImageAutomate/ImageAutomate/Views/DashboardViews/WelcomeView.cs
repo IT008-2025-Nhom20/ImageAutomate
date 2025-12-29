@@ -31,7 +31,7 @@ namespace ImageAutomate.Views.DashboardViews
             InitializeComponent();
 
             WireEventHandlers();
-            LoadRecentWorkspaces();
+            RefreshRecentWorkspaces();
         }
 
         private void WireEventHandlers()
@@ -55,9 +55,10 @@ namespace ImageAutomate.Views.DashboardViews
 
             var workspaces = _workspaceService.GetAllWorkspaces();
 
-            foreach (var ws in workspaces)
+            for (int i = 0; i < workspaces.Count; i++)
             {
-                Debug.WriteLine($"Workspace: {ws.Name}, LastModified: {ws.LastModified}, FilePath: {ws.FilePath}");
+                var ws = workspaces[i];
+                Debug.WriteLine($"Workspace {i}: {ws.Name}, LastModified: {ws.LastModified}, FilePath: {ws.FilePath}");
             }
 
             // Limit to MaxRecentWorkspaces from configuration

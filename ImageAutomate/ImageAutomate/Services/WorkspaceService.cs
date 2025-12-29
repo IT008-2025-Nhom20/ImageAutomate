@@ -66,7 +66,6 @@ namespace ImageAutomate.Services
 
             if (existing != null)
             {
-                Debug.WriteLine($"Updating existing workspace entry for: {filePath}");
                 existing.Name = name ?? existing.Name;
                 existing.LastModified = fileInfo.LastWriteTime;
                 existing.LastOpened = DateTime.Now;

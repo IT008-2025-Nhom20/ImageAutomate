@@ -28,6 +28,7 @@
         /// </summary>
         private void InitializeComponent()
         {
+            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(DashboardView));
             Sidebar = new ImageAutomate.UI.SidebarControl();
             BtnSettings = new ImageAutomate.UI.SidebarButton();
             BtnPlugins = new ImageAutomate.UI.SidebarButton();
@@ -54,67 +55,72 @@
             // 
             // BtnSettings
             // 
-            BtnSettings.CollapsedText = "S";
+            BtnSettings.CollapsedImage = (Image)resources.GetObject("BtnSettings.CollapsedImage");
+            BtnSettings.CollapsedText = "";
             BtnSettings.Dock = DockStyle.Top;
             BtnSettings.ExpandedText = "Settings";
+            BtnSettings.Image = (Image)resources.GetObject("BtnSettings.Image");
             BtnSettings.Location = new Point(0, 252);
             BtnSettings.Name = "BtnSettings";
             BtnSettings.Size = new Size(70, 60);
             BtnSettings.TabIndex = 4;
-            BtnSettings.Text = "S";
             BtnSettings.UseVisualStyleBackColor = true;
             BtnSettings.Click += BtnSettings_Click;
             // 
             // BtnPlugins
             // 
-            BtnPlugins.CollapsedText = "P";
+            BtnPlugins.CollapsedImage = (Image)resources.GetObject("BtnPlugins.CollapsedImage");
+            BtnPlugins.CollapsedText = "";
             BtnPlugins.Dock = DockStyle.Top;
             BtnPlugins.ExpandedText = "Plugins";
+            BtnPlugins.Image = (Image)resources.GetObject("BtnPlugins.Image");
             BtnPlugins.Location = new Point(0, 192);
             BtnPlugins.Name = "BtnPlugins";
             BtnPlugins.Size = new Size(70, 60);
             BtnPlugins.TabIndex = 3;
-            BtnPlugins.Text = "P";
             BtnPlugins.UseVisualStyleBackColor = true;
             BtnPlugins.Click += BtnPlugins_Clicked;
             // 
             // BtnWorkspaces
             // 
-            BtnWorkspaces.CollapsedText = "Ws";
+            BtnWorkspaces.CollapsedImage = (Image)resources.GetObject("BtnWorkspaces.CollapsedImage");
+            BtnWorkspaces.CollapsedText = "";
             BtnWorkspaces.Dock = DockStyle.Top;
             BtnWorkspaces.ExpandedText = "Workspaces";
+            BtnWorkspaces.Image = (Image)resources.GetObject("BtnWorkspaces.Image");
             BtnWorkspaces.Location = new Point(0, 132);
             BtnWorkspaces.Name = "BtnWorkspaces";
             BtnWorkspaces.Size = new Size(70, 60);
             BtnWorkspaces.TabIndex = 2;
-            BtnWorkspaces.Text = "Ws";
             BtnWorkspaces.UseVisualStyleBackColor = true;
             BtnWorkspaces.Click += BtnWorkspaces_Click;
             // 
             // BtnWelcome
             // 
-            BtnWelcome.CollapsedText = "W";
+            BtnWelcome.CollapsedImage = (Image)resources.GetObject("BtnWelcome.CollapsedImage");
+            BtnWelcome.CollapsedText = "";
             BtnWelcome.Dock = DockStyle.Top;
-            BtnWelcome.ExpandedText = "Welcome";
+            BtnWelcome.ExpandedText = "Home";
+            BtnWelcome.Image = (Image)resources.GetObject("BtnWelcome.Image");
             BtnWelcome.Location = new Point(0, 72);
             BtnWelcome.Name = "BtnWelcome";
             BtnWelcome.Size = new Size(70, 60);
             BtnWelcome.TabIndex = 1;
-            BtnWelcome.Text = "W";
             BtnWelcome.UseVisualStyleBackColor = true;
             BtnWelcome.Click += BtnWelcome_Click;
             // 
             // LabelMenu
             // 
-            LabelMenu.CollapsedText = "M";
+            LabelMenu.CollapsedImage = (Image)resources.GetObject("LabelMenu.CollapsedImage");
+            LabelMenu.CollapsedText = "";
             LabelMenu.Dock = DockStyle.Top;
             LabelMenu.ExpandedText = "Menu";
             LabelMenu.Font = new Font("Segoe UI", 15.75F, FontStyle.Regular, GraphicsUnit.Point, 0);
+            LabelMenu.Image = (Image)resources.GetObject("LabelMenu.Image");
             LabelMenu.Location = new Point(0, 0);
             LabelMenu.Name = "LabelMenu";
             LabelMenu.Size = new Size(70, 72);
             LabelMenu.TabIndex = 0;
-            LabelMenu.Text = "Menu";
             LabelMenu.TextAlign = ContentAlignment.MiddleCenter;
             // 
             // ContentPanel

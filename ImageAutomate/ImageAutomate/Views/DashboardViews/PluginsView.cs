@@ -16,7 +16,6 @@ namespace ImageAutomate.Views.DashboardViews
         public PluginsView()
         {
             InitializeComponent();
-            Debug.WriteLine("Plugins view initialized.");
         }
     }
 }

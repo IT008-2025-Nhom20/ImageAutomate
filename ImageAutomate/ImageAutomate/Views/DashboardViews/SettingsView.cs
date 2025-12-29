@@ -15,8 +15,6 @@ namespace ImageAutomate.Views.DashboardViews
 
             LoadConfigurationToUI();
             WireEventHandlers();
-
-            Debug.WriteLine("Settings view initialized.");
         }
 
         /// <summary>

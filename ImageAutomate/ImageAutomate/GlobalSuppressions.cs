@@ -4,6 +4,9 @@
 // a specific target and scoped to a namespace, type, member, etc.
 
 using System.Diagnostics.CodeAnalysis;
+using System.Resources;
+
+[assembly: NeutralResourcesLanguage("en-US")]
 
 // Suppress localization warnings for UI strings - this is a desktop app not requiring localization
 [assembly: SuppressMessage("Globalization", "CA1303:Do not pass literals as localized parameters", Justification = "Desktop application not requiring localization")]
