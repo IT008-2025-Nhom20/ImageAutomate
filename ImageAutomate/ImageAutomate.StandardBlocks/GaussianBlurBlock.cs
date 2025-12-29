@@ -1,8 +1,11 @@
 using ImageAutomate.Core;
+using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Processing;
+using SixLabors.ImageSharp.Processing.Processors.Convolution;
 using System.ComponentModel;
 
 namespace ImageAutomate.StandardBlocks;
+
 
 public class GaussianBlurBlock : IBlock
 {
@@ -14,7 +17,15 @@ public class GaussianBlurBlock : IBlock
     private bool _disposed;
 
     private float _sigma = 1.0f;
-    private int? _radius = null;
+
+    private BorderWrappingMode _borderWrapModeX = BorderWrappingMode.Wrap;
+    private BorderWrappingMode _borderWrapModeY = BorderWrappingMode.Wrap;
+
+    private bool _isRelative = true;
+    private float _rectX = 0.0f;
+    private float _rectY = 0.0f;
+    private float _rectWidth = 1.0f;
+    private float _rectHeight = 1.0f;
 
     // Layout fields
     private double _x;
@@ -56,7 +67,7 @@ public class GaussianBlurBlock : IBlock
     }
 
     [Browsable(false)]
-    public string Content => $"Sigma: {Sigma}\nRadius: {Radius}";
+    public string Content => $"Sigma: {Sigma}\nBorderModeX: {BorderWrappingModeX}\nBorderModeY: {BorderWrappingModeY}";
 
     #endregion
 
@@ -152,23 +163,115 @@ public class GaussianBlurBlock : IBlock
     }
 
     [Category("Configuration")]
-    [Description("Optional override for Gaussian kernel radius. If null, ImageSharp auto-computes based on Sigma.")]
-    public int? Radius
+    [Description("Determines how horizontal borders are handled during the blur operation.")]
+    public BorderWrappingMode BorderWrappingModeX
     {
-        get => _radius;
+        get => _borderWrapModeX;
         set
         {
-            if (_radius != value)
+            if (_borderWrapModeX != value)
             {
-                if (value.HasValue && value.Value <= 0)
-                    throw new ArgumentOutOfRangeException(nameof(Radius), "Radius must be positive when set.");
+                _borderWrapModeX = value;
+                OnPropertyChanged(nameof(BorderWrappingModeX));
+            }    
+        }
+    }
 
-                _radius = value;
-                OnPropertyChanged(nameof(Radius));
+    [Category("Configuration")]
+    [Description("Determines how horizontal borders are handled during the blur operation.")]
+    public BorderWrappingMode BorderWrappingModeY
+    {
+        get => _borderWrapModeX;
+        set
+        {
+            if (_borderWrapModeY != value)
+            {
+                _borderWrapModeY = value;
+                OnPropertyChanged(nameof(BorderWrappingModeY));
             }
         }
     }
 
+    [Category("Region Configuration")]
+    [Description("If true, values are percentages (0.0-1.0). If false, values are pixels.")]
+    public bool IsRelative
+    {
+        get => _isRelative;
+        set
+        {
+            if (_isRelative != value)
+            {
+                _isRelative = value;
+                OnPropertyChanged(nameof(IsRelative));
+            }
+        }
+    }
+
+    [Category("Region Configuration")]
+    [Description("X coordinate of the top-left corner.")]
+    public float RectX
+    {
+        get => _rectX;
+        set
+        {
+            if (Math.Abs(_rectX - value) > float.Epsilon)
+            {
+                _rectX = value;
+                OnPropertyChanged(nameof(RectX));
+            }
+        }
+    }
+
+    [Category("Region Configuration")]
+    [Description("Y coordinate of the top-left corner.")]
+    public float RectY
+    {
+        get => _rectY;
+        set
+        {
+            if (Math.Abs(_rectY - value) > float.Epsilon)
+            {
+                _rectY = value;
+                OnPropertyChanged(nameof(RectY));
+            }
+        }
+    }
+
+    [Category("Region Configuration")]
+    [Description("Width of the region.")]
+    public float RectWidth
+    {
+        get => _rectWidth;
+        set
+        {
+            // Đảm bảo chiều rộng không âm
+            if (value < 0) value = 0;
+
+            if (Math.Abs(_rectWidth - value) > float.Epsilon)
+            {
+                _rectWidth = value;
+                OnPropertyChanged(nameof(RectWidth));
+            }
+        }
+    }
+
+    [Category("Region Configuration")]
+    [Description("Height of the region.")]
+    public float RectHeight
+    {
+        get => _rectHeight;
+        set
+        {
+            // Đảm bảo chiều cao không âm
+            if (value < 0) value = 0;
+
+            if (Math.Abs(_rectHeight - value) > float.Epsilon)
+            {
+                _rectHeight = value;
+                OnPropertyChanged(nameof(RectHeight));
+            }
+        }
+    }
     #endregion
 
     #region INotifyPropertyChanged
@@ -212,8 +315,13 @@ public class GaussianBlurBlock : IBlock
         foreach (var sourceItem in inItems.OfType<WorkItem>())
         {
             cancellationToken.ThrowIfCancellationRequested();
+            var img = sourceItem.Image;
+            int w = img.Width;
+            int h = img.Height;
+
+            Rectangle region = GetProcessRegion(w, h);
             if (Sigma > 0.0f)
-                sourceItem.Image.Mutate(x => x.GaussianBlur(Sigma));
+                sourceItem.Image.Mutate(x => x.GaussianBlur(Sigma, region, BorderWrappingModeX, BorderWrappingModeY));
             outputItems.Add(sourceItem);
         }
         
@@ -222,7 +330,29 @@ public class GaussianBlurBlock : IBlock
                 { _outputs[0], outputItems }
             };
     }
+    private Rectangle GetProcessRegion(int sourceWidth, int sourceHeight)
+    {
+        int x, y, w, h;
 
+        if (IsRelative)
+        {
+            x = (int)(RectX * sourceWidth);
+            y = (int)(RectY * sourceHeight);
+            w = (int)(RectWidth * sourceWidth);
+            h = (int)(RectHeight * sourceHeight);
+        }
+        else
+        {
+            x = (int)RectX;
+            y = (int)RectY;
+            w = (int)RectWidth;
+            h = (int)RectHeight;
+        }
+
+        var rect = new Rectangle(x, y, w, h);
+        rect.Intersect(new Rectangle(0, 0, sourceWidth, sourceHeight));
+        return rect;
+    }
     #endregion
 
     #region IDisposable
