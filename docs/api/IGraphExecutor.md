@@ -26,6 +26,6 @@ Synchronously executes the provided pipeline graph.
 Asynchronously executes the pipeline graph, allowing for configuration and cancellation.
 *   **Parameters**:
     *   `graph`: The `PipelineGraph` to execute.
-    *   `configuration`: Optional `ExecutorConfiguration` to tune execution parameters (e.g., concurrency limits).
+    *   `configuration`: Optional `ExecutorConfiguration` to tune execution parameters.
     *   `cancellationToken`: Token to cancel the execution operation.
 *   **Returns**: A `Task` representing the asynchronous execution.

@@ -1,24 +1,16 @@
 # Hue Block
 
 ## Description
-Rotates the hue channel in HSL color space using ImageSharp's Hue processor.
+The Hue Block rotates the hue channel in the HSL color space using ImageSharp's Hue processor.
 
 ## Configuration Parameters
 
 ### `HueShift`
 *   **Type**: `float`
-*   **Description**: Hue shift in degrees. Range: -180 to +180. 0 = no change.
-*   **Range**: -180.0 to +180.0
+*   **Description**: Hue shift in degrees. Range: -180 to +180. 0 indicates no change.
 
-## Acceptance Criteria
-- Uniform hue rotation across entire image.
-- Luminance and saturation preserved.
-- Metadata preserved.
+## Operational Behavior
 
-## Operational Behaviour
-```csharp
-image.Mutate(x => x.Hue(HueShift));
-```
-
-## Technical Notes
-- Suitable for color shifting and palette adjustments.
+### Execution
+The block applies `Image.Mutate(x => x.Hue(HueShift))`.
+Luminance, saturation, and metadata are preserved.

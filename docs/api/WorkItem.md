@@ -16,9 +16,9 @@ public interface IBasicWorkItem : IDisposable, ICloneable
 ```
 
 *   **`Id`**: Unique identifier for the work item.
-*   **`Metadata`**: Immutable dictionary for storing additional information (e.g., file paths, format info).
-*   **`IDisposable`**: Ensures resources (like images) are released.
-*   **`ICloneable`**: Supports deep copying for branching paths in the graph.
+*   **`Metadata`**: Immutable dictionary for storing additional information.
+*   **`IDisposable`**: Ensures resources are released.
+*   **`ICloneable`**: Supports deep copying.
 
 ### `IWorkItem`
 Represents a single image work item.
@@ -32,7 +32,7 @@ public interface IWorkItem : IBasicWorkItem
 ```
 
 *   **`Image`**: The `SixLabors.ImageSharp.Image` object.
-*   **`SizeMP`**: The size of the image in megapixels (Width * Height / 1,000,000).
+*   **`SizeMP`**: The size of the image in megapixels.
 
 ### `IBatchWorkItem`
 Represents a collection of images processed as a single unit.

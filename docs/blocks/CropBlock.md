@@ -1,10 +1,7 @@
 # Crop Block
 
 ## Description
-Block shall crop images to a specified region.
-Supports multiple cropping modes including explicit rectangle, centered cropping, and anchor-based cropping.
-
----
+The Crop Block crops images to a specified region. It supports multiple cropping modes including explicit rectangle, centered cropping, and anchor-based cropping.
 
 ## Configuration Parameters
 
@@ -28,28 +25,11 @@ Specifies how the crop region is determined.
 - Positions the crop rectangle relative to the source image.
 - Options: `TopLeft`, `Top`, `TopRight`, `Left`, `Center`, `Right`, `BottomLeft`, `Bottom`, `BottomRight`.
 
----
-
-## Acceptance Criteria
-- Output image has dimensions `Width` x `Height`.
-- Crop region is correctly positioned according to `CropMode` and parameters.
-- Throws error if crop region exceeds source image bounds.
-
----
-
-## UI Behaviour
-- **CropMode** dropdown selects the mode.
-- **X, Y** visible only when `CropMode` is `Rectangle`.
-- **AnchorPosition** visible only when `CropMode` is `Anchor`.
-- **Width, Height** always visible.
-
----
-
-## Operational Behaviour
+## Operational Behavior
 
 ### Bounds Checking
 - **Rectangle Mode**: Throws if `X + Width > SourceWidth` or `Y + Height > SourceHeight`.
 - **Center/Anchor Mode**: Throws if `Width > SourceWidth` or `Height > SourceHeight`.
 
 ### Execution
-- Applies `Image.Mutate(x => x.Crop(rectangle))` using the calculated rectangle.
+The block applies `Image.Mutate(x => x.Crop(rectangle))` using the calculated rectangle.

@@ -11,7 +11,6 @@
 ## Dependencies
 
 *   **ImageAutomate.Core** - Core contracts (IBlock, PipelineGraph, Workspace, Connection, Socket)
-*   **Microsoft.Msagl** (1.1.6) - Automatic graph layout library (unused)
 
 ## API Reference
 
@@ -19,7 +18,7 @@
 
 #### Data Binding
 *   **`Workspace`** (`Workspace?`): The workspace containing the graph and view state.
-    *   **Note**: The `Graph` is accessed via `Workspace.Graph`, not as a direct property.
+    *   **Note**: The `Graph` is accessed via `Workspace.Graph`.
 
 #### Node Appearance
 *   **`SelectedBlockOutlineColor`** (`Color`): Color of the selection border. Default: `Red`.
@@ -33,7 +32,7 @@
 *   **`AutoSnapZoneWidth`** (`float`): Width of the zone around sockets for easier connection snapping. Default: `20`.
 
 #### Private State (Internal)
-*   **`_panOffset`** (`PointF`): Current pan offset (private field, not a public property).
+*   **`_panOffset`** (`PointF`): Current pan offset.
 *   **`_isPanning`** (`bool`): Right-click drag state.
 *   **`_isDraggingNode`** (`bool`): Node drag state.
 *   **`_draggedNode`** (`IBlock?`): Currently dragged block.
@@ -59,10 +58,10 @@
 
 ## Visual Style
 
-*   **Nodes**: Dark gray background (`#3C3C3C`), lighter header (`#505050`), white text
-*   **Sockets**: Green for inputs (`#64C864`), red for outputs (`#C86464`), white border
-*   **Connections**: Gray (`#969696`) for normal, red for selected, orange dashed for drag
-*   **Border**: Gray (`#646464`, 2px), selection color (3px, configurable via `SelectedBlockOutlineColor`)
+*   **Nodes**: Dark gray background (`#3C3C3C`), lighter header (`#505050`), white text.
+*   **Sockets**: Green for inputs (`#64C864`), red for outputs (`#C86464`), white border.
+*   **Connections**: Gray (`#969696`) for normal, red for selected, orange dashed for drag.
+*   **Border**: Gray (`#646464`, 2px), selection color (3px, configurable).
 
 ## User Interaction
 

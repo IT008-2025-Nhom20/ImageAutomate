@@ -1,6 +1,6 @@
 # PipelineGraph
 
-`PipelineGraph` is the core data structure representing the workflow graph in ImageAutomate. It manages the collection of blocks and the connections between them.
+`PipelineGraph` is the data structure representing the workflow graph in ImageAutomate. It manages the collection of blocks and the connections between them.
 
 ## Responsibilities
 
@@ -40,7 +40,7 @@ Establishes a connection between a source block's output socket and a target blo
 Removes a specific connection.
 
 #### `BringToTop(IBlock block)`
-Moves the specified block to the end of the node list, effectively bringing it to the visual front.
+Moves the specified block to the end of the node list.
 
 #### `Clear()`
 Resets the graph to an empty state.

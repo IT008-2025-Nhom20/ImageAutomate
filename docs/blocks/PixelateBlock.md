@@ -1,8 +1,7 @@
 # Pixelate Block
 
 ## Description
-Applies pixelation effect by downsampling and upscaling blocks of pixels.
-Useful for anonymization, stylization, or mosaic effects.
+The Pixelate Block applies a pixelation effect by downsampling and upscaling blocks of pixels. This is used for anonymization, stylization, or mosaic effects.
 
 ## Configuration Parameters
 
@@ -11,16 +10,8 @@ Useful for anonymization, stylization, or mosaic effects.
 *   **Description**: Pixel block size. Higher values produce larger pixel blocks.
 *   **Range**: 1–100
 
-## Acceptance Criteria
-- Pixelation grid must be uniform.
-- Block edges must be crisp.
-- Operation must match ImageSharp pixelation results.
+## Operational Behavior
 
-## Operational Behaviour
-```csharp
-image.Mutate(x => x.Pixelate(Size));
-```
-
-## Technical Notes
-- Pixelation is fast and memory efficient.
-- Alpha channel preserved.
+### Execution
+The block applies `Image.Mutate(x => x.Pixelate(Size))`.
+The operation creates uniform pixel blocks with crisp edges, preserving the alpha channel.

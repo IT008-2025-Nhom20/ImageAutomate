@@ -8,7 +8,7 @@ The `IBlock` interface defines the contract for all graph nodes (blocks) within 
 public record Socket(string Id, string Name);
 ```
 
-**Important**: `Socket.Id` is a `string`, NOT a `Guid`. Sockets are identified by their string IDs within blocks.
+**Note**: `Socket.Id` is a `string`, identifying the socket within the block.
 
 ## Definition
 
@@ -34,28 +34,25 @@ public interface IBlock : INotifyPropertyChanged, IDisposable
 ### `Name`
 *   **Type**: `string`
 *   **Description**: The internal or immutable name of the block type (e.g., "ConvertBlock").
-*   **Usage**: Used for identification.
 
 ### `Title`
 *   **Type**: `string`
 *   **Description**: The display header of the block.
-*   **Usage**: Displayed as the main label in the block header on the graph.
 
 ### `Content`
 *   **Type**: `string`
 *   **Description**: The display content of the block.
-*   **Usage**: Rendered in the body of the block node to give users quick insight into the block's settings.
+*   **Usage**: Rendered in the body of the block node to show settings summary.
 
 ### `Inputs` / `Outputs`
 *   **Type**: `IReadOnlyList<Socket>`
-*   **Description**: Collections of input and output sockets (using `Socket` record with `string Id`).
-*   **Usage**: Defines the connectivity points for the block.
+*   **Description**: Collections of input and output sockets.
 
 ### Layout Properties
 *   **`X`**: `double` - X position in graph coordinates
 *   **`Y`**: `double` - Y position in graph coordinates
-*   **`Width`**: `int` - Width of the block (settable)
-*   **`Height`**: `int` - Height of the block (settable)
+*   **`Width`**: `int` - Width of the block
+*   **`Height`**: `int` - Height of the block
 
 ## Methods
 
@@ -72,9 +69,6 @@ IReadOnlyDictionary<Socket, IReadOnlyList<IBasicWorkItem>> Execute(
     CancellationToken cancellationToken);
 ```
 *   **Description**: Primary execution methods that accept Socket-keyed inputs.
-*   **Parameters**:
-    *   `inputs`: Dictionary mapping input sockets to their work items (required).
-    *   `cancellationToken`: Token to observe for cancellation requests (optional).
 *   **Returns**: Dictionary mapping output sockets to their work items.
 
 #### String-Keyed Execute (Convenience Overload)
@@ -85,8 +79,5 @@ IReadOnlyDictionary<Socket, IReadOnlyList<IBasicWorkItem>> Execute(
     IDictionary<string, IReadOnlyList<IBasicWorkItem>> inputs,
     CancellationToken cancellationToken);
 ```
-*   **Description**: Convenience overloads that accept string socket IDs instead of Socket objects.
-*   **Parameters**:
-    *   `inputs`: Dictionary mapping socket IDs to their work items (required).
-    *   `cancellationToken`: Token to observe for cancellation requests (optional).
+*   **Description**: Convenience overloads that accept string socket IDs.
 *   **Returns**: Dictionary mapping output sockets to their work items.

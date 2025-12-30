@@ -1,6 +1,6 @@
 # ExecutionContext
 
-`ExecutionContext` is a large sealed class that maintains the runtime state of a pipeline execution. While not a public API, it is central to the engine's operation.
+`ExecutionContext` is a sealed class that maintains the runtime state of a pipeline execution. While not a public API, it is central to the engine's operation.
 
 ## Responsibilities
 
@@ -47,7 +47,7 @@
 
 ### Warehouse/Barrier Access
 *   **`GetOrCreateWarehouse(IBlock block, int consumerCount)`**: Gets or creates a `Warehouse` for a producer block.
-*   **`TryGetWarehouse(IBlock block)`**: Attempts to get an existing `Warehouse` (returns `null` if not found).
+*   **`TryGetWarehouse(IBlock block)`**: Attempts to get an existing `Warehouse`.
 *   **`GetOrCreateBarrier(IBlock block, int inDegree)`**: Gets or creates a `DependencyBarrier` for a consumer block.
 
 ### Source Tracking

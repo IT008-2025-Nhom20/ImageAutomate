@@ -12,7 +12,7 @@
 
 ## 1. Architectural Overview
 
-The **Plugin System** enables the dynamic extension of the ImageAutomate runtime without recompilation or restart. It adheres to a **Shared-Nothing** architecture (at the dependency level) while maintaining a strict contract via the Host Application's Core library.
+The **Plugin System** enables the extension of the ImageAutomate runtime without recompilation or restart. It adheres to a **Shared-Nothing** architecture (at the dependency level) while maintaining a strict contract via the Host Application's Core library.
 
 *   **Design Pattern:** Microkernel / Plugin Pattern.
 *   **Isolation Strategy:** `AssemblyLoadContext` (ALC) based isolation.
@@ -21,7 +21,7 @@ The **Plugin System** enables the dynamic extension of the ImageAutomate runtime
 
 ## 2. Runtime Isolation Model
 
-To prevent "Dependency Hell" (version conflicts between plugin dependencies and host dependencies), the system employs a custom **Assembly Isolation Layer**.
+To prevent dependency conflicts between plugin dependencies and host dependencies, the system employs a custom **Assembly Isolation Layer**.
 
 ### 2.1. The Load Context Hierarchy
 
@@ -30,17 +30,17 @@ Plugins are loaded into discrete `PluginLoadContext` instances, which inherit fr
 *   **Host Context (Default):** Contains system assemblies, `ImageAutomate.Core`, `SixLabors.ImageSharp`, and the UI shell.
 *   **Plugin Context (Collectible):** Dedicated context for each plugin.
     *   **Shared Dependencies:** Requests for "Core" assemblies (Host, `System.*`, `Microsoft.*`, `netstandard`, `SixLabors.ImageSharp`) are delegated to the Host Context.
-    *   **Private Dependencies:** Requests for plugin-specific libraries (e.g., specific JSON parsers, third-party CV libraries) are resolved locally within the plugin context.
+    *   **Private Dependencies:** Requests for plugin-specific libraries are resolved locally within the plugin context.
 
 ### 2.2. Collectibility
 
-The `PluginLoadContext` is configured as **Collectible** (`isCollectible: true`). This enables the Garbage Collector (GC) to unload the entire assembly set and reclaim memory once all references to types within that context are released, supporting dynamic "Hot Unload".
+The `PluginLoadContext` is configured as **Collectible** (`isCollectible: true`). This enables the Garbage Collector (GC) to unload the entire assembly set and reclaim memory once all references to types within that context are released.
 
 ## 3. Component Structure
 
 ### 3.1. PluginLoader
 
-The **PluginLoader** serves as the central manager (Facade) for the plugin ecosystem.
+The **PluginLoader** serves as the manager for the plugin ecosystem.
 
 *   **Responsibilities:**
     *   **Discovery:** Scanning file system locations for valid plugins.
@@ -50,7 +50,7 @@ The **PluginLoader** serves as the central manager (Facade) for the plugin ecosy
 
 ### 3.2. PluginInfo
 
-A robust metadata descriptor pattern representing a loaded plugin unit.
+A descriptor representing a loaded plugin unit.
 
 *   **Identity:** Name, Version, Path.
 *   **Runtime State:** Reference to `Assembly`, `PluginLoadContext`, and `IsLoaded` status.
@@ -82,7 +82,7 @@ The implementation of the isolation mechanism.
 
 ## 4. Discovery & Loading Mechanism
 
-The system supports a hierarchical discovery strategy to accommodate various deployment scenarios.
+The system supports a hierarchical discovery strategy.
 
 ### 4.1. Discovery Strategies
 
@@ -99,11 +99,11 @@ The system supports a hierarchical discovery strategy to accommodate various dep
 
 ### 5.1. Instantiation
 
-Code within the Host Application (e.g., the UI or Execution Engine) requests types from the `PluginLoader`.
+Code within the Host Application requests types from the `PluginLoader`.
 
 *   **Type Resolution:** `GetPluginBlockTypes()` reflects over exported types in the isolated context.
 *   **Activation:** Standard `Activator.CreateInstance()` creates the object.
-*   **Registration:** The Host **MUST** call `RegisterInstance(obj, pluginName)` to increment the reference counter.
+*   **Registration:** The Host calls `RegisterInstance(obj, pluginName)` to increment the reference counter.
 
 ### 5.2. Plugin Initialization Convention
 
@@ -136,7 +136,7 @@ public interface IPluginUnloadable
 
 ### 5.4. Unloading (Soft & Hard)
 
-Unloading is a sensitive operation due to the lack of forced memory access revocation in managed code.
+Unloading is an operation sensitive to memory management.
 
 1.  **Soft Unload (`TryUnloadPlugin`):**
     *   **Protocol:** Checks `ActiveInstanceCount`. If > 0, it queries instances implementing `IPluginUnloadable.OnUnloadRequested()`.
@@ -145,13 +145,13 @@ Unloading is a sensitive operation due to the lack of forced memory access revoc
 
 2.  **Hard Unload (`UnloadPlugin`):**
     *   **Mechanism:** Calls `PluginLoadContext.Unload()`.
-    *   **Risk:** If the Host holds strong references to plugin types, the GC cannot reclaim the memory, leading to a memory leak (though the plugin is logically "unloaded").
+    *   **Risk:** If the Host holds strong references to plugin types, the GC cannot reclaim the memory.
 
 ## 6. Safety & Consistency
 
 ### 6.1. IRegistryAccessor
 
-`IRegistryAccessor` is an abstraction layer to allow Core to register schedulers without referencing the Execution assembly:
+`IRegistryAccessor` allows Core to register schedulers without referencing the Execution assembly:
 
 ```csharp
 public interface IRegistryAccessor
@@ -174,15 +174,15 @@ public class PluginInitializer : IPluginInitializer
 
 ### 6.2. Type Equivalence
 
-To ensure objects passed between Host and Plugin are compatible, `ImageAutomate.Core` must be shared.
+To ensure objects passed between Host and Plugin are compatible, `ImageAutomate.Core` is shared.
 
 *   **Mechanism:** The `PluginLoadContext` explicitly rejects loading `ImageAutomate.Core.dll` from the plugin folder, forcing usage of the Host's loaded version. This ensures `typeof(IBlock)` in Plugin A is identical to `typeof(IBlock)` in Host.
 
 ### 6.3. Reference Counting
 
-The system implements a manual Reference Counting (RC) mechanism for high-level safety, distinct from the GC.
+The system implements a manual Reference Counting (RC) mechanism.
 
-*   **Purpose:** Prevents accidental unloading while a Block is executing or displayed in the UI.
+*   **Purpose:** Prevents accidental unloading while a Block is executing or displayed.
 *   **Implementation:** `ConcurrentDictionary<object, string>` maps instances to plugin names. `Interlocked` counters track total active objects.
 
 ## 7. Implementation Details

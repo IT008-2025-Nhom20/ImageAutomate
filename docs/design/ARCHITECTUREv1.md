@@ -4,15 +4,15 @@
 
 ## Overview
 
-ImageAutomate is designed as a dataflow system where images are processed through a pipeline of blocks.
+ImageAutomate functions as a dataflow system where images are processed through a pipeline of blocks.
 
 ## Core Components
 
 *   **ImageAutomate.Core**: Defines the core interfaces (`IBlock`, `IWorkItem`, `PipelineGraph`, `Socket`) and data structures.
-*   **ImageAutomate.Execution**: Execution engine and scheduling system.
+*   **ImageAutomate.Execution**: Contains the execution engine and scheduling system.
 *   **ImageAutomate.UI**: Provides the visualization components (`GraphRenderPanel`) and UI logic.
-*   **ImageAutomate.StandardBlocks**: Built-in image processing blocks.
-*   **ImageAutomate.Infrastructure**: Shared infrastructure (e.g., `ImageFormatRegistry`).
+*   **ImageAutomate.StandardBlocks**: Contains built-in image processing blocks.
+*   **ImageAutomate.Infrastructure**: Provides shared infrastructure (e.g., `ImageFormatRegistry`).
 
 ## Execution Flow
 
@@ -23,6 +23,8 @@ The execution engine traverses the `PipelineGraph`. Blocks consume `WorkItem`s f
 **Location**: `ImageAutomate.Execution/Scheduling/`
 
 ### IScheduler Interface
+
+The `IScheduler` interface defines the contract for scheduling operations.
 
 ```csharp
 public interface IScheduler
@@ -37,11 +39,11 @@ public interface IScheduler
 }
 ```
 
-**Note**: All methods take `ExecutionContext context` parameter.
+**Note**: All methods accept an `ExecutionContext context` parameter.
 
 ### SchedulerRegistry
 
-Thread-safe registry for scheduler registration:
+The `SchedulerRegistry` provides thread-safe registration for schedulers:
 
 ```csharp
 public class SchedulerRegistry
@@ -56,7 +58,7 @@ public class SchedulerRegistry
 
 ### Built-in Scheduler
 
-**SimpleDfsScheduler** (registered in `SchedulerFactory` static constructor):
+**SimpleDfsScheduler** is the default scheduler, registered in the `SchedulerFactory` static constructor:
 
 ```csharp
 static SchedulerFactory()
@@ -65,7 +67,7 @@ static SchedulerFactory()
 }
 ```
 
-Plugin registration via `IRegistryAccessor`:
+Plugins can register schedulers via `IRegistryAccessor`:
 
 ```csharp
 public class PluginInitializer : IPluginInitializer
@@ -79,10 +81,12 @@ public class PluginInitializer : IPluginInitializer
 
 ## ExecutorConfiguration
 
+The `ExecutorConfiguration` class holds configuration settings for the execution engine.
+
 ```csharp
 public class ExecutorConfiguration
 {
-    // String-based (not enum) for extensibility
+    // String-based identifier for the execution mode
     public string Mode { get; set; } = "SimpleDfs";
 
     // Core settings
@@ -91,7 +95,7 @@ public class ExecutorConfiguration
     public bool EnableGcThrottling { get; set; } = true;
     public int MaxShipmentSize { get; set; } = 64;
 
-    // Adaptive mode settings (not fully implemented)
+    // Adaptive mode settings (deferred implementation)
     public int ProfilingWindowSize { get; set; } = 20;
     public double CostEmaAlpha { get; set; } = 0.2;
     public int CriticalPathRecomputeInterval { get; set; } = 10;
@@ -102,11 +106,13 @@ public class ExecutorConfiguration
 
 ## Socket Record
 
+The `Socket` record identifies input and output ports.
+
 ```csharp
 public record Socket(string Id, string Name);
 ```
 
-**Important**: `Socket.Id` is a `string`, NOT a `Guid`.
+**Note**: `Socket.Id` is a `string`, not a `Guid`.
 
 ## Parallel Processing
 

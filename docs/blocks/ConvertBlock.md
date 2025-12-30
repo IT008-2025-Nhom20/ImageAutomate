@@ -1,17 +1,12 @@
 # Convert Block
 
 ## Description
-Prepares images for format conversion by setting target format metadata.
-The actual encoding is performed by `SaveBlock` using the metadata instructions.
-Supports configurable encoder options for each target format.
-
----
+The Convert Block prepares images for format conversion by setting target format metadata. The actual encoding is performed by `SaveBlock` using these metadata instructions. It supports configurable encoder options for each target format.
 
 ## Configuration Parameters
 
-### TargetFormat
-Specifies desired output format.
-Selection is provided via a dropdown list. Supported values:
+### `TargetFormat`
+Specifies the desired output format. Supported values include:
 - Bmp
 - Gif
 - Jpeg
@@ -22,8 +17,8 @@ Selection is provided via a dropdown list. Supported values:
 - Qoi
 - Pbm
 
-### JpegEncodingOptions / PngEncodingOptions / BmpEncodingOptions / GifEncodingOptions / TiffEncodingOptions / TgaEncodingOptions / WebPEncodingOptions / QoiEncodingOptions / PbmEncodingOptions
-Format-specific encoder configuration, exposed based on `TargetFormat`:
+### Encoding Options
+Format-specific encoder configurations are exposed based on the `TargetFormat` selection:
 
 | Format | Options |
 |--------|---------|
@@ -37,42 +32,22 @@ Format-specific encoder configuration, exposed based on `TargetFormat`:
 | QOI | ColorSpace, Channels |
 | PBM | ColorType, ComponentType, Encoding |
 
----
-
-## Acceptance Criteria
-- Sets `Format` and `EncodingOptions` metadata on output WorkItems.
-- Encoder parameters stored correctly for downstream `SaveBlock`.
-- Image data passed through.
-
----
-
-## UI Behaviour
-- TargetFormat dropdown displays supported formats.
-- Only the relevant format options panel is shown based on TargetFormat selection.
-
----
-
-## Operational Behaviour
+## Operational Behavior
 
 ### Metadata Updates
-The block sets the following metadata on each WorkItem:
+The block sets the following metadata on each `WorkItem`:
 - `"Format"`: Target format name (e.g., "Jpeg", "Png")
 - `"EncodingOptions"`: The format-specific options object
 
 ### Image Handling
-ConvertBlock modifies the `WorkItem` metadata.
-The actual format conversion/encoding is performed by `SaveBlock` using the metadata.
+The Convert Block modifies the `WorkItem` metadata. The actual format conversion and encoding are performed by the downstream `SaveBlock`.
 
 ### Transparency
-Transparency handling depends on target format and is applied at save time:
-- Non-alpha formats (JPEG, BMP without transparency): Alpha flattened by encoder
-- Alpha-capable formats (PNG, TGA, TIFF, WebP, QOI): Alpha preserved
+Transparency handling depends on the target format and is applied at save time:
+- **Non-alpha formats** (e.g., JPEG, BMP without transparency): Alpha channel is flattened by the encoder.
+- **Alpha-capable formats** (e.g., PNG, TGA, TIFF, WebP, QOI): Alpha channel is preserved.
 
----
-
-## Technical Notes
-- This block does **not** perform actual format conversion - it only sets metadata instructions.
-- `SaveBlock` reads the `Format` and `EncodingOptions` metadata to perform the actual encoding.
+### Notes
+- This block does **not** perform the actual format conversion; it only sets metadata instructions.
 - ICC profiles and other image metadata are preserved through the pipeline.
-- Animated GIFs: only first frame processed (Image is single frame in WorkItem).
-- Large batch operations may require memory warnings and sequential processing.
+- For animated GIFs, only the first frame is processed (as the `WorkItem` contains a single frame).
