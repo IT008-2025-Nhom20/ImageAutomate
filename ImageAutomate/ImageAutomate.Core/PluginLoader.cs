@@ -102,7 +102,7 @@ public class PluginLoader
                 TryInitializePlugin(assembly);
 
                 var pluginInfo = new PluginInfo(name, fullPath, assembly, loadContext);
-                
+
                 _plugins[name] = pluginInfo;
                 return pluginInfo;
             }
@@ -446,7 +446,7 @@ public class PluginLoader
 
             // Request unload from all instances that support it
             var unloadableInstances = instances.OfType<IPluginUnloadable>().ToList();
-            
+
             // Check if all instances are unloadable
             if (unloadableInstances.Count < instances.Count)
             {
@@ -482,7 +482,7 @@ public class PluginLoader
             // Give them time to complete cleanup
             var deadline = DateTimeOffset.UtcNow + timeout.Value;
             const int pollIntervalMs = 50;
-            
+
             while (plugin.ActiveInstanceCount > 0 && DateTimeOffset.UtcNow < deadline)
             {
                 Monitor.Exit(_lock);

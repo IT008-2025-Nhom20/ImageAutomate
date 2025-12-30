@@ -1,11 +1,8 @@
-using ImageAutomate.Core;
-using SixLabors.ImageSharp.Processing;
-using System;
-using System.Collections.Generic;
 using System.ComponentModel;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+
+using ImageAutomate.Core;
+
+using SixLabors.ImageSharp.Processing;
 
 namespace ImageAutomate.StandardBlocks;
 
@@ -152,7 +149,7 @@ public class BrightnessBlock : IBlock
     /// 1.0 = no change, &lt; 1.0 = darker, &gt; 1.0 = brighter.
     /// </summary>
     [Category("Configuration")]
-    [Description("Brightness factor. 1.0 = no change, <1.0 = darker, >1.0 = brighter.")]   
+    [Description("Brightness factor. 1.0 = no change, <1.0 = darker, >1.0 = brighter.")]
     public float Brightness
     {
         get => _bright;

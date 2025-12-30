@@ -13,12 +13,37 @@
 	    <AnalysisLevel>latest-all</AnalysisLevel>
 
 	    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+
+	    <Title>ImageAutomate</Title>
+
+	    <Description>Image pipeline graph maker for image workflow automation</Description>
+
+	    <PackageProjectUrl>https://github.com/IT008-2025-Nhom20/ImageAutomate/</PackageProjectUrl>
+
+	    <Copyright>Copyright © 2025 IT008-2025-Nhom20</Copyright>
+
+	    <PackageReadmeFile>README.md</PackageReadmeFile>
+
+	    <RepositoryUrl>https://github.com/IT008-2025-Nhom20/ImageAutomate/</RepositoryUrl>
+
+	    <FileVersion>1.0</FileVersion>
+
+	    <NeutralLanguage>en-001</NeutralLanguage>
+
+	    <AssemblyVersion>1.0</AssemblyVersion>
     </PropertyGroup>
 
   <ItemGroup>
     <Compile Remove="Controls\**" />
     <EmbeddedResource Remove="Controls\**" />
     <None Remove="Controls\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\..\README.md">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
   </ItemGroup>
 
   <ItemGroup>

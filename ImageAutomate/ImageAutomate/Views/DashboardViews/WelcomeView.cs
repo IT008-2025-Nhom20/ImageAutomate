@@ -1,20 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
+﻿using System.Data;
 using System.Diagnostics;
-using System.Drawing;
-using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows.Forms;
 
 using ImageAutomate.Core;
 using ImageAutomate.Dialogs;
 using ImageAutomate.Models;
 using ImageAutomate.Services;
-using ImageAutomate.UI;
 
 namespace ImageAutomate.Views.DashboardViews
 {
@@ -188,7 +178,6 @@ namespace ImageAutomate.Views.DashboardViews
             else
             {
                 MessageBox.Show($"File not found:\n{filePath}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                // Optionally remove from list?
                 _workspaceService.RemoveWorkspace(filePath);
                 LoadRecentWorkspaces();
             }

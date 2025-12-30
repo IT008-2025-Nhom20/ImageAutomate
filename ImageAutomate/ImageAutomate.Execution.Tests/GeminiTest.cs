@@ -1,7 +1,4 @@
-using System.Collections.Concurrent;
 using ImageAutomate.Core;
-using ImageAutomate.Execution;
-using Xunit.v3;
 
 namespace ImageAutomate.Execution.Tests;
 
@@ -101,7 +98,7 @@ public class GeminiTest
         // We use latches to ensure the Success branch finishes execution 
         // BEFORE the Fail branch throws. This proves the engine doesn't 
         // discard results from successful branches when an aggregate exception occurs.
-        
+
         // Source -> Split -> SlowFail
         //                 -> FastSuccess -> Sink
 
@@ -113,11 +110,11 @@ public class GeminiTest
         using var successFinished = new ManualResetEventSlim(false);
 
         // Blocks
-        var fastBranch = new CallbackBlock("Fast", (item) => 
+        var fastBranch = new CallbackBlock("Fast", (item) =>
         {
             // 1. Signal that we are about to finish
             successFinished.Set();
-            
+
             // 2. CRITICAL FIX: Clone the item.
             // The engine will dispose 'item' (the input) immediately after this method returns.
             // If we return 'item' directly, the downstream Sink receives a disposed object.
@@ -127,9 +124,9 @@ public class GeminiTest
         var slowBranch = new CallbackBlock("Slow", (item) =>
         {
             // 1. Wait for Fast branch to finish completely
-            bool signaled = successFinished.Wait(2000); 
+            bool signaled = successFinished.Wait(2000);
             if (!signaled) throw new TimeoutException("Test timed out waiting for fast branch");
-            
+
             // 2. Now fail
             throw new Exception("Intentional Failure");
         });
@@ -141,7 +138,7 @@ public class GeminiTest
         _graph.AddBlock(sink);
 
         _graph.AddEdge(source, source.Outputs[0], split, split.Inputs[0]);
-        
+
         // Fast Branch
         _graph.AddEdge(split, split.Outputs[0], fastBranch, fastBranch.Inputs[0]);
         _graph.AddEdge(fastBranch, fastBranch.Outputs[0], sink, sink.Inputs[0]);
@@ -156,12 +153,12 @@ public class GeminiTest
         // FIX: Use .Contains() because the executor wraps the exception 
         // e.g. "Block 'Slow' failed: Intentional Failure"
         Assert.Contains(ex.InnerExceptions, e => e.Message.Contains("Intentional Failure"));
-        
+
         // We DO NOT expect ObjectDisposedException (which happens if we mess up cloning)
         Assert.DoesNotContain(ex.InnerExceptions, e => e.Message.Contains("ObjectDisposedException"));
 
         // Crucial: The sink MUST have received the item from the fast branch
         // despite the failure in the slow branch.
         Assert.Single(sink.ReceivedItems);
-    }    
+    }
 }

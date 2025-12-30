@@ -1,5 +1,3 @@
-using System.Diagnostics;
-using ImageAutomate.Execution.Scheduling;
 using ImageAutomate.Infrastructure;
 using ImageAutomate.StandardBlocks;
 

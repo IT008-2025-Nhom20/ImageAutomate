@@ -1,6 +1,7 @@
 using ImageAutomate.Core;
 using ImageAutomate.Core.Serialization;
 using ImageAutomate.StandardBlocks;
+
 using SixLabors.ImageSharp;
 
 namespace ImageAutomate.Execution.Tests;

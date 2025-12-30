@@ -1,5 +1,7 @@
 using System.Collections.Immutable;
+
 using ImageAutomate.Core;
+
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;

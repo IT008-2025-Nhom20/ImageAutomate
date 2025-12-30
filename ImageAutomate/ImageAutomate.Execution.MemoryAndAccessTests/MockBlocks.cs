@@ -1,7 +1,6 @@
 using System.ComponentModel;
-using System.Diagnostics;
+
 using ImageAutomate.Core;
-using SixLabors.ImageSharp;
 
 namespace ImageAutomate.Execution.MemoryAndAccessTests;
 
@@ -171,7 +170,7 @@ public class MultiInputBlock : MockBlock
                 foreach (var item in items)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
-                     if (item is ICloneable cloneable)
+                    if (item is ICloneable cloneable)
                     {
                         outputList.Add((IBasicWorkItem)cloneable.Clone());
                     }
@@ -222,7 +221,7 @@ public class MultiOutputBlock : MockBlock
         }
         else
         {
-             foreach (var socket in Outputs)
+            foreach (var socket in Outputs)
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 result[socket] = new List<IBasicWorkItem>();

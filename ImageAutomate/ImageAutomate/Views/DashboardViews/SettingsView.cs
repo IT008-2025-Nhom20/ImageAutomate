@@ -251,7 +251,9 @@ namespace ImageAutomate.Views.DashboardViews
 
         private void OnSettingsViewLoad(object sender, EventArgs e)
         {
-            ExecutionModeComboBox.Items.AddRange(SchedulerRegistry.Instance.GetRegisteredSchedulers().ToArray());
+            foreach (var mode in SchedulerFactory.Registry.GetRegisteredNames())
+                Debug.WriteLine($"Scheduler mode: {mode}");
+            ExecutionModeComboBox.Items.AddRange(SchedulerFactory.Registry.GetRegisteredNames().ToArray<string>());
             ExecutionModeComboBox.SelectedItem = UserConfiguration.Mode;
         }
     }

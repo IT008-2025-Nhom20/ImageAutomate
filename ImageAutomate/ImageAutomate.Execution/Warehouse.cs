@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+
 using ImageAutomate.Core;
 
 namespace ImageAutomate.Execution;
@@ -26,7 +27,7 @@ public sealed class Warehouse
     {
         if (consumerCount < 0)
             throw new ArgumentOutOfRangeException(nameof(consumerCount), "Consumer count cannot be negative.");
-        
+
         _consumerCount = consumerCount;
         _isImported = false;
     }
@@ -37,7 +38,6 @@ public sealed class Warehouse
     /// <param name="outputs">Block execution outputs mapped by socket.</param>
     public void Import(IReadOnlyDictionary<Socket, IReadOnlyList<IBasicWorkItem>> outputs)
     {
-        ArgumentNullException.ThrowIfNull(outputs, nameof(outputs));
         lock (_lock)
         {
             if (_isImported)

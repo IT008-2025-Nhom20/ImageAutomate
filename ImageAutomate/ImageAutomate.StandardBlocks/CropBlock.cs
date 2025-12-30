@@ -1,7 +1,9 @@
+using System.ComponentModel;
+
 using ImageAutomate.Core;
+
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Processing;
-using System.ComponentModel;
 
 namespace ImageAutomate.StandardBlocks;
 
@@ -102,7 +104,7 @@ public class CropBlock : IBlock
     [Browsable(false)]
     public string Content
     {
-        get 
+        get
         {
             if (IsRelative)
             {
@@ -471,7 +473,7 @@ public class CropBlock : IBlock
     {
         ArgumentNullException.ThrowIfNull(inputs, nameof(inputs));
         if (!inputs.TryGetValue(_inputs[0].Id, out var inItems))
-            throw new ArgumentException($"Input items not found for the expected input socket {_inputs[0].Id}.", nameof(inputs)); 
+            throw new ArgumentException($"Input items not found for the expected input socket {_inputs[0].Id}.", nameof(inputs));
 
         var outputItems = new List<IBasicWorkItem>();
 
@@ -484,7 +486,7 @@ public class CropBlock : IBlock
 
             outputItems.Add(sourceItem);
         }
-        
+
         return new Dictionary<Socket, IReadOnlyList<IBasicWorkItem>>
         {
             { _outputs[0], outputItems }

@@ -1,8 +1,12 @@
+using System.ComponentModel;
+using System.ComponentModel;
+
 using ImageAutomate.Core;
+
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Processing;
 using SixLabors.ImageSharp.Processing.Processors.Convolution;
-using System.ComponentModel;
+using SixLabors.ImageSharp.Processing;
 
 namespace ImageAutomate.StandardBlocks;
 
@@ -324,7 +328,7 @@ public class GaussianBlurBlock : IBlock
                 sourceItem.Image.Mutate(x => x.GaussianBlur(Sigma, region, BorderWrappingModeX, BorderWrappingModeY));
             outputItems.Add(sourceItem);
         }
-        
+
         return new Dictionary<Socket, IReadOnlyList<IBasicWorkItem>>
             {
                 { _outputs[0], outputItems }

@@ -1,10 +1,11 @@
+using System.ComponentModel;
+using System.Globalization;
+
 using ImageAutomate.Core;
 using ImageAutomate.Infrastructure;
+
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats;
-using System.ComponentModel;
-using System.Diagnostics;
-using System.Globalization;
 
 namespace ImageAutomate.StandardBlocks;
 

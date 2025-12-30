@@ -1,15 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Diagnostics;
-using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows.Forms;
-
-using ImageAutomate.Views.DashboardViews;
+﻿using ImageAutomate.Views.DashboardViews;
 
 namespace ImageAutomate
 {
@@ -28,7 +17,8 @@ namespace ImageAutomate
         {
             InitializeComponent();
 
-            workspaceView = new Lazy<WorkspaceView>(() => {
+            workspaceView = new Lazy<WorkspaceView>(() =>
+            {
                 var v = new WorkspaceView();
                 v.OpenEditorRequested += WelcomeView_OpenEditorRequested; // Reuse same handler
                 return v;
@@ -38,7 +28,8 @@ namespace ImageAutomate
 
             settingsView = new Lazy<SettingsView>(() => new SettingsView());
 
-            welcomeView = new Lazy<WelcomeView>(() => {
+            welcomeView = new Lazy<WelcomeView>(() =>
+            {
                 var v = new WelcomeView();
                 v.OpenEditorRequested += WelcomeView_OpenEditorRequested;
                 return v;

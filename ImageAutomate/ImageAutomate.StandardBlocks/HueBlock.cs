@@ -1,7 +1,9 @@
-﻿using ImageAutomate.Core;
+using System.ComponentModel;
+
+using ImageAutomate.Core;
+
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Processing;
-using System.ComponentModel;
 
 namespace ImageAutomate.StandardBlocks;
 

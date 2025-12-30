@@ -13,7 +13,7 @@ namespace ImageAutomate.Execution;
 public sealed class DependencyBarrier
 {
     private int _dependencyCount; // number of unsatisfied dependencies
-    private int  _enqueued; // 0 = false, 1 = true
+    private int _enqueued; // 0 = false, 1 = true
     private readonly IBlock _block; // the consumer block that this barrier protects
 
     /// <summary>
@@ -25,7 +25,7 @@ public sealed class DependencyBarrier
     {
         if (inDegree < 0)
             throw new ArgumentOutOfRangeException(nameof(inDegree), "In-degree cannot be negative.");
-        
+
         _block = block ?? throw new ArgumentNullException(nameof(block));
         _dependencyCount = inDegree;
         _enqueued = 0;
@@ -48,7 +48,7 @@ public sealed class DependencyBarrier
         {
             // All dependencies satisfied. Try to set enqueue flag.
             int previousFlag = Interlocked.CompareExchange(ref _enqueued, 1, 0);
-            
+
             // Return true only if this was the first barrier to set the flag
             return previousFlag == 0;
         }

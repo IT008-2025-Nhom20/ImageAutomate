@@ -1,5 +1,5 @@
 using ImageAutomate.Core;
-using Xunit;
+using ImageAutomate.Infrastructure;
 
 namespace ImageAutomate.StandardBlocks.Tests;
 
@@ -47,6 +47,7 @@ public class StandardBlocksTests : StandardBlockTestBase
     [MemberData(nameof(TestConfigs))]
     public async Task ConvertBlock(string res, int count, int batch)
     {
+        FormatRegistryInitializer.InitializeBuiltInFormats(ImageFormatRegistry.Instance);
         // Test conversion to JPEG
         var block = new ConvertBlock
         {

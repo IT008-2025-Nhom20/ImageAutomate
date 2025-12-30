@@ -1,66 +1,101 @@
-using System.Collections.Concurrent;
+using System.Globalization;
 
 namespace ImageAutomate.Execution.Scheduling;
 
 /// <summary>
-/// Thread-safe singleton registry for task schedulers.
+/// Thread-safe registry for scheduler factories.
+/// Allows plugins to register custom schedulers by name.
 /// </summary>
 public sealed class SchedulerRegistry
 {
+    private readonly Dictionary<string, Func<IScheduler>> _factories = new();
+    private readonly object _lock = new();
+
     /// <summary>
-    /// Gets the shared singleton instance of the registry.
+    /// Registers a scheduler factory with the specified name.
     /// </summary>
-    public static SchedulerRegistry Instance { get; } = new();
-
-    private readonly ConcurrentDictionary<string, Func<IScheduler>> _factories = new(StringComparer.OrdinalIgnoreCase);
-
-    private SchedulerRegistry()
+    /// <param name="name">Unique name for the scheduler (case-sensitive).</param>
+    /// <param name="factory">Factory function to create scheduler instances.</param>
+    /// <returns>True if registered, false if name already exists.</returns>
+    /// <exception cref="ArgumentException">Thrown when name is null or empty.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when factory is null.</exception>
+    public bool RegisterScheduler(string name, Func<IScheduler> factory)
     {
-        // Register default schedulers
-        RegisterScheduler("simpledfs", () => new SimpleDfsScheduler());
-        RegisterScheduler("adaptive", () => new AdaptiveScheduler());
+        if (string.IsNullOrEmpty(name))
+        {
+            throw new ArgumentException("Name cannot be null or empty.", nameof(name));
+        }
+        if (factory == null)
+        {
+            throw new ArgumentNullException(nameof(factory));
+        }
+
+        lock (_lock)
+        {
+            if (_factories.ContainsKey(name))
+            {
+                return false;
+            }
+
+            _factories[name] = factory;
+            return true;
+        }
     }
 
     /// <summary>
-    /// Registers a scheduler factory.
+    /// Unregisters a scheduler by name.
     /// </summary>
-    /// <param name="name">Unique scheduler name (case-insensitive).</param>
-    /// <param name="factory">Function that creates a new scheduler instance.</param>
-    public void RegisterScheduler(string name, Func<IScheduler> factory)
+    /// <param name="name">Name of the scheduler to unregister.</param>
+    /// <returns>True if unregistered, false if name was not found.</returns>
+    public bool UnregisterScheduler(string name)
     {
-        ArgumentNullException.ThrowIfNull(factory, nameof(factory));
-        ArgumentNullException.ThrowIfNullOrEmpty(name, nameof(name));
-
-        _factories[name] = factory;
+        lock (_lock)
+        {
+            return _factories.Remove(name);
+        }
     }
 
     /// <summary>
     /// Creates a scheduler instance by name.
     /// </summary>
-    /// <param name="name">Name of the scheduler to create.</param>
-    /// <returns>A new scheduler instance.</returns>
-    /// <exception cref="KeyNotFoundException">Thrown if the scheduler is not registered.</exception>
+    /// <param name="name">Name of the registered scheduler.</param>
+    /// <returns>A scheduler instance.</returns>
+    /// <exception cref="KeyNotFoundException">Thrown when name is not registered.</exception>
     public IScheduler CreateScheduler(string name)
     {
-        if (string.IsNullOrEmpty(name))
+        lock (_lock)
         {
-            // Default to simpledfs if name is null/empty, matching historical behavior.
-            name = "simpledfs";
-        }
+            if (!_factories.TryGetValue(name, out var factory))
+            {
+                throw new KeyNotFoundException($"Scheduler '{name}' is not registered.");
+            }
 
-        if (_factories.TryGetValue(name, out var factory))
-        {
             return factory();
         }
-
-        throw new KeyNotFoundException($"Scheduler '{name}' is not registered.");
     }
 
     /// <summary>
     /// Gets all registered scheduler names.
     /// </summary>
-    public IReadOnlyList<string> GetRegisteredSchedulers()
+    /// <returns>Read-only list of registered scheduler names.</returns>
+    public IReadOnlyList<string> GetRegisteredNames()
     {
-        return _factories.Keys.ToList();
+        lock (_lock)
+        {
+            return _factories.Keys.ToList();
+        }
+    }
+
+    /// <summary>
+    /// Checks if a scheduler is registered.
+    /// </summary>
+    /// <param name="name">Name of the scheduler to check.</param>
+    /// <returns>True if registered, false otherwise.</returns>
+    public bool IsRegistered(string name)
+    {
+        lock (_lock)
+        {
+            return _factories.ContainsKey(name);
+        }
     }
 }

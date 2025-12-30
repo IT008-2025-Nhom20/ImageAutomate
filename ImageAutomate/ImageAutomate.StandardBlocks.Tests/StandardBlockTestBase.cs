@@ -1,9 +1,5 @@
 using ImageAutomate.Core;
 using ImageAutomate.Execution;
-using ImageAutomate.StandardBlocks;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.PixelFormats;
-using Xunit;
 
 namespace ImageAutomate.StandardBlocks.Tests;
 
@@ -110,13 +106,13 @@ public abstract class StandardBlockTestBase : IDisposable
         // But we should assert > 0 if inputs existed.
         if (Directory.Exists(load.SourcePath) && Directory.GetFiles(load.SourcePath).Length > 0)
         {
-             Assert.NotEmpty(files);
-             // Verify files are valid images
-             foreach (var f in files.Take(5)) // Check first 5
-             {
-                 using var img = SixLabors.ImageSharp.Image.Load(f);
-                 Assert.NotNull(img);
-             }
+            Assert.NotEmpty(files);
+            // Verify files are valid images
+            foreach (var f in files.Take(5)) // Check first 5
+            {
+                using var img = SixLabors.ImageSharp.Image.Load(f);
+                Assert.NotNull(img);
+            }
         }
     }
 

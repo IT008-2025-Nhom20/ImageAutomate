@@ -1,8 +1,5 @@
-using System.Diagnostics;
 using ImageAutomate.Core;
-using ImageAutomate.Execution;
 using ImageAutomate.Execution.Exceptions;
-using Xunit.v3;
 
 [assembly: CaptureConsole]
 [assembly: CaptureTrace]

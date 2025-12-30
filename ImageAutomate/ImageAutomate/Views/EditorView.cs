@@ -1,5 +1,4 @@
-﻿using System.Diagnostics;
-using ImageAutomate.Core;
+﻿using ImageAutomate.Core;
 using ImageAutomate.Dialogs;
 using ImageAutomate.Execution;
 using ImageAutomate.Services;
@@ -214,7 +213,7 @@ public partial class EditorView : UserControl
     private void ShowSaveDialog()
     {
         var workspace = GraphPanel.Workspace!;
-        
+
         using var dialog = new WorkspaceSaveDialog(
             workspace.Name,
             workspace.FilePath,
