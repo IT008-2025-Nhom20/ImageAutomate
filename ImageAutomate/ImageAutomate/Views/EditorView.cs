@@ -108,7 +108,7 @@ public partial class EditorView : UserControl
             // This prevents UI freeze during validation (synchronous preamble) and file scanning
             await Task.Run(async () =>
             {
-                await executor.ExecuteAsync(graph, new ExecutorConfiguration(), CancellationToken.None);
+                await executor.ExecuteAsync(graph, UserConfiguration.ExecutorConfig, CancellationToken.None);
             }, CancellationToken.None);
 
             MessageBox.Show("Pipeline execution completed successfully!", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);

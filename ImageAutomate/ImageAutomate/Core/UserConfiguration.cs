@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using ImageAutomate.Execution;
 
 namespace ImageAutomate.Core
 {
@@ -33,69 +34,9 @@ namespace ImageAutomate.Core
         #region Execution Settings
 
         /// <summary>
-        /// Gets or sets the execution mode or custom scheduler name.
-        /// Default: "simpledfs".
+        /// Gets the configuration options for the pipeline executor.
         /// </summary>
-        public static string Mode { get; set; } = "simpledfs";
-
-        /// <summary>
-        /// Gets or sets the maximum degree of parallelism (concurrent block executions).
-        /// Default: Number of logical processors.
-        /// </summary>
-        public static int MaxDegreeOfParallelism { get; set; } = Environment.ProcessorCount;
-
-        /// <summary>
-        /// Gets or sets the watchdog timeout for deadlock detection.
-        /// If no progress occurs within this duration, a PipelineDeadlockException is thrown.
-        /// Default: 30 seconds.
-        /// </summary>
-        public static int WatchdogTimeoutSeconds { get; set; } = 30;
-
-        /// <summary>
-        /// Gets or sets whether GC throttling is enabled.
-        /// When enabled, the engine pauses dispatches if GC frequency exceeds 10/second.
-        /// Default: true.
-        /// </summary>
-        public static bool EnableGcThrottling { get; set; } = true;
-
-        /// <summary>
-        /// Gets or sets the maximum number of work items to process per shipment.
-        /// Used for batching work from shipment sources (e.g., LoadBlock).
-        /// Higher values increase memory pressure but reduce overhead.
-        /// Default: 64 work items.
-        /// </summary>
-        public static int MaxShipmentSize { get; set; } = 64;
-
-        /// <summary>
-        /// Gets or sets the profiling window size for cost estimation (Adaptive Mode only).
-        /// Default: 20 samples.
-        /// </summary>
-        public static int ProfilingWindowSize { get; set; } = 20;
-
-        /// <summary>
-        /// Gets or sets the exponential moving average alpha for cost profiling (Adaptive Mode only).
-        /// Default: 0.2 (emphasizes recent behavior).
-        /// </summary>
-        public static double CostEmaAlpha { get; set; } = 0.2;
-
-        /// <summary>
-        /// Gets or sets the critical path recomputation interval in blocks (Adaptive Mode only).
-        /// Default: Every 10 blocks.
-        /// </summary>
-        public static int CriticalPathRecomputeInterval { get; set; } = 10;
-
-        /// <summary>
-        /// Gets or sets the batch size for grouped scheduling (AdaptiveBatched mode only).
-        /// Default: 5 blocks.
-        /// </summary>
-        public static int BatchSize { get; set; } = 5;
-
-        /// <summary>
-        /// Gets or sets the critical path boost multiplier (Adaptive Mode only).
-        /// Blocks on the critical path receive priority × this multiplier.
-        /// Default: 1.5.
-        /// </summary>
-        public static double CriticalPathBoost { get; set; } = 1.5;
+        public static ExecutorConfiguration ExecutorConfig { get; set; } = new ExecutorConfiguration();
 
         #endregion
 
@@ -224,16 +165,7 @@ namespace ImageAutomate.Core
             MaxRecentWorkspaces = 10;
 
             // Execution Settings
-            Mode = "simpledfs";
-            MaxDegreeOfParallelism = Environment.ProcessorCount;
-            WatchdogTimeoutSeconds = 30;
-            EnableGcThrottling = true;
-            MaxShipmentSize = 64;
-            ProfilingWindowSize = 20;
-            CostEmaAlpha = 0.2;
-            CriticalPathRecomputeInterval = 10;
-            BatchSize = 5;
-            CriticalPathBoost = 1.5;
+            ExecutorConfig = new ExecutorConfiguration();
 
             // Editor Settings
             SelectedBlockOutlineColor = Color.Red;
@@ -281,16 +213,7 @@ namespace ImageAutomate.Core
                 var data = new ConfigurationData
                 {
                     MaxRecentWorkspaces = MaxRecentWorkspaces,
-                    Mode = Mode,
-                    MaxDegreeOfParallelism = MaxDegreeOfParallelism,
-                    WatchdogTimeoutSeconds = WatchdogTimeoutSeconds,
-                    EnableGcThrottling = EnableGcThrottling,
-                    MaxShipmentSize = MaxShipmentSize,
-                    ProfilingWindowSize = ProfilingWindowSize,
-                    CostEmaAlpha = CostEmaAlpha,
-                    CriticalPathRecomputeInterval = CriticalPathRecomputeInterval,
-                    BatchSize = BatchSize,
-                    CriticalPathBoost = CriticalPathBoost,
+                    Executor = ExecutorConfig,
                     SelectedBlockOutlineColor = ColorToHtml(SelectedBlockOutlineColor),
                     SocketRadius = SocketRadius,
                     RenderScale = RenderScale,
@@ -336,16 +259,11 @@ namespace ImageAutomate.Core
                 if (data != null)
                 {
                     MaxRecentWorkspaces = data.MaxRecentWorkspaces;
-                    Mode = data.Mode;
-                    MaxDegreeOfParallelism = data.MaxDegreeOfParallelism;
-                    WatchdogTimeoutSeconds = data.WatchdogTimeoutSeconds;
-                    EnableGcThrottling = data.EnableGcThrottling;
-                    MaxShipmentSize = data.MaxShipmentSize;
-                    ProfilingWindowSize = data.ProfilingWindowSize;
-                    CostEmaAlpha = data.CostEmaAlpha;
-                    CriticalPathRecomputeInterval = data.CriticalPathRecomputeInterval;
-                    BatchSize = data.BatchSize;
-                    CriticalPathBoost = data.CriticalPathBoost;
+                    
+                    if (data.Executor != null)
+                    {
+                        ExecutorConfig = data.Executor;
+                    }
 
                     SelectedBlockOutlineColor = HtmlToColor(data.SelectedBlockOutlineColor);
                     SocketRadius = data.SocketRadius;
@@ -397,16 +315,7 @@ namespace ImageAutomate.Core
         private class ConfigurationData
         {
             public int MaxRecentWorkspaces { get; set; } = 10;
-            public string Mode { get; set; } = "SimpleDfs";
-            public int MaxDegreeOfParallelism { get; set; }
-            public int WatchdogTimeoutSeconds { get; set; }
-            public bool EnableGcThrottling { get; set; }
-            public int MaxShipmentSize { get; set; }
-            public int ProfilingWindowSize { get; set; }
-            public double CostEmaAlpha { get; set; }
-            public int CriticalPathRecomputeInterval { get; set; }
-            public int BatchSize { get; set; }
-            public double CriticalPathBoost { get; set; }
+            public ExecutorConfiguration? Executor { get; set; }
             public string? SelectedBlockOutlineColor { get; set; }
             public int SocketRadius { get; set; }
             public float RenderScale { get; set; }

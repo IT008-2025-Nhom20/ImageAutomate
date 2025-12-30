@@ -26,16 +26,16 @@ namespace ImageAutomate.Views.DashboardViews
             MaxRecentWorkspacesValue.Value = UserConfiguration.MaxRecentWorkspaces;
 
             // Execution Settings
-            ExecutionModeComboBox.SelectedItem = UserConfiguration.Mode;
-            MaxDegreeOfParallelismValue.Value = UserConfiguration.MaxDegreeOfParallelism;
-            EnableGcThrottlingValue.Checked = UserConfiguration.EnableGcThrottling;
-            WatchdogTimeoutValue.Value = UserConfiguration.WatchdogTimeoutSeconds;
-            MaxShipmentSizeValue.Value = UserConfiguration.MaxShipmentSize;
-            ProfilingWindowSizeValue.Value = UserConfiguration.ProfilingWindowSize;
-            CostEmaAlphaValue.Value = (decimal)UserConfiguration.CostEmaAlpha;
-            CriticalPathRecomputeIntervalValue.Value = UserConfiguration.CriticalPathRecomputeInterval;
-            BatchSizeValue.Value = UserConfiguration.BatchSize;
-            CriticalPathBoostValue.Value = (decimal)UserConfiguration.CriticalPathBoost;
+            ExecutionModeComboBox.SelectedItem = UserConfiguration.ExecutorConfig.Mode;
+            MaxDegreeOfParallelismValue.Value = UserConfiguration.ExecutorConfig.MaxDegreeOfParallelism;
+            EnableGcThrottlingValue.Checked = UserConfiguration.ExecutorConfig.EnableGcThrottling;
+            WatchdogTimeoutValue.Value = (decimal)UserConfiguration.ExecutorConfig.WatchdogTimeout.TotalSeconds;
+            MaxShipmentSizeValue.Value = UserConfiguration.ExecutorConfig.MaxShipmentSize;
+            ProfilingWindowSizeValue.Value = UserConfiguration.ExecutorConfig.ProfilingWindowSize;
+            CostEmaAlphaValue.Value = (decimal)UserConfiguration.ExecutorConfig.CostEmaAlpha;
+            CriticalPathRecomputeIntervalValue.Value = UserConfiguration.ExecutorConfig.CriticalPathRecomputeInterval;
+            BatchSizeValue.Value = UserConfiguration.ExecutorConfig.BatchSize;
+            CriticalPathBoostValue.Value = (decimal)UserConfiguration.ExecutorConfig.CriticalPathBoost;
 
             // Editor Settings
             SelectedBlockOutlineColorButton.SelectedColor = UserConfiguration.SelectedBlockOutlineColor;
@@ -74,52 +74,52 @@ namespace ImageAutomate.Views.DashboardViews
             // Execution Settings
             ExecutionModeComboBox.SelectedIndexChanged += (s, e) =>
             {
-                UserConfiguration.Mode = ExecutionModeComboBox.SelectedItem?.ToString() ?? "SimpleDfs";
+                UserConfiguration.ExecutorConfig.Mode = ExecutionModeComboBox.SelectedItem?.ToString() ?? "SimpleDfs";
             };
 
             MaxDegreeOfParallelismValue.ValueChanged += (s, e) =>
             {
-                UserConfiguration.MaxDegreeOfParallelism = (int)MaxDegreeOfParallelismValue.Value;
+                UserConfiguration.ExecutorConfig.MaxDegreeOfParallelism = (int)MaxDegreeOfParallelismValue.Value;
             };
 
             EnableGcThrottlingValue.CheckedChanged += (s, e) =>
             {
-                UserConfiguration.EnableGcThrottling = EnableGcThrottlingValue.Checked;
+                UserConfiguration.ExecutorConfig.EnableGcThrottling = EnableGcThrottlingValue.Checked;
             };
 
             WatchdogTimeoutValue.ValueChanged += (s, e) =>
             {
-                UserConfiguration.WatchdogTimeoutSeconds = (int)WatchdogTimeoutValue.Value;
+                UserConfiguration.ExecutorConfig.WatchdogTimeout = TimeSpan.FromSeconds((double)WatchdogTimeoutValue.Value);
             };
 
             MaxShipmentSizeValue.ValueChanged += (s, e) =>
             {
-                UserConfiguration.MaxShipmentSize = (int)MaxShipmentSizeValue.Value;
+                UserConfiguration.ExecutorConfig.MaxShipmentSize = (int)MaxShipmentSizeValue.Value;
             };
 
             ProfilingWindowSizeValue.ValueChanged += (s, e) =>
             {
-                UserConfiguration.ProfilingWindowSize = (int)ProfilingWindowSizeValue.Value;
+                UserConfiguration.ExecutorConfig.ProfilingWindowSize = (int)ProfilingWindowSizeValue.Value;
             };
 
             CostEmaAlphaValue.ValueChanged += (s, e) =>
             {
-                UserConfiguration.CostEmaAlpha = (double)CostEmaAlphaValue.Value;
+                UserConfiguration.ExecutorConfig.CostEmaAlpha = (double)CostEmaAlphaValue.Value;
             };
 
             CriticalPathRecomputeIntervalValue.ValueChanged += (s, e) =>
             {
-                UserConfiguration.CriticalPathRecomputeInterval = (int)CriticalPathRecomputeIntervalValue.Value;
+                UserConfiguration.ExecutorConfig.CriticalPathRecomputeInterval = (int)CriticalPathRecomputeIntervalValue.Value;
             };
 
             BatchSizeValue.ValueChanged += (s, e) =>
             {
-                UserConfiguration.BatchSize = (int)BatchSizeValue.Value;
+                UserConfiguration.ExecutorConfig.BatchSize = (int)BatchSizeValue.Value;
             };
 
             CriticalPathBoostValue.ValueChanged += (s, e) =>
             {
-                UserConfiguration.CriticalPathBoost = (double)CriticalPathBoostValue.Value;
+                UserConfiguration.ExecutorConfig.CriticalPathBoost = (double)CriticalPathBoostValue.Value;
             };
 
             // Editor Settings
@@ -254,7 +254,7 @@ namespace ImageAutomate.Views.DashboardViews
             foreach (var mode in SchedulerFactory.Registry.GetRegisteredNames())
                 Debug.WriteLine($"Scheduler mode: {mode}");
             ExecutionModeComboBox.Items.AddRange(SchedulerFactory.Registry.GetRegisteredNames().ToArray<string>());
-            ExecutionModeComboBox.SelectedItem = UserConfiguration.Mode;
+            ExecutionModeComboBox.SelectedItem = UserConfiguration.ExecutorConfig.Mode;
         }
     }
 
