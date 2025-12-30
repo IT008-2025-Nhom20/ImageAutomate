@@ -1,12 +1,10 @@
 using System.ComponentModel;
-using System.ComponentModel;
 
 using ImageAutomate.Core;
 
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Processing;
 using SixLabors.ImageSharp.Processing.Processors.Convolution;
-using SixLabors.ImageSharp.Processing;
 
 namespace ImageAutomate.StandardBlocks;
 

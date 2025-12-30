@@ -1,6 +1,4 @@
 using System.ComponentModel;
-using System.Text.RegularExpressions;
-using System.ComponentModel;
 
 using ImageAutomate.Core;
 
