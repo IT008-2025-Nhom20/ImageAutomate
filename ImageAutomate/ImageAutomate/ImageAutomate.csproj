@@ -33,12 +33,18 @@
 	    <PackageIcon>3fd0311e7d0e.jpg</PackageIcon>
 
 	    <Version>$(VersionPrefix)</Version>
+
+	    <ApplicationIcon>3fd0311e7d0e.ico</ApplicationIcon>
     </PropertyGroup>
 
   <ItemGroup>
     <Compile Remove="Controls\**" />
     <EmbeddedResource Remove="Controls\**" />
     <None Remove="Controls\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="3fd0311e7d0e.ico" />
   </ItemGroup>
 
   <ItemGroup>

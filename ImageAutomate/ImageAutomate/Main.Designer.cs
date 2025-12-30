@@ -46,7 +46,9 @@
             ClientSize = new Size(984, 561);
             Controls.Add(Dashboard);
             Name = "Main";
+            StartPosition = FormStartPosition.CenterScreen;
             Text = "Main";
+            Load += Main_Load;
             ResumeLayout(false);
         }
 

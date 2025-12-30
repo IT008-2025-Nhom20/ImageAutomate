@@ -82,5 +82,10 @@ namespace ImageAutomate
             base.OnFormClosing(e);
             UserConfiguration.Save();
         }
+
+        private void Main_Load(object sender, EventArgs e)
+        {
+
+        }
     }
 }
