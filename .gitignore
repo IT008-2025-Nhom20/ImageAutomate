@@ -425,3 +425,5 @@ latex/**
 # Generated Testcases
 Testcases/
 TestOutput/**
+
+source.zip
